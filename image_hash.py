@@ -3,7 +3,8 @@ import imagehash
 
 def generate_phash(image_path):
     image = Image.open(image_path)
-    return imagehash.phash(image)
+    phash = imagehash.phash(image)
+    return phash
 
 def hamming_distance(hash1, hash2):
     return hash1 - hash2
