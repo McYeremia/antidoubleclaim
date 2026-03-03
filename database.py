@@ -23,25 +23,51 @@ def create_database():
     conn.close()
 
 
-def insert_claim(nama_lomba, tingkat, tanggal, peringkat, sertifikat_path):
+import sqlite3
+from image_hash import generate_phash, hamming_distance
+import imagehash
+
+def insert_claim(nama_lomba, tingkat, tanggal, peringkat, sertifikat_path, threshold=10):
     conn = sqlite3.connect("claims.db")
     cursor = conn.cursor()
 
-    phash_obj = generate_phash(sertifikat_path)
+    # Generate hash baru
+    new_hash = generate_phash(sertifikat_path)
 
-    # 🔥 UBAH KE STRING SEBELUM DISIMPAN
-    phash_str = str(phash_obj)
+    # Ambil semua hash lama
+    cursor.execute("SELECT id, phash FROM claims")
+    rows = cursor.fetchall()
 
+    status = "pending"
+
+    for row in rows:
+        old_hash = imagehash.hex_to_hash(row[1])
+        distance = hamming_distance(new_hash, old_hash)
+
+        if distance <= threshold:
+            status = "duplikat"
+            print(f"⚠ Mirip dengan ID {row[0]} (Distance: {distance})")
+            break
+
+    # Simpan ke database
     cursor.execute("""
-    INSERT INTO claims 
-    (nama_lomba, tingkat, tanggal, peringkat, sertifikat_path, phash)
-    VALUES (?, ?, ?, ?, ?, ?)
-    """, (nama_lomba, tingkat, tanggal, peringkat, sertifikat_path, phash_str))
+        INSERT INTO claims 
+        (nama_lomba, tingkat, tanggal, peringkat, sertifikat_path, phash, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (
+        nama_lomba,
+        tingkat,
+        tanggal,
+        peringkat,
+        sertifikat_path,
+        str(new_hash),
+        status
+    ))
 
     conn.commit()
     conn.close()
 
-    print("Data berhasil disimpan dengan pHash:", phash_str)
+    print("Data disimpan dengan status:", status)
 
 def get_all_claims():
     conn = sqlite3.connect("claims.db")
