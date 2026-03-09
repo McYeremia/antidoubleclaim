@@ -1,5 +1,5 @@
 import sqlite3
-from image_hash import generate_phash, hamming_distance
+from backend.image_hash import generate_phash, hamming_distance
 import imagehash
 
 def create_database():
@@ -21,11 +21,6 @@ def create_database():
 
     conn.commit()
     conn.close()
-
-
-import sqlite3
-from image_hash import generate_phash, hamming_distance
-import imagehash
 
 def insert_claim(nama_lomba, tingkat, tanggal, peringkat, sertifikat_path, threshold=10):
     conn = sqlite3.connect("claims.db")

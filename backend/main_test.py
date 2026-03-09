@@ -1,4 +1,4 @@
-from database import create_database,insert_claim
+from backend.database import create_database,insert_claim
 
 # create_database()
 
