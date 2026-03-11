@@ -1,5 +1,5 @@
 import sqlite3
-from backend.image_hash import generate_phash, hamming_distance
+from image_hash import generate_phash, hamming_distance
 import imagehash
 
 def create_database():
@@ -26,14 +26,12 @@ def insert_claim(nama_lomba, tingkat, tanggal, peringkat, sertifikat_path, thres
     conn = sqlite3.connect("claims.db")
     cursor = conn.cursor()
 
-    # Generate hash baru
     new_hash = generate_phash(sertifikat_path)
 
-    # Ambil semua hash lama
     cursor.execute("SELECT id, phash FROM claims")
     rows = cursor.fetchall()
 
-    status = "pending"
+    status = "aman"
 
     for row in rows:
         old_hash = imagehash.hex_to_hash(row[1])
@@ -43,8 +41,7 @@ def insert_claim(nama_lomba, tingkat, tanggal, peringkat, sertifikat_path, thres
             status = "duplikat"
             print(f"⚠ Mirip dengan ID {row[0]} (Distance: {distance})")
             break
-
-    # Simpan ke database
+        
     cursor.execute("""
         INSERT INTO claims 
         (nama_lomba, tingkat, tanggal, peringkat, sertifikat_path, phash, status)

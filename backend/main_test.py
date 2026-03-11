@@ -1,4 +1,4 @@
-from backend.database import create_database,insert_claim
+from database import create_database,insert_claim
 
 # create_database()
 
@@ -7,5 +7,5 @@ insert_claim(
     tingkat="Nasional",
     tanggal="2025-06-10",
     peringkat="Juara 1",
-    sertifikat_path="test_images/cert3.jpg"
+    sertifikat_path="test_images/cert1.jpg"
 )

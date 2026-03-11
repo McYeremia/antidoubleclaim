@@ -8,6 +8,11 @@ POPPLER_PATH = r"C:\poppler\Library\bin"
 def generate_phash(file_path):
 
     extension = os.path.splitext(file_path)[1].lower()
+
+    allowed_ext = [".jpg", ".jpeg", ".png", ".pdf"]
+
+    if extension not in allowed_ext:
+        raise ValueError("Format file tidak didukung")
     
     if extension == ".pdf":
 
@@ -16,8 +21,7 @@ def generate_phash(file_path):
             poppler_path=POPPLER_PATH
         )
 
-        image = images[0]  # ambil halaman pertama
-
+        image = images[0]
     else:
         image = Image.open(file_path)
 
