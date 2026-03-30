@@ -1,5 +1,5 @@
 import sqlite3
-from image_hash import generate_phash, hamming_distance
+from backend.image_hash import generate_phash, hamming_distance
 import imagehash
 
 def create_database():
