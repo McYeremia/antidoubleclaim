@@ -51,7 +51,7 @@ async def upload_certificate(
         print(f"File disimpan di: {file_location}")
 
         # Masukkan ke database dan jalankan deteksi
-        insert_claim(
+        result = insert_claim(
             nama_lomba,
             tingkat,
             tanggal,
@@ -59,7 +59,11 @@ async def upload_certificate(
             file_location
         )
 
-        return {"message": "Upload berhasil dan data telah dianalisis"}
+        return {
+            "message": "Upload berhasil dan data telah dianalisis",
+            "status": result["status"],
+            "distance": result["distance"]
+        }
 
     except Exception as e:
         print("!!! ERROR SAAT UPLOAD !!!")

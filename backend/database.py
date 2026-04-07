@@ -32,10 +32,14 @@ def insert_claim(nama_lomba, tingkat, tanggal, peringkat, sertifikat_path, thres
     rows = cursor.fetchall()
 
     status = "aman"
+    min_distance = 100
 
     for row in rows:
         old_hash = imagehash.hex_to_hash(row[1])
         distance = hamming_distance(new_hash, old_hash)
+
+        if distance < min_distance:
+            min_distance = distance
 
         if distance <= threshold:
             status = "duplikat"
@@ -60,6 +64,7 @@ def insert_claim(nama_lomba, tingkat, tanggal, peringkat, sertifikat_path, thres
     conn.close()
 
     print("Data disimpan dengan status:", status)
+    return {"status": status, "distance": int(min_distance) if status == "duplikat" else None}
 
 def get_all_claims():
     conn = sqlite3.connect("claims.db")

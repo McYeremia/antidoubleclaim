@@ -11,6 +11,7 @@ export default function Home() {
   });
   const [file, setFile] = useState(null);
   const [status, setStatus] = useState("");
+  const [result, setResult] = useState(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -29,6 +30,7 @@ export default function Home() {
     }
 
     setStatus("Sedang mengunggah...");
+    setResult(null);
 
     const data = new FormData();
     data.append("nama_lomba", formData.nama_lomba);
@@ -44,17 +46,20 @@ export default function Home() {
       });
 
       if (response.ok) {
-        const result = await response.json();
-        setStatus(`Berhasil: ${result.message}`);
-        // Reset form
-        setFormData({
-          nama_lomba: "",
-          tingkat: "",
-          tanggal: "",
-          peringkat: "",
-        });
-        setFile(null);
-        e.target.reset();
+        const resData = await response.json();
+        setResult(resData);
+        setStatus("Selesai!");
+        
+        if (resData.status === "aman") {
+            setFormData({
+              nama_lomba: "",
+              tingkat: "",
+              tanggal: "",
+              peringkat: "",
+            });
+            setFile(null);
+            e.target.reset();
+        }
       } else {
         setStatus("Gagal mengunggah sertifikat. Cek koneksi backend.");
       }
@@ -81,7 +86,7 @@ export default function Home() {
               required
               value={formData.nama_lomba}
               onChange={handleChange}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
               placeholder="Contoh: Hackathon Nasional 2024"
             />
           </div>
@@ -94,7 +99,7 @@ export default function Home() {
                 required
                 value={formData.tingkat}
                 onChange={handleChange}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
               >
                 <option value="">Pilih Tingkat</option>
                 <option value="Universitas">Universitas</option>
@@ -112,7 +117,7 @@ export default function Home() {
                 required
                 value={formData.tanggal}
                 onChange={handleChange}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
               />
             </div>
           </div>
@@ -125,7 +130,7 @@ export default function Home() {
               required
               value={formData.peringkat}
               onChange={handleChange}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
               placeholder="Contoh: Juara 1 / Finalis"
             />
           </div>
@@ -151,9 +156,28 @@ export default function Home() {
           </div>
         </form>
 
-        {status && (
-          <div className={`mt-4 p-3 rounded-md text-sm text-center ${status.includes("Berhasil") ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}>
+        {status && !result && (
+          <div className="mt-4 p-3 rounded-md text-sm text-center bg-blue-100 text-blue-800">
             {status}
+          </div>
+        )}
+
+        {result && (
+          <div className={`mt-6 p-4 rounded-lg border-2 ${result.status === 'aman' ? 'bg-green-50 border-green-500' : 'bg-red-50 border-red-500'}`}>
+            <h3 className={`text-lg font-bold ${result.status === 'aman' ? 'text-green-700' : 'text-red-700'}`}>
+              Hasil Analisis: {result.status.toUpperCase()}
+            </h3>
+            <p className="text-gray-700 mt-1">{result.message}</p>
+            {result.status === 'duplikat' && (
+              <p className="text-sm text-red-600 mt-2 font-semibold">
+                ⚠ Peringatan: Sistem mendeteksi kesamaan visual yang tinggi (Distance: {result.distance}). Sertifikat ini kemungkinan besar sudah pernah diklaim.
+              </p>
+            )}
+            {result.status === 'aman' && (
+              <p className="text-sm text-green-600 mt-2">
+                ✓ Sertifikat belum pernah terdaftar sebelumnya dan dinyatakan aman.
+              </p>
+            )}
           </div>
         )}
       </div>
