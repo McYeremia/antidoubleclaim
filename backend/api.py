@@ -62,7 +62,9 @@ async def upload_certificate(
         return {
             "message": "Upload berhasil dan data telah dianalisis",
             "status": result["status"],
-            "distance": result["distance"]
+            "duplikat_dengan_id": result.get("duplikat_dengan_id"),
+            "similarity_nama": result.get("similarity_nama"),
+            "distance_phash": result.get("distance_phash"),
         }
 
     except Exception as e:

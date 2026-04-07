@@ -1,6 +1,9 @@
 import sqlite3
 from backend.image_hash import generate_phash, hamming_distance
+from backend.text_similarity import token_sort_ratio
 import imagehash
+
+PHASH_THRESHOLD = 10   # Maximum Hamming distance agar dianggap mirip secara visual
 
 def create_database():
     conn = sqlite3.connect("claims.db")
@@ -22,32 +25,46 @@ def create_database():
     conn.commit()
     conn.close()
 
-def insert_claim(nama_lomba, tingkat, tanggal, peringkat, sertifikat_path, threshold=10):
+def insert_claim(nama_lomba, tingkat, tanggal, peringkat, sertifikat_path):
     conn = sqlite3.connect("claims.db")
     cursor = conn.cursor()
 
     new_hash = generate_phash(sertifikat_path)
 
-    cursor.execute("SELECT id, phash FROM claims")
+    cursor.execute("SELECT id, nama_lomba, tingkat, tanggal, peringkat, phash FROM claims")
     rows = cursor.fetchall()
 
     status = "aman"
-    min_distance = 100
+    detail = {}
 
     for row in rows:
-        old_hash = imagehash.hex_to_hash(row[1])
-        distance = hamming_distance(new_hash, old_hash)
+        old_id, old_nama, old_tingkat, old_tanggal, old_peringkat, old_phash_str = row
 
-        if distance < min_distance:
-            min_distance = distance
+        # --- TAHAP 1: Fuzzy nama lomba (informasi saja, bukan gate) ---
+        sim_nama = token_sort_ratio(nama_lomba, old_nama)
+        print(f"[Tahap 1] vs ID {old_id}: similarity nama={sim_nama}%")
 
-        if distance <= threshold:
-            status = "duplikat"
-            print(f"⚠ Mirip dengan ID {row[0]} (Distance: {distance})")
-            break
-        
+        # --- TAHAP 2: pHash — gate utama ---
+        old_hash = imagehash.hex_to_hash(old_phash_str)
+        distance = int(hamming_distance(new_hash, old_hash))
+        print(f"[Tahap 2] vs ID {old_id}: Hamming distance={distance}")
+
+        if distance <= PHASH_THRESHOLD:
+            # Sertifikat mirip — cek peringkat (exact match karena dari dropdown)
+            if peringkat == old_peringkat:
+                status = "perlu ditinjau"
+                detail = {
+                    "duplikat_dengan_id": old_id,
+                    "similarity_nama": sim_nama,
+                    "distance_phash": distance,
+                }
+                print(f"⚠ PERLU DITINJAU: sertifikat mirip & peringkat sama dengan ID {old_id}")
+                break
+            else:
+                print(f"[Info] Sertifikat mirip dengan ID {old_id} tapi peringkat berbeda ({old_peringkat} vs {peringkat}) → aman")
+
     cursor.execute("""
-        INSERT INTO claims 
+        INSERT INTO claims
         (nama_lomba, tingkat, tanggal, peringkat, sertifikat_path, phash, status)
         VALUES (?, ?, ?, ?, ?, ?, ?)
     """, (
@@ -64,7 +81,7 @@ def insert_claim(nama_lomba, tingkat, tanggal, peringkat, sertifikat_path, thres
     conn.close()
 
     print("Data disimpan dengan status:", status)
-    return {"status": status, "distance": int(min_distance) if status == "duplikat" else None}
+    return {"status": status, **detail}
 
 def get_all_claims():
     conn = sqlite3.connect("claims.db")

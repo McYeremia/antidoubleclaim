@@ -124,15 +124,23 @@ export default function Home() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700">Peringkat</label>
-            <input
-              type="text"
+            <select
               name="peringkat"
               required
               value={formData.peringkat}
               onChange={handleChange}
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
-              placeholder="Contoh: Juara 1 / Finalis"
-            />
+            >
+              <option value="">Pilih Peringkat</option>
+              <option value="Juara 1">Juara 1</option>
+              <option value="Juara 2">Juara 2</option>
+              <option value="Juara 3">Juara 3</option>
+              <option value="Harapan 1">Harapan 1</option>
+              <option value="Harapan 2">Harapan 2</option>
+              <option value="Harapan 3">Harapan 3</option>
+              <option value="Finalis">Finalis</option>
+              <option value="Peserta Terbaik">Peserta Terbaik</option>
+            </select>
           </div>
 
           <div>
@@ -163,19 +171,30 @@ export default function Home() {
         )}
 
         {result && (
-          <div className={`mt-6 p-4 rounded-lg border-2 ${result.status === 'aman' ? 'bg-green-50 border-green-500' : 'bg-red-50 border-red-500'}`}>
-            <h3 className={`text-lg font-bold ${result.status === 'aman' ? 'text-green-700' : 'text-red-700'}`}>
+          <div className={`mt-6 p-4 rounded-lg border-2 ${
+            result.status === 'aman'
+              ? 'bg-green-50 border-green-500'
+              : 'bg-yellow-50 border-yellow-500'
+          }`}>
+            <h3 className={`text-lg font-bold ${
+              result.status === 'aman' ? 'text-green-700' : 'text-yellow-700'
+            }`}>
               Hasil Analisis: {result.status.toUpperCase()}
             </h3>
             <p className="text-gray-700 mt-1">{result.message}</p>
-            {result.status === 'duplikat' && (
-              <p className="text-sm text-red-600 mt-2 font-semibold">
-                ⚠ Peringatan: Sistem mendeteksi kesamaan visual yang tinggi (Distance: {result.distance}). Sertifikat ini kemungkinan besar sudah pernah diklaim.
-              </p>
+
+            {result.status === 'perlu ditinjau' && (
+              <div className="mt-3 space-y-1 text-sm text-yellow-800">
+                <p className="font-semibold">Klaim ini ditandai untuk ditinjau oleh operator.</p>
+                <p>Mirip dengan klaim ID: <span className="font-mono font-bold">#{result.duplikat_dengan_id}</span></p>
+                <p>Kesamaan nama lomba: <span className="font-bold">{result.similarity_nama}%</span></p>
+                <p>Jarak hash sertifikat: <span className="font-bold">{result.distance_phash}</span></p>
+              </div>
             )}
+
             {result.status === 'aman' && (
               <p className="text-sm text-green-600 mt-2">
-                ✓ Sertifikat belum pernah terdaftar sebelumnya dan dinyatakan aman.
+                Sertifikat belum pernah terdaftar sebelumnya dan dinyatakan aman.
               </p>
             )}
           </div>
