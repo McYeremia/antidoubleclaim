@@ -1,10 +1,11 @@
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 import shutil
 import os
 import traceback
 
-from backend.database import insert_claim, create_database
+from backend.database import insert_claim, create_database, get_all_claims, get_claim_by_id
 
 app = FastAPI()
 
@@ -27,9 +28,23 @@ UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
+# Serve file sertifikat yang sudah diupload
+app.mount("/uploads", StaticFiles(directory=UPLOAD_FOLDER), name="uploads")
+
 @app.get("/")
 async def root():
     return {"message": "Backend Anti-Double Claim Aktif"}
+
+@app.get("/claims")
+async def list_claims():
+    return get_all_claims()
+
+@app.get("/claims/{claim_id}")
+async def detail_claim(claim_id: int):
+    claim = get_claim_by_id(claim_id)
+    if not claim:
+        raise HTTPException(status_code=404, detail="Klaim tidak ditemukan")
+    return claim
 
 @app.post("/upload")
 async def upload_certificate(

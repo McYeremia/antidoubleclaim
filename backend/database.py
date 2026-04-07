@@ -1,4 +1,5 @@
 import sqlite3
+import os
 from backend.image_hash import generate_phash, hamming_distance
 from backend.text_similarity import token_sort_ratio
 import imagehash
@@ -83,15 +84,32 @@ def insert_claim(nama_lomba, tingkat, tanggal, peringkat, sertifikat_path):
     print("Data disimpan dengan status:", status)
     return {"status": status, **detail}
 
+def _row_to_dict(row):
+    return {
+        "id": row[0],
+        "nama_lomba": row[1],
+        "tingkat": row[2],
+        "tanggal": row[3],
+        "peringkat": row[4],
+        "sertifikat_filename": os.path.basename(row[5]),
+        "status": row[6],
+    }
+
 def get_all_claims():
     conn = sqlite3.connect("claims.db")
     cursor = conn.cursor()
-
-    cursor.execute("SELECT id, phash FROM claims")
+    cursor.execute("SELECT id, nama_lomba, tingkat, tanggal, peringkat, sertifikat_path, status FROM claims ORDER BY id DESC")
     rows = cursor.fetchall()
-
     conn.close()
-    return rows
+    return [_row_to_dict(row) for row in rows]
+
+def get_claim_by_id(claim_id):
+    conn = sqlite3.connect("claims.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, nama_lomba, tingkat, tanggal, peringkat, sertifikat_path, status FROM claims WHERE id = ?", (claim_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return _row_to_dict(row) if row else None
 
 def compare_with_existing(sertifikat_path, threshold=10):
     conn = sqlite3.connect("claims.db")
