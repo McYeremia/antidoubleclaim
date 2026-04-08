@@ -63,7 +63,7 @@ export default function MahasiswaPage() {
         setResult(resData);
         setStatus("Selesai!");
 
-        if (resData.status === "aman") {
+        if (resData.uploaded) {
           setFormData({ nama_lomba: "", tingkat: "", tanggal: "", peringkat: "" });
           setFile(null);
           e.target.reset();
@@ -189,32 +189,11 @@ export default function MahasiswaPage() {
         )}
 
         {result && (
-          <div className={`mt-6 p-4 rounded-lg border-2 ${
-            result.status === "aman"
-              ? "bg-green-50 border-green-500"
-              : "bg-yellow-50 border-yellow-500"
-          }`}>
-            <h3 className={`text-lg font-bold ${
-              result.status === "aman" ? "text-green-700" : "text-yellow-700"
-            }`}>
-              Hasil Analisis: {result.status.toUpperCase()}
-            </h3>
-            <p className="text-gray-700 mt-1">{result.message}</p>
-
-            {result.status === "perlu ditinjau" && (
-              <div className="mt-3 space-y-1 text-sm text-yellow-800">
-                <p className="font-semibold">Klaim ini ditandai untuk ditinjau oleh operator.</p>
-                <p>Mirip dengan klaim ID: <span className="font-mono font-bold">#{result.duplikat_dengan_id}</span></p>
-                <p>Kesamaan nama lomba: <span className="font-bold">{result.similarity_nama}%</span></p>
-                <p>Jarak hash sertifikat: <span className="font-bold">{result.distance_phash}</span></p>
-              </div>
-            )}
-
-            {result.status === "aman" && (
-              <p className="text-sm text-green-600 mt-2">
-                Sertifikat belum pernah terdaftar sebelumnya dan dinyatakan aman.
-              </p>
-            )}
+          <div className="mt-6 p-4 rounded-lg border-2 bg-green-50 border-green-500">
+            <h3 className="text-lg font-bold text-green-700">Klaim Berhasil Diupload</h3>
+            <p className="text-sm text-green-600 mt-2">
+              Klaim Anda telah diterima dan sedang menunggu pengecekan oleh operator.
+            </p>
           </div>
         )}
       </div>
