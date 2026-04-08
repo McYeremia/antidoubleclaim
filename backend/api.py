@@ -5,14 +5,16 @@ import shutil
 import os
 import traceback
 
-from backend.database import insert_claim, create_database, get_all_claims, get_claim_by_id
+from backend.database import (
+    insert_claim, create_database,
+    get_all_claims, get_claim_by_id,
+    approve_claim, discard_claim,
+)
 
 app = FastAPI()
 
-# Inisialisasi Database
 create_database()
 
-# Konfigurasi CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -21,20 +23,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Pastikan folder uploads ada di dalam folder backend
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
 
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
-# Serve file sertifikat yang sudah diupload
 app.mount("/uploads", StaticFiles(directory=UPLOAD_FOLDER), name="uploads")
 
+# ── Root ────────────────────────────────────────────────────────────────────
 @app.get("/")
 async def root():
     return {"message": "Backend Anti-Double Claim Aktif"}
 
+# ── Claims ──────────────────────────────────────────────────────────────────
 @app.get("/claims")
 async def list_claims():
     return get_all_claims()
@@ -46,6 +48,23 @@ async def detail_claim(claim_id: int):
         raise HTTPException(status_code=404, detail="Klaim tidak ditemukan")
     return claim
 
+@app.patch("/claims/{claim_id}/approve")
+async def approve(claim_id: int):
+    claim = get_claim_by_id(claim_id)
+    if not claim:
+        raise HTTPException(status_code=404, detail="Klaim tidak ditemukan")
+    approve_claim(claim_id)
+    return {"message": "Klaim disetujui", "id": claim_id}
+
+@app.delete("/claims/{claim_id}")
+async def discard(claim_id: int):
+    claim = get_claim_by_id(claim_id)
+    if not claim:
+        raise HTTPException(status_code=404, detail="Klaim tidak ditemukan")
+    discard_claim(claim_id)
+    return {"message": "Klaim dihapus", "id": claim_id}
+
+# ── Upload ───────────────────────────────────────────────────────────────────
 @app.post("/upload")
 async def upload_certificate(
     nama_lomba: str = Form(...),
@@ -56,30 +75,21 @@ async def upload_certificate(
 ):
     try:
         print(f"--- Menerima upload: {nama_lomba} ---")
-        
-        file_location = os.path.join(UPLOAD_FOLDER, file.filename)
 
-        # Simpan file secara lokal
+        file_location = os.path.join(UPLOAD_FOLDER, file.filename)
         with open(file_location, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
-        
         print(f"File disimpan di: {file_location}")
 
-        # Masukkan ke database dan jalankan deteksi
-        result = insert_claim(
-            nama_lomba,
-            tingkat,
-            tanggal,
-            peringkat,
-            file_location
-        )
+        result = insert_claim(nama_lomba, tingkat, tanggal, peringkat, file_location)
 
         return {
-            "message": "Upload berhasil dan data telah dianalisis",
-            "status": result["status"],
+            "uploaded":           result.get("uploaded", True),
+            "flagged":            result.get("flagged", False),
             "duplikat_dengan_id": result.get("duplikat_dengan_id"),
-            "similarity_nama": result.get("similarity_nama"),
-            "distance_phash": result.get("distance_phash"),
+            "similarity_nama":    result.get("similarity_nama"),
+            "distance_phash":     result.get("distance_phash"),
+            "pesan":              result.get("pesan"),
         }
 
     except Exception as e:
