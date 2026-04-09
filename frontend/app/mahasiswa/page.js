@@ -1,10 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 
 export default function MahasiswaPage() {
   const router = useRouter();
+  const { data: session, status } = useSession();
+
   const [formData, setFormData] = useState({
     nama_lomba: "",
     tingkat: "",
@@ -12,37 +15,35 @@ export default function MahasiswaPage() {
     peringkat: "",
   });
   const [file, setFile] = useState(null);
-  const [status, setStatus] = useState("");
+  const [uploadStatus, setUploadStatus] = useState("");
   const [result, setResult] = useState(null);
 
-  useEffect(() => {
-    if (sessionStorage.getItem("role") !== "mahasiswa") {
-      router.replace("/");
-    }
-  }, [router]);
+  // Redirect jika belum login atau bukan mahasiswa UKDW
+  if (status === "loading") {
+    return <p className="text-center mt-20 text-gray-400">Memuat sesi...</p>;
+  }
+  if (status === "unauthenticated" || !session?.user?.email?.endsWith("@students.ukdw.ac.id")) {
+    router.replace("/");
+    return null;
+  }
 
-  const handleLogout = () => {
-    sessionStorage.removeItem("role");
-    router.push("/");
-  };
+  const handleLogout = () => signOut({ callbackUrl: "/" });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
-  };
+  const handleFileChange = (e) => setFile(e.target.files[0]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!file) {
-      setStatus("Silakan pilih file sertifikat terlebih dahulu.");
+      setUploadStatus("Silakan pilih file sertifikat terlebih dahulu.");
       return;
     }
 
-    setStatus("Sedang mengunggah...");
+    setUploadStatus("Sedang mengunggah...");
     setResult(null);
 
     const data = new FormData();
@@ -50,6 +51,8 @@ export default function MahasiswaPage() {
     data.append("tingkat", formData.tingkat);
     data.append("tanggal", formData.tanggal);
     data.append("peringkat", formData.peringkat);
+    data.append("mahasiswa_email", session.user.email);
+    data.append("nama_display", session.user.name ?? session.user.email);
     data.append("file", file);
 
     try {
@@ -61,7 +64,7 @@ export default function MahasiswaPage() {
       if (response.ok) {
         const resData = await response.json();
         setResult(resData);
-        setStatus("Selesai!");
+        setUploadStatus("Selesai!");
 
         if (resData.uploaded) {
           setFormData({ nama_lomba: "", tingkat: "", tanggal: "", peringkat: "" });
@@ -69,11 +72,11 @@ export default function MahasiswaPage() {
           e.target.reset();
         }
       } else {
-        setStatus("Gagal mengunggah sertifikat. Cek koneksi backend.");
+        setUploadStatus("Gagal mengunggah sertifikat. Cek koneksi backend.");
       }
     } catch (error) {
       console.error("Error:", error);
-      setStatus("Terjadi kesalahan saat menghubungi server.");
+      setUploadStatus("Terjadi kesalahan saat menghubungi server.");
     }
   };
 
@@ -87,12 +90,16 @@ export default function MahasiswaPage() {
             <h1 className="text-3xl font-bold text-gray-900">Anti-Double Claim</h1>
             <p className="mt-1 text-gray-600 text-sm">Sistem Deteksi Klaim Sertifikat Ganda</p>
           </div>
-          <button
-            onClick={handleLogout}
-            className="text-sm text-red-500 hover:underline"
-          >
-            Keluar
-          </button>
+          <div className="text-right">
+            <p className="text-sm text-gray-700 font-medium">{session.user.name}</p>
+            <p className="text-xs text-gray-400">{session.user.email}</p>
+            <button
+              onClick={handleLogout}
+              className="text-xs text-red-500 hover:underline mt-1"
+            >
+              Keluar
+            </button>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -172,19 +179,17 @@ export default function MahasiswaPage() {
             />
           </div>
 
-          <div>
-            <button
-              type="submit"
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              Kirim Klaim
-            </button>
-          </div>
+          <button
+            type="submit"
+            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            Kirim Klaim
+          </button>
         </form>
 
-        {status && !result && (
+        {uploadStatus && !result && (
           <div className="mt-4 p-3 rounded-md text-sm text-center bg-blue-100 text-blue-800">
-            {status}
+            {uploadStatus}
           </div>
         )}
 

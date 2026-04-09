@@ -71,17 +71,20 @@ async def upload_certificate(
     tingkat: str = Form(...),
     tanggal: str = Form(...),
     peringkat: str = Form(...),
+    mahasiswa_email: str = Form(...),
+    nama_display: str = Form(...),
     file: UploadFile = File(...)
 ):
     try:
-        print(f"--- Menerima upload: {nama_lomba} ---")
+        print(f"--- Menerima upload: {nama_lomba} dari {mahasiswa_email} ---")
 
         file_location = os.path.join(UPLOAD_FOLDER, file.filename)
         with open(file_location, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
         print(f"File disimpan di: {file_location}")
 
-        result = insert_claim(nama_lomba, tingkat, tanggal, peringkat, file_location)
+        result = insert_claim(nama_lomba, tingkat, tanggal, peringkat, file_location,
+                              mahasiswa_email=mahasiswa_email, nama_display=nama_display)
 
         return {
             "uploaded":           result.get("uploaded", True),
