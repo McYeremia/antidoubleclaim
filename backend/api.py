@@ -7,7 +7,7 @@ import traceback
 
 from backend.database import (
     insert_claim, create_database,
-    get_all_claims, get_claim_by_id,
+    get_all_claims, get_claims_by_email, get_claim_by_id,
     approve_claim, discard_claim,
 )
 
@@ -38,7 +38,9 @@ async def root():
 
 # ── Claims ──────────────────────────────────────────────────────────────────
 @app.get("/claims")
-async def list_claims():
+async def list_claims(email: str = None):
+    if email:
+        return get_claims_by_email(email)
     return get_all_claims()
 
 @app.get("/claims/{claim_id}")

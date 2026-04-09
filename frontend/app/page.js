@@ -27,7 +27,7 @@ export default function LoginPage() {
   const handleGoogleLogin = async () => {
     setLoadingGoogle(true);
     setError("");
-    await signIn("google", { callbackUrl: "/mahasiswa" });
+    await signIn("google", { callbackUrl: "/mahasiswa/dashboard" });
   };
 
   return (
