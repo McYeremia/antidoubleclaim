@@ -215,6 +215,19 @@ def get_all_claims():
     conn.close()
     return [_row_to_dict(row) for row in rows]
 
+def get_claims_by_email(email):
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id, nama_lomba, tingkat, tanggal, peringkat,
+               sertifikat_path, status, mahasiswa_email, nama_display,
+               mirip_dengan_id, verified_by, verified_at
+        FROM CLAIMS WHERE mahasiswa_email = ? ORDER BY id DESC
+    """, (email,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [_row_to_dict(row) for row in rows]
+
 def get_claim_by_id(claim_id):
     conn = _get_conn()
     cursor = conn.cursor()
