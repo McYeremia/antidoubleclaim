@@ -1,94 +1,122 @@
 # Anti-Double Claim
 
-Sistem deteksi klaim sertifikat ganda untuk mencegah mahasiswa mengklaim hadiah/penghargaan yang sama lebih dari satu kali.
+Sistem pencatatan dan deteksi klaim sertifikat ganda untuk mahasiswa berbasis **perceptual hashing (pHash)** dan **fuzzy string matching**. Dibangun sebagai bagian dari skripsi di Universitas Kristen Duta Wacana (UKDW).
 
-## Latar Belakang
+---
 
-Dalam proses klaim hadiah kompetisi oleh mahasiswa, terdapat potensi kecurangan berupa pengklaiman sertifikat yang sama lebih dari satu kali (double claim). Sistem ini dirancang untuk mendeteksi hal tersebut secara otomatis melalui dua tahap verifikasi: kesamaan teks metadata dan kesamaan visual sertifikat.
+## Deskripsi Sistem
 
-## Aktor
+Mahasiswa mengajukan klaim prestasi (lomba mandiri / rekognisi non-lomba) beserta dokumen pendukung melalui form multi-step. Sistem mendeteksi secara otomatis apakah sertifikat yang diunggah memiliki kemiripan visual dengan sertifikat yang sudah ada di database. Operator kemudian meninjau dan memverifikasi klaim.
 
-| Aktor | Peran |
-|---|---|
-| **Mahasiswa (User)** | Mengajukan klaim lomba beserta sertifikat |
-| **Operator** | Mengecek dan memvalidasi klaim yang masuk |
-
-## Alur Kerja (MVP)
+### Alur Sistem
 
 ```
-Mahasiswa input klaim
-        │
-        ▼
-[TAHAP 1] Fuzzy String Matching
-Cek kesamaan nama lomba & atribut metadata
-(nama lomba, tingkat, tanggal, peringkat)
-        │
-        ├─ Tidak mirip ──► Status: AMAN
-        │
-        └─ Mirip ─────────► Tandai sementara
-                                    │
-                                    ▼
-                    [TAHAP 2] Perceptual Hash (pHash)
-                    Bandingkan hash visual sertifikat
-                    menggunakan Hamming distance
-                                    │
-                           ┌────────┴────────┐
-                           ▼                 ▼
-                      DUPLIKAT           AMAN
-               (distance ≤ threshold)
+Mahasiswa login (Google OAuth — @students.ukdw.ac.id)
+  → Mengisi form multi-step pengajuan klaim (6 langkah)
+  → Upload sertifikat → pHash detection otomatis
+      ├─ Mirip (distance ≤ 10) + peringkat sama  → status "perlu ditinjau"
+      └─ Tidak mirip / peringkat beda             → status "belum dicek"
+  → Data tersimpan di CLAIMS (deteksi) + PENGAJUAN (data lengkap)
+
+Operator login (password)
+  → Dashboard: lihat semua klaim berdasarkan status
+  → Detail klaim: data lengkap pengajuan + preview sertifikat
+  → Approve → status "sudah dicek"
+  → Discard → klaim dihapus
 ```
+
+---
 
 ## Teknologi
 
-**Backend**
-- Python + FastAPI
-- SQLite (database lokal)
-- `imagehash` — generate perceptual hash (pHash) dari gambar sertifikat
-- `pdf2image` + Poppler — konversi PDF ke gambar sebelum di-hash
-- `RapidFuzz` — fuzzy string matching untuk perbandingan metadata teks
+| Bagian | Stack |
+|---|---|
+| Backend | Python 3, FastAPI, SQLite |
+| Frontend | Next.js 16, Tailwind CSS |
+| Autentikasi | NextAuth.js + Google OAuth 2.0 |
+| Deteksi Visual | `imagehash` (pHash + Hamming distance) |
+| Deteksi Teks | `RapidFuzz` (fuzzy string matching) |
 
-**Frontend**
-- Next.js (React)
-- Tailwind CSS
+---
 
 ## Struktur Proyek
 
 ```
 antidoubleclaim/
 ├── backend/
-│   ├── api.py              # REST API endpoint (FastAPI)
-│   ├── database.py         # Logika penyimpanan & deteksi duplikat
-│   ├── image_hash.py       # Generate pHash & Hamming distance
-│   └── text_similarity.py  # Fuzzy string matching (RapidFuzz)
+│   ├── api.py              # FastAPI endpoints
+│   ├── database.py         # Operasi SQLite (CLAIMS, PENGAJUAN, dll.)
+│   ├── image_hash.py       # Generate & bandingkan pHash
+│   ├── text_similarity.py  # Fuzzy string matching (RapidFuzz)
+│   └── nim_parser.py       # Parse NIM dari email @students.ukdw.ac.id
 ├── frontend/
-│   └── app/
-│       ├── layout.js
-│       └── page.js         # Form upload klaim
-├── claims.db               # Database SQLite
+│   ├── app/
+│   │   ├── page.js                         # Halaman login
+│   │   ├── layout.js                       # Root layout + SessionProvider
+│   │   ├── providers.js                    # NextAuth SessionProvider wrapper
+│   │   ├── auth-error/page.js              # Halaman error autentikasi
+│   │   ├── mahasiswa/
+│   │   │   └── dashboard/
+│   │   │       ├── page.js                 # Dashboard mahasiswa
+│   │   │       └── TambahKlaimWizard.js    # Form multi-step pengajuan klaim
+│   │   ├── operator/
+│   │   │   ├── page.js                     # Dashboard operator
+│   │   │   └── [id]/page.js                # Detail klaim operator
+│   │   └── api/auth/[...nextauth]/
+│   │       └── route.js                    # Konfigurasi NextAuth + Google
+│   ├── .env.local                          # Kredensial OAuth (tidak di-commit)
+│   └── package.json
+├── claims.db               # Database SQLite (auto-generated)
 ├── requirements.txt
 └── README.md
 ```
 
-## Cara Menjalankan
+---
+
+## Database
+
+Tabel di `claims.db`:
+
+| Tabel | Isi |
+|---|---|
+| `CLAIMS` | Data klaim untuk deteksi double (pHash, status, email mahasiswa) |
+| `PENGAJUAN` | Data lengkap form multi-step (semua field pengajuan) |
+| `PENGAJUAN_ANGGOTA` | Data anggota kelompok per pengajuan |
+| `USERS` | Akun operator |
+| `OTP_SESSIONS` | Sesi OTP (reserved) |
+
+`PENGAJUAN.claim_id` → FK ke `CLAIMS.id` (menghubungkan kedua tabel).
+
+---
+
+## Setup & Menjalankan
 
 ### Prasyarat
+
 - Python 3.10+
 - Node.js 18+
-- [Poppler](https://github.com/oschwartz10612/poppler-windows/releases/) (untuk konversi PDF), ekstrak ke `C:\poppler\`
+- Virtual environment Python
+- Akun Google Cloud Console dengan OAuth 2.0 credentials (Web Application)
 
-### Backend
+### 1. Backend
 
 ```bash
-# Install dependencies
-pip install -r requirements.txt
+# Buat dan aktifkan virtual environment
+python -m venv venv
+venv\Scripts\activate        # Windows
+source venv/bin/activate     # Linux/Mac
 
-# Jalankan server
+# Install dependencies
+pip install fastapi uvicorn python-multipart imagehash pillow rapidfuzz
+
+# Jalankan dari root folder
 uvicorn backend.api:app --reload
 ```
 
-Server berjalan di `http://127.0.0.1:8000`
+Backend berjalan di `http://127.0.0.1:8000`.  
+Database `claims.db` dibuat otomatis saat backend pertama kali dijalankan.
 
-### Frontend
+### 2. Frontend
 
 ```bash
 cd frontend
@@ -96,41 +124,74 @@ npm install
 npm run dev
 ```
 
-Aplikasi berjalan di `http://localhost:3000`
+Frontend berjalan di `http://localhost:3000`.
 
-## API Endpoint
+### 3. Konfigurasi `frontend/.env.local`
+
+```env
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=isi_dengan_string_acak
+GOOGLE_CLIENT_ID=isi_dengan_client_id_dari_google_console
+GOOGLE_CLIENT_SECRET=isi_dengan_client_secret_dari_google_console
+```
+
+Google OAuth hanya mengizinkan login dari email `@students.ukdw.ac.id`.  
+Authorized redirect URI yang perlu didaftarkan di Google Console:
+```
+http://localhost:3000/api/auth/callback/google
+```
+
+---
+
+## API Endpoints
 
 | Method | Endpoint | Deskripsi |
 |---|---|---|
-| `GET` | `/` | Cek status backend |
-| `POST` | `/upload` | Upload klaim sertifikat |
+| GET | `/` | Health check |
+| GET | `/nim-info?email=` | Parse NIM dari email mahasiswa |
+| POST | `/upload` | Upload sertifikat + deteksi double claim |
+| GET | `/claims` | Semua klaim (opsional: `?email=` untuk filter per mahasiswa) |
+| GET | `/claims/{id}` | Detail satu klaim |
+| PATCH | `/claims/{id}/approve` | Setujui klaim → status "sudah dicek" |
+| DELETE | `/claims/{id}` | Hapus klaim |
+| POST | `/pengajuan` | Simpan data pengajuan lengkap |
+| GET | `/pengajuan?email=` | Daftar pengajuan per mahasiswa |
+| GET | `/pengajuan/by-claim/{id}` | Data pengajuan berdasarkan claim_id |
 
-### POST `/upload`
+---
 
-**Form Data:**
+## Akun
 
-| Field | Tipe | Keterangan |
+| Role | Cara Login | Keterangan |
 |---|---|---|
-| `nama_lomba` | string | Nama kompetisi |
-| `tingkat` | string | Universitas / Provinsi / Nasional / Internasional |
-| `tanggal` | string | Tanggal sertifikat (YYYY-MM-DD) |
-| `peringkat` | string | Contoh: Juara 1, Finalis |
-| `file` | file | File sertifikat (.jpg, .jpeg, .png, .pdf) |
+| Mahasiswa | Google OAuth | Hanya email `@students.ukdw.ac.id` |
+| Operator | Password | Default: `operator` |
 
-**Response:**
+---
 
-```json
-{
-  "message": "Upload berhasil dan data telah dianalisis",
-  "status": "aman" | "duplikat",
-  "distance": null | <integer>
-}
-```
+## Format NIM UKDW
 
-## Logika Deteksi
+NIM mahasiswa UKDW: 8 digit dengan format `FPAAXXXX`
 
-### Tahap 1 — Fuzzy String Matching
-Menggunakan `token_sort_ratio` dari RapidFuzz untuk membandingkan nama lomba dan atribut lainnya. Nilai similarity dihitung dalam skala 0–100.
+| Posisi | Arti |
+|---|---|
+| F | Kode Fakultas (1=Bisnis, 3=Bioteknologi, 4=Kedokteran, 6=Arsitektur, 7=FTI, 8=Humaniora) |
+| P | Kode Prodi |
+| AA | Dua digit terakhir tahun angkatan (contoh: `22` → 2022) |
+| XXXX | Nomor urut mahasiswa |
 
-### Tahap 2 — Perceptual Hash (pHash)
-Sertifikat dikonversi menjadi hash 64-bit menggunakan algoritma pHash. Dua sertifikat dianggap duplikat jika **Hamming distance ≤ 10** (threshold dapat dikonfigurasi).
+Contoh: `71220001` → FTI / Informatika / Angkatan 2022 / No. 0001
+
+---
+
+## Logika Deteksi Double Claim
+
+1. Sertifikat baru di-upload → generate **pHash** (perceptual hash 64-bit)
+2. Bandingkan dengan semua klaim lama menggunakan **Hamming distance**
+3. Jika `distance ≤ 10` **dan** `peringkat sama` → status **"perlu ditinjau"**
+4. Jika `distance ≤ 10` tapi `peringkat berbeda` → status **"belum dicek"**
+5. Jika `distance > 10` → status **"belum dicek"**
+
+Status yang dilihat mahasiswa disederhanakan:
+- `belum dicek` / `perlu ditinjau` → **"Dalam Proses"**
+- `sudah dicek` → **"Selesai"**
