@@ -90,6 +90,62 @@ def create_database():
     END
     """)
 
+    # ── Tabel PENGAJUAN ───────────────────────────────────────────────────────
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS PENGAJUAN (
+        id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+        mahasiswa_email         TEXT    NOT NULL,
+        nama_display            TEXT    NOT NULL,
+        nomor_wa                TEXT,
+        ada_dospem              TEXT    NOT NULL DEFAULT 'tidak',
+        nidn_dospem             TEXT,
+        surat_tugas_path        TEXT,
+        kategori_simkatmawa     TEXT    NOT NULL,
+        jenis_kepesertaan       TEXT    NOT NULL,
+        nama_kegiatan           TEXT    NOT NULL,
+        kategori_kegiatan       TEXT,
+        tingkatan               TEXT,
+        tahun_kegiatan          TEXT,
+        model_pelaksanaan       TEXT,
+        jumlah_peserta          INTEGER,
+        capaian                 TEXT,
+        tanggal_mulai           TEXT,
+        tanggal_selesai         TEXT,
+        url_penyelenggara       TEXT,
+        keterangan              TEXT,
+        dokumen_sertifikat_path TEXT,
+        foto_penyerahan_path    TEXT,
+        dokumen_lainnya_path    TEXT,
+        nama_lembaga            TEXT,
+        jenis_karya_teks        TEXT,
+        jenis_karya_pilihan     TEXT,
+        deskripsi_karya         TEXT,
+        manfaat_karya           TEXT,
+        nomor_surat             TEXT,
+        tanggal_surat           TEXT,
+        nama_ketua              TEXT,
+        peran_pengeclaim        TEXT,
+        keterangan_kelompok     TEXT,
+        claim_id                INTEGER,
+        setuju                  INTEGER NOT NULL DEFAULT 0,
+        created_at              TEXT    NOT NULL DEFAULT (DATETIME('now', 'localtime')),
+        FOREIGN KEY (claim_id) REFERENCES CLAIMS (id)
+    )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_pengajuan_email ON PENGAJUAN (mahasiswa_email)")
+
+    # ── Tabel PENGAJUAN_ANGGOTA ───────────────────────────────────────────────
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS PENGAJUAN_ANGGOTA (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        pengajuan_id    INTEGER NOT NULL,
+        nama_anggota    TEXT    NOT NULL,
+        nim_anggota     TEXT    NOT NULL,
+        FOREIGN KEY (pengajuan_id) REFERENCES PENGAJUAN (id)
+    )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_anggota_pengajuan ON PENGAJUAN_ANGGOTA (pengajuan_id)")
+
     cursor.execute("""
     INSERT OR IGNORE INTO USERS (username, password_hash, nama, email)
     VALUES (
@@ -159,11 +215,12 @@ def insert_claim(nama_lomba, tingkat, tanggal, peringkat, sertifikat_path,
         str(new_hash), status, mahasiswa_email, nama_display, mirip_dengan_id,
     ))
 
+    claim_id = cursor.lastrowid
     conn.commit()
     conn.close()
 
-    print(f"Klaim disimpan — status={status}")
-    return {"uploaded": True, "flagged": flagged, **detail}
+    print(f"Klaim disimpan — id={claim_id}, status={status}")
+    return {"uploaded": True, "flagged": flagged, "id": claim_id, **detail}
 
 # ---------------------------------------------------------------------------
 # Approve & Discard
@@ -214,6 +271,90 @@ def get_all_claims():
     rows = cursor.fetchall()
     conn.close()
     return [_row_to_dict(row) for row in rows]
+
+def insert_pengajuan(data: dict, anggota: list = None) -> int:
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO PENGAJUAN (
+            mahasiswa_email, nama_display, nomor_wa,
+            ada_dospem, nidn_dospem, surat_tugas_path,
+            kategori_simkatmawa, jenis_kepesertaan,
+            nama_kegiatan, kategori_kegiatan, tingkatan,
+            tahun_kegiatan, model_pelaksanaan, jumlah_peserta,
+            capaian, tanggal_mulai, tanggal_selesai,
+            url_penyelenggara, keterangan,
+            dokumen_sertifikat_path, foto_penyerahan_path, dokumen_lainnya_path,
+            nama_lembaga, jenis_karya_teks, jenis_karya_pilihan,
+            deskripsi_karya, manfaat_karya, nomor_surat, tanggal_surat,
+            nama_ketua, peran_pengeclaim, keterangan_kelompok,
+            claim_id, setuju
+        ) VALUES (
+            ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
+        )
+    """, (
+        data.get("mahasiswa_email"), data.get("nama_display"), data.get("nomor_wa"),
+        data.get("ada_dospem", "tidak"), data.get("nidn_dospem"), data.get("surat_tugas_path"),
+        data.get("kategori_simkatmawa"), data.get("jenis_kepesertaan"),
+        data.get("nama_kegiatan"), data.get("kategori_kegiatan"), data.get("tingkatan"),
+        data.get("tahun_kegiatan"), data.get("model_pelaksanaan"), data.get("jumlah_peserta"),
+        data.get("capaian"), data.get("tanggal_mulai"), data.get("tanggal_selesai"),
+        data.get("url_penyelenggara"), data.get("keterangan"),
+        data.get("dokumen_sertifikat_path"), data.get("foto_penyerahan_path"), data.get("dokumen_lainnya_path"),
+        data.get("nama_lembaga"), data.get("jenis_karya_teks"), data.get("jenis_karya_pilihan"),
+        data.get("deskripsi_karya"), data.get("manfaat_karya"), data.get("nomor_surat"), data.get("tanggal_surat"),
+        data.get("nama_ketua"), data.get("peran_pengeclaim"), data.get("keterangan_kelompok"),
+        data.get("claim_id"), 1 if data.get("setuju") else 0,
+    ))
+    pengajuan_id = cursor.lastrowid
+
+    if anggota:
+        for a in anggota:
+            cursor.execute(
+                "INSERT INTO PENGAJUAN_ANGGOTA (pengajuan_id, nama_anggota, nim_anggota) VALUES (?,?,?)",
+                (pengajuan_id, a.get("nama", ""), a.get("nim", "")),
+            )
+
+    conn.commit()
+    conn.close()
+    return pengajuan_id
+
+
+def get_pengajuan_by_email(email: str) -> list:
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT p.*, GROUP_CONCAT(a.nama_anggota || '|' || a.nim_anggota, ';;') AS anggota_list
+        FROM PENGAJUAN p
+        LEFT JOIN PENGAJUAN_ANGGOTA a ON a.pengajuan_id = p.id
+        WHERE p.mahasiswa_email = ?
+        GROUP BY p.id
+        ORDER BY p.id DESC
+    """, (email,))
+    rows = cursor.fetchall()
+    cols = [d[0] for d in cursor.description]
+    conn.close()
+    return [dict(zip(cols, row)) for row in rows]
+
+
+def get_pengajuan_by_claim_id(claim_id: int):
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT p.*, GROUP_CONCAT(a.nama_anggota || '|' || a.nim_anggota, ';;') AS anggota_list
+        FROM PENGAJUAN p
+        LEFT JOIN PENGAJUAN_ANGGOTA a ON a.pengajuan_id = p.id
+        WHERE p.claim_id = ?
+        GROUP BY p.id
+    """, (claim_id,))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return None
+    cols = [d[0] for d in cursor.description]
+    conn.close()
+    return dict(zip(cols, row))
+
 
 def get_claims_by_email(email):
     conn = _get_conn()
