@@ -455,9 +455,12 @@ export default function DetailKlaim() {
 
   useEffect(() => { fetchAll(); }, [id]);
 
+  const opId = typeof window !== "undefined" ? sessionStorage.getItem("operator_id") : null;
+  const opHeaders = opId ? { "x-operator-id": opId } : {};
+
   const handleApprove = async () => {
     setActionLoading(true);
-    await fetch(`http://127.0.0.1:8000/claims/${id}/approve`, { method: "PATCH" });
+    await fetch(`http://127.0.0.1:8000/claims/${id}/approve`, { method: "PATCH", headers: opHeaders });
     await fetchAll();
     setActionLoading(false);
   };
@@ -465,7 +468,7 @@ export default function DetailKlaim() {
   const handleDiscard = async () => {
     if (!confirm("Yakin ingin menghapus klaim ini?")) return;
     setActionLoading(true);
-    await fetch(`http://127.0.0.1:8000/claims/${id}`, { method: "DELETE" });
+    await fetch(`http://127.0.0.1:8000/claims/${id}`, { method: "DELETE", headers: opHeaders });
     router.push("/operator");
   };
 
@@ -521,7 +524,17 @@ export default function DetailKlaim() {
             <InfoRow label="Tanggal" value={claim.tanggal} />
             <InfoRow label="Mahasiswa"   value={claim.nama_display} />
             <InfoRow label="Email"       value={claim.mahasiswa_email} />
-            {claim.verified_at && <InfoRow label="Diverifikasi" value={claim.verified_at} />}
+            {claim.verified_by_nama && (
+              <div className="col-span-2 mt-1 rounded-lg bg-green-50 border border-green-200 px-4 py-3 flex items-center gap-3">
+                <svg className="w-4 h-4 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <p className="text-xs font-semibold text-green-700">Diverifikasi oleh {claim.verified_by_nama}</p>
+                  <p className="text-xs text-green-500 mt-0.5">{claim.verified_at ?? "—"}</p>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">

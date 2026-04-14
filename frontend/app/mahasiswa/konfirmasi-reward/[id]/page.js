@@ -50,11 +50,30 @@ function Select({ children, error, ...props }) {
   );
 }
 
-function FileInput({ label, name, onChange, required, hint, currentFile, error }) {
+function FileInput({ label, name, onChange, required, hint, currentFile, existingPath, error }) {
+  const existingFilename = existingPath ? existingPath.split(/[\\/]/).pop() : null;
+  const existingUrl      = existingFilename ? `http://127.0.0.1:8000/uploads/${existingFilename}` : null;
+  const hasExisting      = !!existingUrl;
+  // Jika ada file lama, upload jadi opsional (tidak wajib)
+  const isRequired = required && !hasExisting;
+
   return (
     <div>
-      <Label required={required}>{label}</Label>
+      <Label required={isRequired}>{label}</Label>
       {hint && <p className="text-xs text-gray-400 mb-1">{hint}</p>}
+
+      {/* File lama — tampil jika ada dan belum diganti */}
+      {hasExisting && !currentFile && (
+        <div className="mb-1.5 flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+          <svg className="w-4 h-4 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span className="text-xs text-green-700 flex-1 truncate">File tersimpan: {existingFilename}</span>
+          <a href={existingUrl} target="_blank" rel="noopener noreferrer"
+             className="text-xs text-blue-600 hover:underline flex-shrink-0">Lihat ↗</a>
+        </div>
+      )}
+
       <input
         type="file"
         name={name}
@@ -62,10 +81,13 @@ function FileInput({ label, name, onChange, required, hint, currentFile, error }
         accept=".pdf"
         className="block w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
       />
+      {hasExisting && !currentFile && (
+        <p className="mt-0.5 text-xs text-gray-400">Kosongkan jika tidak ingin mengganti file.</p>
+      )}
       {currentFile && (
         <p className="mt-1 text-xs text-green-600 flex items-center gap-1">
           <span>✓</span>
-          <span className="truncate">{currentFile.name}</span>
+          <span className="truncate">{currentFile.name} (akan mengganti file lama)</span>
         </p>
       )}
       {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
@@ -114,13 +136,15 @@ export default function KonfirmasiRewardForm() {
   const router                      = useRouter();
   const { data: session, status }   = useSession();
 
-  const [claim,      setClaim]      = useState(null);
-  const [loading,    setLoading]    = useState(true);
-  const [notFound,   setNotFound]   = useState(false);
+  const [claim,         setClaim]         = useState(null);
+  const [loading,       setLoading]       = useState(true);
+  const [notFound,      setNotFound]      = useState(false);
   const [alreadyFilled, setAlreadyFilled] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted,  setSubmitted]  = useState(false);
-  const [errors,     setErrors]     = useState({});
+  const [isReturned,    setIsReturned]    = useState(false);   // status dikembalikan
+  const [existingReward, setExistingReward] = useState(null);  // data lama untuk pre-fill
+  const [submitting,    setSubmitting]    = useState(false);
+  const [submitted,     setSubmitted]     = useState(false);
+  const [errors,        setErrors]        = useState({});
 
   // NIM diambil dari email (format: NIM@students.ukdw.ac.id)
   const nim = session?.user?.email?.split("@")[0] ?? "";
@@ -175,7 +199,31 @@ export default function KonfirmasiRewardForm() {
         const tahun = claimData.tanggal.substring(0, 4);
         setForm(f => ({ ...f, tahun_kegiatan: tahun }));
       }
-      if (rewardRes.ok) setAlreadyFilled(true);
+      if (rewardRes.ok) {
+        const rewardData = await rewardRes.json();
+        setExistingReward(rewardData);
+        if (rewardData.reward_status === "dikembalikan") {
+          setIsReturned(true);
+          // Pre-fill form dengan data lama
+          setForm(f => ({
+            ...f,
+            tahun_klaim:           rewardData.tahun_klaim           ?? f.tahun_klaim,
+            periode:               rewardData.periode               ?? f.periode,
+            nomor_urut_lampiran:   rewardData.nomor_urut_lampiran   ?? f.nomor_urut_lampiran,
+            kategori_lomba:        rewardData.kategori_lomba        ?? f.kategori_lomba,
+            kompetisi_puspresnas:  rewardData.kompetisi_puspresnas  ?? f.kompetisi_puspresnas,
+            judul_lomba:           rewardData.judul_lomba           ?? f.judul_lomba,
+            tahun_kegiatan:        rewardData.tahun_kegiatan        ?? f.tahun_kegiatan,
+            nama_ketua:            rewardData.nama_ketua            ?? f.nama_ketua,
+            nomor_wa:              rewardData.nomor_wa              ?? f.nomor_wa,
+            nama_pemilik_rekening: rewardData.nama_pemilik_rekening ?? f.nama_pemilik_rekening,
+            bank:                  rewardData.bank                  ?? f.bank,
+            nomor_rekening:        rewardData.nomor_rekening        ?? f.nomor_rekening,
+          }));
+        } else {
+          setAlreadyFilled(true);
+        }
+      }
     }).catch(() => setNotFound(true))
       .finally(() => setLoading(false));
   }, [id]);
@@ -212,12 +260,16 @@ export default function KonfirmasiRewardForm() {
     if (!form.nomor_wa.trim())                                  errs.nomor_wa              = "Wajib diisi";
     if (!form.nama_pemilik_rekening.trim())                     errs.nama_pemilik_rekening = "Wajib diisi";
     if (kategoriDipilih && !form.nomor_rekening.trim())         errs.nomor_rekening        = "Wajib diisi";
-    if (!files.foto_buku_tabungan)  errs.foto_buku_tabungan = "Wajib diupload";
-    if (!files.foto_ktm)            errs.foto_ktm           = "Wajib diupload";
-    if (!files.foto_ktp)            errs.foto_ktp           = "Wajib diupload";
-    if (!files.pakta_integritas)    errs.pakta_integritas   = "Wajib diupload";
-    if ((isPuspresnas || isNonPuspresnas) && !files.laporan_akhir) errs.laporan_akhir = "Wajib diupload";
-    if (isPublikasi && !files.karya_publikasi)                  errs.karya_publikasi  = "Wajib diupload";
+    // File wajib upload hanya jika belum ada file lama (mode kirim pertama kali)
+    const ex = existingReward;
+    if (!files.foto_buku_tabungan && !ex?.foto_buku_tabungan_path) errs.foto_buku_tabungan = "Wajib diupload";
+    if (!files.foto_ktm           && !ex?.foto_ktm_path)           errs.foto_ktm           = "Wajib diupload";
+    if (!files.foto_ktp           && !ex?.foto_ktp_path)           errs.foto_ktp           = "Wajib diupload";
+    if (!files.pakta_integritas   && !ex?.pakta_integritas_path)   errs.pakta_integritas   = "Wajib diupload";
+    if ((isPuspresnas || isNonPuspresnas) && !files.laporan_akhir && !ex?.laporan_akhir_path)
+      errs.laporan_akhir = "Wajib diupload";
+    if (isPublikasi && !files.karya_publikasi && !ex?.karya_publikasi_path)
+      errs.karya_publikasi = "Wajib diupload";
     if (!bersedia)  errs.bersedia  = "Wajib dicentang";
     if (!dataBenar) errs.data_benar = "Wajib dicentang";
     return errs;
@@ -252,10 +304,12 @@ export default function KonfirmasiRewardForm() {
     });
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/reward-konfirmasi", {
-        method: "POST",
-        body: formData,
-      });
+      const url    = isReturned
+        ? `http://127.0.0.1:8000/reward-konfirmasi/${existingReward.id}`
+        : "http://127.0.0.1:8000/reward-konfirmasi";
+      const method = isReturned ? "PUT" : "POST";
+
+      const res = await fetch(url, { method, body: formData });
       if (res.ok) {
         setSubmitted(true);
         window.scrollTo({ top: 0, behavior: "smooth" });
@@ -299,11 +353,13 @@ export default function KonfirmasiRewardForm() {
           </svg>
         </div>
         <h1 className="text-2xl font-bold text-gray-900">
-          {alreadyFilled && !submitted ? "Data Sudah Dikirim" : "Data Berhasil Dikirim!"}
+          {alreadyFilled && !submitted ? "Data Sudah Dikirim" : submitted && isReturned ? "Data Berhasil Diperbaiki!" : "Data Berhasil Dikirim!"}
         </h1>
         <p className="text-gray-500 text-sm">
           {alreadyFilled && !submitted
             ? "Kamu sudah pernah mengisi data reward untuk klaim ini."
+            : submitted && isReturned
+            ? `Data reward untuk klaim "${claim?.nama_lomba}" telah diperbaiki dan dikirim ulang. Operator akan meninjau kembali.`
             : `Data rekening untuk klaim "${claim?.nama_lomba}" telah berhasil dikirimkan. Divisi Bakat Minat akan segera memproses reward kamu.`
           }
         </p>
@@ -336,6 +392,22 @@ export default function KonfirmasiRewardForm() {
             <span className="text-gray-600">{claim?.peringkat} · {claim?.tingkat}</span>
           </p>
         </div>
+
+        {/* Banner dikembalikan */}
+        {isReturned && existingReward?.catatan_operator && (
+          <div className="bg-orange-50 border border-orange-300 rounded-xl px-5 py-4">
+            <div className="flex gap-3">
+              <svg className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div>
+                <p className="text-sm font-semibold text-orange-800 mb-1">Form dikembalikan oleh Operator</p>
+                <p className="text-sm text-orange-700">{existingReward.catatan_operator}</p>
+                <p className="text-xs text-orange-500 mt-1">Perbaiki data di bawah, lalu kirim ulang. File yang tidak diganti akan tetap digunakan.</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Error summary */}
         {hasErrors && (
@@ -553,6 +625,7 @@ export default function KonfirmasiRewardForm() {
                   required
                   hint={`Format nama file: ${isPuspresnas ? (form.kompetisi_puspresnas || "KategoriKompetisi") : isNonPuspresnas ? "NonPUSPRESNAS" : "Publikasi"}_${form.nama_pemilik_rekening || "NamaPemilik"}_Buku Tabungan`}
                   currentFile={files.foto_buku_tabungan}
+                  existingPath={existingReward?.foto_buku_tabungan_path}
                   error={errors.foto_buku_tabungan}
                 />
 
@@ -563,6 +636,7 @@ export default function KonfirmasiRewardForm() {
                   required
                   hint={`Format nama file: ${isPuspresnas ? (form.kompetisi_puspresnas || "KategoriKompetisi") : isNonPuspresnas ? "NonPUSPRESNAS" : "Publikasi"}_${form.nama_pemilik_rekening || "NamaPemilik"}_KTM`}
                   currentFile={files.foto_ktm}
+                  existingPath={existingReward?.foto_ktm_path}
                   error={errors.foto_ktm}
                 />
 
@@ -573,6 +647,7 @@ export default function KonfirmasiRewardForm() {
                   required
                   hint={`Format nama file: ${isPuspresnas ? (form.kompetisi_puspresnas || "KategoriKompetisi") : isNonPuspresnas ? "NonPUSPRESNAS" : "Publikasi"}_${form.nama_pemilik_rekening || "NamaPemilik"}_KTP`}
                   currentFile={files.foto_ktp}
+                  existingPath={existingReward?.foto_ktp_path}
                   error={errors.foto_ktp}
                 />
 
@@ -583,6 +658,7 @@ export default function KonfirmasiRewardForm() {
                     onChange={handleFileChange}
                     required
                     currentFile={files.pakta_integritas}
+                    existingPath={existingReward?.pakta_integritas_path}
                     error={errors.pakta_integritas}
                   />
                   <p className="mt-1 text-xs text-blue-600">
@@ -599,6 +675,7 @@ export default function KonfirmasiRewardForm() {
                     required
                     hint="Lampirkan Laporan Akhir / Proposal Akhir / Karya / Bukti Pendukung."
                     currentFile={files.laporan_akhir}
+                    existingPath={existingReward?.laporan_akhir_path}
                     error={errors.laporan_akhir}
                   />
                 )}
@@ -611,6 +688,7 @@ export default function KonfirmasiRewardForm() {
                     required
                     hint="Lampirkan karya publikasi."
                     currentFile={files.karya_publikasi}
+                    existingPath={existingReward?.karya_publikasi_path}
                     error={errors.karya_publikasi}
                   />
                 )}

@@ -277,9 +277,15 @@ def insert_claim(nama_lomba, tingkat, tanggal, peringkat, sertifikat_path,
 # ---------------------------------------------------------------------------
 # Approve & Discard
 # ---------------------------------------------------------------------------
-def approve_claim(claim_id):
+def approve_claim(claim_id, operator_id=None):
     conn = _get_conn()
-    conn.execute("UPDATE CLAIMS SET status = 'sudah dicek' WHERE id = ?", (claim_id,))
+    if operator_id:
+        conn.execute(
+            "UPDATE CLAIMS SET status = 'sudah dicek', verified_by = ? WHERE id = ?",
+            (operator_id, claim_id)
+        )
+    else:
+        conn.execute("UPDATE CLAIMS SET status = 'sudah dicek' WHERE id = ?", (claim_id,))
     conn.commit()
     conn.close()
 
@@ -306,6 +312,7 @@ def _row_to_dict(row):
         "mirip_dengan_id":     row[9],
         "verified_by":         row[10],
         "verified_at":         row[11],
+        "verified_by_nama":    row[12] if len(row) > 12 else None,
     }
 
 # ---------------------------------------------------------------------------
@@ -315,10 +322,13 @@ def get_all_claims():
     conn = _get_conn()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT id, nama_lomba, tingkat, tanggal, peringkat,
-               sertifikat_path, status, mahasiswa_email, nama_display,
-               mirip_dengan_id, verified_by, verified_at
-        FROM CLAIMS ORDER BY id DESC
+        SELECT c.id, c.nama_lomba, c.tingkat, c.tanggal, c.peringkat,
+               c.sertifikat_path, c.status, c.mahasiswa_email, c.nama_display,
+               c.mirip_dengan_id, c.verified_by, c.verified_at,
+               u.nama AS verified_by_nama
+        FROM CLAIMS c
+        LEFT JOIN USERS u ON u.id = c.verified_by
+        ORDER BY c.id DESC
     """)
     rows = cursor.fetchall()
     conn.close()
@@ -440,10 +450,13 @@ def get_claims_by_email(email):
     conn = _get_conn()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT id, nama_lomba, tingkat, tanggal, peringkat,
-               sertifikat_path, status, mahasiswa_email, nama_display,
-               mirip_dengan_id, verified_by, verified_at
-        FROM CLAIMS WHERE mahasiswa_email = ? ORDER BY id DESC
+        SELECT c.id, c.nama_lomba, c.tingkat, c.tanggal, c.peringkat,
+               c.sertifikat_path, c.status, c.mahasiswa_email, c.nama_display,
+               c.mirip_dengan_id, c.verified_by, c.verified_at,
+               u.nama AS verified_by_nama
+        FROM CLAIMS c
+        LEFT JOIN USERS u ON u.id = c.verified_by
+        WHERE c.mahasiswa_email = ? ORDER BY c.id DESC
     """, (email,))
     rows = cursor.fetchall()
     conn.close()
@@ -453,10 +466,13 @@ def get_claim_by_id(claim_id):
     conn = _get_conn()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT id, nama_lomba, tingkat, tanggal, peringkat,
-               sertifikat_path, status, mahasiswa_email, nama_display,
-               mirip_dengan_id, verified_by, verified_at
-        FROM CLAIMS WHERE id = ?
+        SELECT c.id, c.nama_lomba, c.tingkat, c.tanggal, c.peringkat,
+               c.sertifikat_path, c.status, c.mahasiswa_email, c.nama_display,
+               c.mirip_dengan_id, c.verified_by, c.verified_at,
+               u.nama AS verified_by_nama
+        FROM CLAIMS c
+        LEFT JOIN USERS u ON u.id = c.verified_by
+        WHERE c.id = ?
     """, (claim_id,))
     row = cursor.fetchone()
     conn.close()
@@ -496,6 +512,53 @@ def insert_reward_konfirmasi(data: dict) -> int:
     conn.commit()
     conn.close()
     return reward_id
+
+
+def update_reward_konfirmasi(reward_id: int, data: dict):
+    """Update data form reward + reset status ke 'menunggu' untuk pengiriman ulang."""
+    TEXT_FIELDS = [
+        "tahun_klaim", "periode", "nomor_urut_lampiran", "kategori_lomba",
+        "kompetisi_puspresnas", "judul_lomba", "tahun_kegiatan",
+        "nama_ketua", "nomor_wa", "nama_pemilik_rekening", "bank", "nomor_rekening",
+    ]
+    FILE_FIELDS = [
+        "foto_buku_tabungan_path", "foto_ktm_path", "foto_ktp_path",
+        "pakta_integritas_path", "laporan_akhir_path", "karya_publikasi_path",
+    ]
+
+    sets, values = [], []
+
+    for col in TEXT_FIELDS:
+        if col in data and data[col] is not None:
+            sets.append(f"{col} = ?")
+            values.append(data[col])
+
+    for col in FILE_FIELDS:
+        if col in data and data[col]:          # hanya update jika ada file baru
+            sets.append(f"{col} = ?")
+            values.append(data[col])
+
+    if "bersedia" in data:
+        sets.append("bersedia = ?")
+        values.append(1 if data["bersedia"] else 0)
+    if "data_benar" in data:
+        sets.append("data_benar = ?")
+        values.append(1 if data["data_benar"] else 0)
+
+    # Selalu reset status dan hapus catatan operator
+    sets += ["reward_status = ?", "catatan_operator = ?"]
+    values += ["menunggu", None]
+
+    if not sets:
+        return
+
+    conn = _get_conn()
+    conn.execute(
+        f"UPDATE REWARD_KONFIRMASI SET {', '.join(sets)} WHERE id = ?",
+        (*values, reward_id)
+    )
+    conn.commit()
+    conn.close()
 
 
 def get_reward_konfirmasi_by_claim_id(claim_id: int):
