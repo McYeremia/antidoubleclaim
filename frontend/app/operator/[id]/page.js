@@ -176,6 +176,21 @@ function PengajuanDetail({ p }) {
         </div>
       </div>
 
+      {/* Estimasi Reward */}
+      {p.estimasi_reward != null && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold text-blue-700">Estimasi Dana Penghargaan</p>
+            <p className="text-xs text-blue-400 mt-0.5">
+              Berdasarkan SK Rektor No. 078/B.02/UKDW/2023 · Non PUSPRESNAS
+            </p>
+          </div>
+          <p className="text-2xl font-bold text-blue-700">
+            {"Rp " + Number(p.estimasi_reward).toLocaleString("id-ID")}
+          </p>
+        </div>
+      )}
+
       {/* Timestamp */}
       <div>
         <InfoRow label="Tanggal Pengajuan" value={p.created_at} />

@@ -39,6 +39,11 @@ const IconReward = () => (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
   </svg>
 );
+const IconDoc = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+  </svg>
+);
 
 // ── Popup: Form Tambah Klaim — digantikan TambahKlaimWizard ──────────────────
 function TambahKlaimModal({ session, onClose, onSuccess }) {
@@ -342,6 +347,19 @@ function DetailModal({ claim, onClose }) {
                 <FileLink label="Dokumen Lainnya"  path={pengajuan.dokumen_lainnya_path} />
               </div>
 
+              {/* Estimasi Reward */}
+              {pengajuan.estimasi_reward != null && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center justify-between mt-2">
+                  <div>
+                    <p className="text-sm font-semibold text-blue-700">Estimasi Dana Penghargaan</p>
+                    <p className="text-xs text-blue-400 mt-0.5">SK Rektor No. 078/B.02/UKDW/2023 · Non PUSPRESNAS</p>
+                  </div>
+                  <p className="text-xl font-bold text-blue-700">
+                    {"Rp " + Number(pengajuan.estimasi_reward).toLocaleString("id-ID")}
+                  </p>
+                </div>
+              )}
+
               <div className="pt-3">
                 <InfoRow label="Tanggal Pengajuan" value={pengajuan.created_at} />
               </div>
@@ -463,21 +481,27 @@ function DaftarKlaim({ session, search }) {
 // ── Konten: Konfirmasi Reward ─────────────────────────────────────────────────
 function KonfirmasiReward({ session }) {
   const router = useRouter();
-  const [claims,    setClaims]    = useState([]);
-  const [rewardMap, setRewardMap] = useState({});
-  const [loading,   setLoading]   = useState(true);
+  const [claims,       setClaims]       = useState([]);
+  const [rewardMap,    setRewardMap]    = useState({});
+  const [pengajuanMap, setPengajuanMap] = useState({});
+  const [loading,      setLoading]      = useState(true);
 
   useEffect(() => {
     Promise.all([
       fetch(`http://127.0.0.1:8000/claims?email=${encodeURIComponent(session.user.email)}`),
       fetch(`http://127.0.0.1:8000/reward-konfirmasi?email=${encodeURIComponent(session.user.email)}`),
-    ]).then(async ([claimRes, rewardRes]) => {
-      const claimData  = await claimRes.json();
-      const rewardData = rewardRes.ok ? await rewardRes.json() : [];
+      fetch(`http://127.0.0.1:8000/pengajuan?email=${encodeURIComponent(session.user.email)}`),
+    ]).then(async ([claimRes, rewardRes, pengajuanRes]) => {
+      const claimData     = await claimRes.json();
+      const rewardData    = rewardRes.ok     ? await rewardRes.json()    : [];
+      const pengajuanData = pengajuanRes.ok  ? await pengajuanRes.json() : [];
       setClaims(claimData.filter(c => c.status === "sudah dicek"));
-      const map = {};
-      rewardData.forEach(r => { map[r.claim_id] = r; });
-      setRewardMap(map);
+      const rMap = {};
+      rewardData.forEach(r => { rMap[r.claim_id] = r; });
+      setRewardMap(rMap);
+      const pMap = {};
+      pengajuanData.forEach(p => { if (p.claim_id) pMap[p.claim_id] = p; });
+      setPengajuanMap(pMap);
     }).catch(() => setClaims([]))
       .finally(() => setLoading(false));
   }, []);
@@ -493,33 +517,40 @@ function KonfirmasiReward({ session }) {
             <th className="px-4 py-3">Nama Lomba</th>
             <th className="px-4 py-3">Tingkat</th>
             <th className="px-4 py-3">Peringkat</th>
-            <th className="px-4 py-3">Tanggal</th>
+            <th className="px-4 py-3">Estimasi Dana</th>
             <th className="px-4 py-3 text-right">{showButton ? "Aksi" : "Status Reward"}</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
-          {items.map(claim => (
-            <tr key={claim.id} className="hover:bg-gray-50 transition-colors">
-              <td className="px-4 py-3 font-medium text-gray-900">{claim.nama_lomba}</td>
-              <td className="px-4 py-3 text-gray-600">{claim.tingkat}</td>
-              <td className="px-4 py-3 text-gray-600">{claim.peringkat}</td>
-              <td className="px-4 py-3 text-gray-600">{claim.tanggal}</td>
-              <td className="px-4 py-3 text-right">
-                {showButton ? (
-                  <button
-                    onClick={() => router.push(`/mahasiswa/konfirmasi-reward/${claim.id}`)}
-                    className="px-3 py-1.5 rounded-md text-xs font-semibold bg-orange-500 text-white hover:bg-orange-600 transition-colors"
-                  >
-                    Isi Data Reward
-                  </button>
-                ) : (
-                  <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${REWARD_STYLE[rewardMap[claim.id]?.reward_status] ?? "bg-gray-100 text-gray-600"}`}>
-                    {REWARD_LABEL[rewardMap[claim.id]?.reward_status] ?? "—"}
-                  </span>
-                )}
-              </td>
-            </tr>
-          ))}
+          {items.map(claim => {
+            const estimasi = pengajuanMap[claim.id]?.estimasi_reward;
+            return (
+              <tr key={claim.id} className="hover:bg-gray-50 transition-colors">
+                <td className="px-4 py-3 font-medium text-gray-900">{claim.nama_lomba}</td>
+                <td className="px-4 py-3 text-gray-600">{claim.tingkat}</td>
+                <td className="px-4 py-3 text-gray-600">{claim.peringkat}</td>
+                <td className="px-4 py-3">
+                  {estimasi != null
+                    ? <span className="font-semibold text-blue-700">{"Rp " + Number(estimasi).toLocaleString("id-ID")}</span>
+                    : <span className="text-gray-400">—</span>}
+                </td>
+                <td className="px-4 py-3 text-right">
+                  {showButton ? (
+                    <button
+                      onClick={() => router.push(`/mahasiswa/konfirmasi-reward/${claim.id}`)}
+                      className="px-3 py-1.5 rounded-md text-xs font-semibold bg-orange-500 text-white hover:bg-orange-600 transition-colors"
+                    >
+                      Isi Data Reward
+                    </button>
+                  ) : (
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${REWARD_STYLE[rewardMap[claim.id]?.reward_status] ?? "bg-gray-100 text-gray-600"}`}>
+                      {REWARD_LABEL[rewardMap[claim.id]?.reward_status] ?? "—"}
+                    </span>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -560,6 +591,262 @@ function KonfirmasiReward({ session }) {
           )}
         </>
       )}
+    </div>
+  );
+}
+
+// ── Konten: SK Rektor ─────────────────────────────────────────────────────────
+function SKRektor() {
+  const [activeTab, setActiveTab] = useState("ketentuan");
+
+  const tabs = [
+    { key: "ketentuan", label: "Ketentuan Umum" },
+    { key: "mahasiswa", label: "Tabel Penghargaan Mahasiswa" },
+    { key: "petunjuk",  label: "Petunjuk Teknis" },
+  ];
+
+  return (
+    <div>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold text-gray-900">SK Rektor No. 078/B.02/UKDW/2023</h2>
+          <p className="text-sm text-gray-500 mt-1">Aturan Pemberian Penghargaan Bidang Kemahasiswaan UKDW</p>
+        </div>
+        <a
+          href="/sk-rektor.pdf"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors flex-shrink-0"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          Lihat PDF Asli
+        </a>
+      </div>
+
+      {/* Tab navigation */}
+      <div className="flex gap-2 mb-6 border-b border-gray-200">
+        {tabs.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setActiveTab(t.key)}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${
+              activeTab === t.key
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab: Ketentuan Umum */}
+      {activeTab === "ketentuan" && (
+        <div className="space-y-4">
+          <Section title="Latar Belakang (Pasal 1)">
+            <p>
+              Selain menekuni bidang akademik, mahasiswa diharapkan mengembangkan <em>soft skills</em> agar
+              menjadi lulusan yang tangguh, unggul, dan berprestasi. Dosen atau staf pendamping serta mahasiswa
+              diberikan penghargaan atas keaktifan mengikuti berbagai lomba dan kompetisi. Penghargaan
+              (reward) yang diberikan diharapkan mampu mendorong dan memotivasi mahasiswa.
+            </p>
+          </Section>
+
+          <Section title="Tujuan (Pasal 3)">
+            <ol className="list-decimal list-inside space-y-1 text-gray-700">
+              <li>Memberikan penghargaan kepada mahasiswa dan pendamping yang berhasil mencapai prestasi tinggi.</li>
+              <li>Memberikan motivasi kepada mahasiswa melaksanakan kegiatan kurikuler, ko-kurikuler, dan ekstra-kurikuler.</li>
+              <li>Mendorong Perguruan Tinggi mengembangkan iklim kehidupan kampus yang memfasilitasi mahasiswa mencapai prestasi secara berkesinambungan.</li>
+            </ol>
+          </Section>
+
+          <Section title="Pengertian (Pasal 4)">
+            <div className="space-y-3 text-gray-700">
+              <p><strong>(1) Mahasiswa Berprestasi</strong> — Mahasiswa yang berhasil mencapai prestasi tinggi, baik akademik maupun non-akademik melalui keikutsertaan dalam lomba, kompetisi, dan kegiatan kemahasiswaan.</p>
+              <p><strong>(2) Kompetisi/Lomba/Kejuaraan</strong> — Kegiatan perlombaan yang diselenggarakan oleh institusi resmi dengan peserta mahasiswa UKDW yang berstatus aktif. Dapat berupa pertandingan olahraga, lomba karya ilmiah, hibah, gelar karya kreatifitas, dan kegiatan prestasi yang berdampak pada SIMKATMAWA.</p>
+              <p><strong>(3) Tingkatan Lomba</strong> — Bersifat (a) Rekognisi dan (b) Non Rekognisi.</p>
+            </div>
+          </Section>
+
+          <Section title="Ketentuan Penghargaan (Pasal 5)">
+            <div className="space-y-2 text-gray-700">
+              <p>(1) Penentuan penghargaan prestasi ditentukan dalam rapat pimpinan Bidang Kemahasiswaan UKDW dan diwujudkan sebagai dana pembinaan.</p>
+              <p>(2) Kriteria penghargaan berdasarkan tingkatan lomba bersifat (a) Rekognisi dan (b) Non Rekognisi, diberikan berdasarkan pencapaian pada tahapan lomba.</p>
+            </div>
+          </Section>
+
+          <Section title="Ketentuan Berlaku">
+            <p className="text-gray-700">
+              Keputusan ini berlaku mulai sejak <strong>Semester Gasal 2023–2024</strong>, ditetapkan di Yogyakarta
+              pada tanggal 19 September 2023 oleh Rektor UKDW Dr.-Ing. Wiyatiningsih, ST., MT.
+            </p>
+          </Section>
+        </div>
+      )}
+
+      {/* Tab: Tabel Penghargaan Mahasiswa */}
+      {activeTab === "mahasiswa" && (
+        <div className="space-y-6">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+            <strong>Pengali:</strong> Rp 225.000 per poin. Contoh: poin 6 = Rp 1.350.000
+          </div>
+
+          <Section title="PUSPRESNAS">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="border border-gray-300 px-3 py-2 text-left">Kategori</th>
+                    <th className="border border-gray-300 px-3 py-2 text-center">Semifinal</th>
+                    <th className="border border-gray-300 px-3 py-2 text-center">Juara 3</th>
+                    <th className="border border-gray-300 px-3 py-2 text-center">Juara 2</th>
+                    <th className="border border-gray-300 px-3 py-2 text-center">Juara 1</th>
+                    <th className="border border-gray-300 px-3 py-2 text-center">Terbaik</th>
+                    <th className="border border-gray-300 px-3 py-2 text-center">Terbaik+</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td className="border border-gray-300 px-3 py-2 font-medium">PUSPRESNAS</td>
+                    <td className="border border-gray-300 px-3 py-2 text-center">0,5</td>
+                    <td className="border border-gray-300 px-3 py-2 text-center">3</td>
+                    <td className="border border-gray-300 px-3 py-2 text-center">6</td>
+                    <td className="border border-gray-300 px-3 py-2 text-center">12</td>
+                    <td className="border border-gray-300 px-3 py-2 text-center">15</td>
+                    <td className="border border-gray-300 px-3 py-2 text-center">18</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </Section>
+
+          <Section title="NON PUSPRESNAS">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="border border-gray-300 px-3 py-2 text-left">Tingkat</th>
+                    <th className="border border-gray-300 px-3 py-2 text-center">Peserta</th>
+                    <th className="border border-gray-300 px-3 py-2 text-center">Juara 3</th>
+                    <th className="border border-gray-300 px-3 py-2 text-center">Juara 2</th>
+                    <th className="border border-gray-300 px-3 py-2 text-center">Juara 1</th>
+                    <th className="border border-gray-300 px-3 py-2 text-center">Terbaik</th>
+                    <th className="border border-gray-300 px-3 py-2 text-center">Terbaik+</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { level: "Regional",       vals: ["0,5", "1", "2", "4", "5", "6"] },
+                    { level: "Nasional",        vals: ["0,5", "2", "4", "8", "10", "12"] },
+                    { level: "Internasional",   vals: ["0,5", "3", "6", "12", "15", "18"] },
+                  ].map((row) => (
+                    <tr key={row.level}>
+                      <td className="border border-gray-300 px-3 py-2 font-medium">{row.level}</td>
+                      {row.vals.map((v, i) => (
+                        <td key={i} className="border border-gray-300 px-3 py-2 text-center">{v}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Section>
+
+          <Section title="Publikasi Ilmiah">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="border border-gray-300 px-3 py-2 text-left">Jenis Publikasi</th>
+                    <th className="border border-gray-300 px-3 py-2 text-center">Penulis 1</th>
+                    <th className="border border-gray-300 px-3 py-2 text-center">Penulis 2</th>
+                    <th className="border border-gray-300 px-3 py-2 text-center">Penulis 3+</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { jenis: "Jurnal Internasional",   vals: ["6", "4", "2"] },
+                    { jenis: "Jurnal Nasional Scopus",  vals: ["6", "4", "2"] },
+                    { jenis: "Jurnal Nasional SINTA",   vals: ["6", "4", "2"] },
+                    { jenis: "Paten Internasional",     vals: ["6", "4", "2"] },
+                    { jenis: "Pemakalah Internasional", vals: ["2", "–", "–"] },
+                    { jenis: "Pemakalah Nasional",      vals: ["2", "–", "–"] },
+                    { jenis: "Pemakalah Regional",      vals: ["2", "–", "–"] },
+                  ].map((row) => (
+                    <tr key={row.jenis}>
+                      <td className="border border-gray-300 px-3 py-2 font-medium">{row.jenis}</td>
+                      {row.vals.map((v, i) => (
+                        <td key={i} className="border border-gray-300 px-3 py-2 text-center">{v}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">* Pembatasan: masing-masing jenis publikasi (jurnal, paten, pemakalah) dibatasi 2x selama studi per individu.</p>
+          </Section>
+        </div>
+      )}
+
+      {/* Tab: Petunjuk Teknis */}
+      {activeTab === "petunjuk" && (
+        <div className="space-y-4">
+          <Section title="Berkas yang Wajib Dilampirkan">
+            <ol className="list-decimal list-inside space-y-1 text-gray-700">
+              <li>Surat tugas peserta kompetisi</li>
+              <li>Sertifikat</li>
+              <li>URL laman penyelenggara dan dokumentasi kegiatan (website, media sosial, poster kegiatan)</li>
+              <li>Letter of Acceptance (untuk kategori publikasi ilmiah)</li>
+            </ol>
+          </Section>
+
+          <Section title="Ketentuan Jumlah Peserta Kelompok">
+            <ul className="list-disc list-inside space-y-1 text-gray-700">
+              <li>Tabel berlaku untuk kelompok dengan <strong>maksimal 5 orang</strong> anggota</li>
+              <li>6–10 orang: jumlah penghargaan ditambah <strong>25%</strong></li>
+              <li>Lebih dari 10 orang: jumlah penghargaan ditambah <strong>50%</strong></li>
+              <li>Seluruh penghargaan dalam kelompok <strong>dibagi rata</strong> sesuai jumlah anggota</li>
+            </ul>
+          </Section>
+
+          <Section title="Ketentuan Skala Wilayah (Non PUSPRESNAS)">
+            <ul className="list-disc list-inside space-y-1 text-gray-700">
+              <li><strong>Regional</strong> — kegiatan dalam lingkup 1–3 provinsi</li>
+              <li><strong>Nasional</strong> — diikuti minimal dari 4 provinsi</li>
+              <li><strong>Internasional</strong> — diikuti minimal dari 4 negara</li>
+            </ul>
+          </Section>
+
+          <Section title="Ketentuan Berkas Tidak Lengkap">
+            <p className="text-gray-700">
+              Apabila berkas tidak lengkap dan ketika direview memiliki catatan pertimbangan layak mendapat
+              penghargaan, maka jumlah penghargaan yang diterima <strong>maksimal 75%</strong>.
+            </p>
+          </Section>
+
+          <Section title="Batas Waktu Pengajuan">
+            <p className="text-gray-700">
+              Jangka waktu kegiatan kompetisi yang dapat diajukan memiliki batas <strong>12 bulan</strong> dimulai
+              dari waktu dikeluarkannya informasi/pengumuman terkait tahapan prestasi yang didapatkan.
+            </p>
+          </Section>
+
+          <Section title="Cara Input Berkas">
+            <p className="text-gray-700">Input berkas melalui website SAC (Sistem Anti-Double Claim).</p>
+          </Section>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Section({ title, children }) {
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-5">
+      <h3 className="text-sm font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-100">{title}</h3>
+      <div className="text-sm text-gray-700 leading-relaxed">{children}</div>
     </div>
   );
 }
@@ -605,6 +892,7 @@ export default function MahasiswaDashboard() {
     { key: "daftar",      label: "Daftar Klaim",      icon: <IconList />   },
     { key: "reward",      label: "Konfirmasi Reward",  icon: <IconReward /> },
     { key: "visualisasi", label: "Visualisasi Data",   icon: <IconChart />  },
+    { key: "sk-rektor",   label: "SK Rektor",          icon: <IconDoc />    },
   ];
 
   return (
@@ -693,6 +981,7 @@ export default function MahasiswaDashboard() {
           {activeMenu === "daftar"      && <DaftarKlaim key={claimsRefreshKey} session={session} search={search} />}
           {activeMenu === "reward"      && <KonfirmasiReward session={session} />}
           {activeMenu === "visualisasi" && <VisualisasiData />}
+          {activeMenu === "sk-rektor"   && <SKRektor />}
         </main>
       </div>
 
