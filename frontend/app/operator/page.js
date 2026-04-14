@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+const API = "http://127.0.0.1:8000";
+
 // ── Ikon ──────────────────────────────────────────────────────────────────────
 const IconClaim = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -15,6 +17,13 @@ const IconReward = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
       d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+  </svg>
+);
+
+const IconUsers = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+      d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
   </svg>
 );
 
@@ -500,26 +509,219 @@ function PengajuanReward() {
   );
 }
 
+// ── Konten: Kelola Operator (Super Admin only) ────────────────────────────────
+function KelolаOperator({ operatorId }) {
+  const [operators, setOperators] = useState([]);
+  const [loading,   setLoading]   = useState(true);
+  const [showForm,  setShowForm]  = useState(false);
+  const [saving,    setSaving]    = useState(false);
+  const [formError, setFormError] = useState("");
+  const [form, setForm] = useState({ username: "", password: "", nama: "", email: "", role: "operator" });
+
+  const headers = { "Content-Type": "application/json", "x-operator-id": String(operatorId) };
+
+  const fetchOperators = async () => {
+    setLoading(true);
+    try {
+      const res  = await fetch(`${API}/operators`, { headers });
+      const data = await res.json();
+      setOperators(data);
+    } catch {
+      setOperators([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchOperators(); }, []);
+
+  const handleAdd = async (e) => {
+    e.preventDefault();
+    setFormError("");
+    setSaving(true);
+    try {
+      const res = await fetch(`${API}/operators`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setFormError(d.detail || "Gagal menambah operator.");
+        return;
+      }
+      setForm({ username: "", password: "", nama: "", email: "", role: "operator" });
+      setShowForm(false);
+      fetchOperators();
+    } catch {
+      setFormError("Tidak dapat terhubung ke server.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id, nama) => {
+    if (!confirm(`Hapus akun "${nama}"? Tindakan ini tidak dapat dibatalkan.`)) return;
+    const res = await fetch(`${API}/operators/${id}`, { method: "DELETE", headers });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      alert(d.detail || "Gagal menghapus.");
+      return;
+    }
+    fetchOperators();
+  };
+
+  const ROLE_BADGE = {
+    superadmin: "bg-purple-100 text-purple-800",
+    operator:   "bg-blue-100 text-blue-800",
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-gray-900">Kelola Operator</h2>
+          <p className="text-sm text-gray-500 mt-0.5">Manajemen akun operator dan super admin</p>
+        </div>
+        <button
+          onClick={() => { setShowForm(v => !v); setFormError(""); }}
+          className="px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+        >
+          {showForm ? "Batal" : "+ Tambah Operator"}
+        </button>
+      </div>
+
+      {/* Form Tambah */}
+      {showForm && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h3 className="text-sm font-semibold text-gray-800 mb-4">Tambah Akun Baru</h3>
+          <form onSubmit={handleAdd} className="grid grid-cols-2 gap-4">
+            {[
+              { label: "Nama Lengkap", name: "nama",     type: "text",     required: true },
+              { label: "Email",        name: "email",    type: "email",    required: true },
+              { label: "Username",     name: "username", type: "text",     required: true },
+              { label: "Password",     name: "password", type: "password", required: true },
+            ].map(f => (
+              <div key={f.name}>
+                <label className="block text-xs font-medium text-gray-600 mb-1">{f.label}</label>
+                <input
+                  type={f.type}
+                  required={f.required}
+                  value={form[f.name]}
+                  onChange={e => setForm(v => ({ ...v, [f.name]: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            ))}
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Role</label>
+              <select
+                value={form.role}
+                onChange={e => setForm(v => ({ ...v, role: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="operator">Operator</option>
+                <option value="superadmin">Super Admin</option>
+              </select>
+            </div>
+            <div className="col-span-2 flex items-center gap-3">
+              {formError && <p className="text-sm text-red-600 flex-1">{formError}</p>}
+              <button
+                type="submit"
+                disabled={saving}
+                className="ml-auto px-5 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              >
+                {saving ? "Menyimpan..." : "Simpan"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Tabel Operator */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        {loading ? (
+          <p className="text-center text-gray-400 text-sm py-8">Memuat data...</p>
+        ) : operators.length === 0 ? (
+          <p className="text-center text-gray-400 text-sm py-8">Belum ada data operator.</p>
+        ) : (
+          <table className="w-full text-sm text-left">
+            <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
+              <tr>
+                <th className="px-5 py-3">Nama</th>
+                <th className="px-5 py-3">Username</th>
+                <th className="px-5 py-3">Email</th>
+                <th className="px-5 py-3">Role</th>
+                <th className="px-5 py-3 text-right">Aksi</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {operators.map(op => (
+                <tr key={op.id} className="hover:bg-gray-50">
+                  <td className="px-5 py-3 font-medium text-gray-900">{op.nama}</td>
+                  <td className="px-5 py-3 font-mono text-gray-600">{op.username}</td>
+                  <td className="px-5 py-3 text-gray-600">{op.email}</td>
+                  <td className="px-5 py-3">
+                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${ROLE_BADGE[op.role] ?? "bg-gray-100 text-gray-600"}`}>
+                      {op.role === "superadmin" ? "Super Admin" : "Operator"}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3 text-right">
+                    {String(op.id) !== String(operatorId) ? (
+                      <button
+                        onClick={() => handleDelete(op.id, op.nama)}
+                        className="px-3 py-1 rounded-md text-xs font-semibold bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
+                      >
+                        Hapus
+                      </button>
+                    ) : (
+                      <span className="text-xs text-gray-400 italic">Akun Anda</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Halaman Utama ─────────────────────────────────────────────────────────────
 export default function OperatorDashboard() {
   const router = useRouter();
-  const [activeMenu, setActiveMenu] = useState("claim");
-
-  const handleLogout = () => {
-    sessionStorage.removeItem("role");
-    router.push("/");
-  };
+  const [activeMenu,    setActiveMenu]    = useState("claim");
+  const [operatorNama,  setOperatorNama]  = useState("");
+  const [operatorRole,  setOperatorRole]  = useState("");
+  const [operatorId,    setOperatorId]    = useState(null);
 
   useEffect(() => {
     if (sessionStorage.getItem("role") !== "operator") {
       router.replace("/");
+      return;
     }
+    setOperatorNama(sessionStorage.getItem("operator_nama") || "Operator");
+    setOperatorRole(sessionStorage.getItem("operator_role") || "operator");
+    setOperatorId(sessionStorage.getItem("operator_id"));
   }, [router]);
+
+  const handleLogout = () => {
+    ["role","operator_id","operator_nama","operator_username","operator_role"].forEach(k =>
+      sessionStorage.removeItem(k)
+    );
+    router.push("/");
+  };
+
+  const isSuperAdmin = operatorRole === "superadmin";
 
   const menus = [
     { key: "claim",  label: "Pengajuan Claim",  icon: <IconClaim />  },
     { key: "reward", label: "Pengajuan Reward",  icon: <IconReward /> },
+    ...(isSuperAdmin ? [{ key: "operators", label: "Kelola Operator", icon: <IconUsers /> }] : []),
   ];
+
+  const activeLabel = menus.find(m => m.key === activeMenu)?.label ?? "";
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -550,8 +752,15 @@ export default function OperatorDashboard() {
           ))}
         </nav>
 
-        {/* Logout */}
-        <div className="px-5 py-4 border-t border-gray-100">
+        {/* Info User + Logout */}
+        <div className="px-5 py-4 border-t border-gray-100 space-y-2">
+          <div>
+            <p className="text-xs font-semibold text-gray-800 truncate">{operatorNama}</p>
+            <span className={`inline-block mt-0.5 px-2 py-0.5 rounded-full text-xs font-semibold
+              ${isSuperAdmin ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"}`}>
+              {isSuperAdmin ? "Super Admin" : "Operator"}
+            </span>
+          </div>
           <button onClick={handleLogout} className="text-xs text-red-500 hover:text-red-700">
             Keluar
           </button>
@@ -562,16 +771,15 @@ export default function OperatorDashboard() {
       <div className="flex-1 flex flex-col overflow-hidden">
 
         {/* Top bar */}
-        <header className="h-14 bg-white border-b border-gray-200 flex items-center px-8 flex-shrink-0">
-          <h2 className="text-sm font-semibold text-gray-700">
-            {menus.find(m => m.key === activeMenu)?.label}
-          </h2>
+        <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-8 flex-shrink-0">
+          <h2 className="text-sm font-semibold text-gray-700">{activeLabel}</h2>
         </header>
 
         {/* Konten */}
         <main className="flex-1 px-8 py-8 overflow-y-auto">
-          {activeMenu === "claim"  && <PengajuanClaim  router={router} />}
-          {activeMenu === "reward" && <PengajuanReward />}
+          {activeMenu === "claim"     && <PengajuanClaim  router={router} />}
+          {activeMenu === "reward"    && <PengajuanReward />}
+          {activeMenu === "operators" && isSuperAdmin && <KelolаOperator operatorId={operatorId} />}
         </main>
       </div>
 

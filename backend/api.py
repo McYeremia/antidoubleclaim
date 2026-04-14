@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -16,6 +16,8 @@ from backend.database import (
     update_pengajuan,
     insert_reward_konfirmasi, get_reward_konfirmasi_by_claim_id,
     get_reward_konfirmasi_by_email, update_reward_status,
+    authenticate_operator, get_all_operators, get_operator_by_id,
+    create_operator, delete_operator,
 )
 from backend.nim_parser import parse_nim
 
@@ -366,3 +368,63 @@ async def get_reward(claim_id: int):
     if not data:
         raise HTTPException(status_code=404, detail="Data reward tidak ditemukan")
     return data
+
+
+# ── Autentikasi & Manajemen Operator ─────────────────────────────────────────
+class OperatorLoginRequest(BaseModel):
+    username: str
+    password: str
+
+class CreateOperatorRequest(BaseModel):
+    username: str
+    password: str
+    nama: str
+    email: str
+    role: Optional[str] = "operator"
+
+def _require_superadmin(x_operator_id: Optional[str]):
+    """Raise 403 jika requester bukan superadmin."""
+    if not x_operator_id:
+        raise HTTPException(status_code=403, detail="Akses ditolak: header X-Operator-ID diperlukan")
+    try:
+        op = get_operator_by_id(int(x_operator_id))
+    except ValueError:
+        op = None
+    if not op or op.get("role") != "superadmin":
+        raise HTTPException(status_code=403, detail="Akses ditolak: hanya Super Admin yang dapat melakukan ini")
+
+@app.post("/login-operator")
+async def login_operator(body: OperatorLoginRequest):
+    user = authenticate_operator(body.username, body.password)
+    if not user:
+        raise HTTPException(status_code=401, detail="Username atau password salah")
+    return {"success": True, "user": user}
+
+@app.get("/operators")
+async def list_operators(x_operator_id: Optional[str] = Header(None)):
+    _require_superadmin(x_operator_id)
+    return get_all_operators()
+
+@app.post("/operators")
+async def add_operator(
+    body: CreateOperatorRequest,
+    x_operator_id: Optional[str] = Header(None),
+):
+    _require_superadmin(x_operator_id)
+    ok = create_operator(body.username, body.password, body.nama, body.email, body.role or "operator")
+    if not ok:
+        raise HTTPException(status_code=409, detail="Username atau email sudah digunakan")
+    return {"success": True}
+
+@app.delete("/operators/{operator_id}")
+async def remove_operator(
+    operator_id: int,
+    x_operator_id: Optional[str] = Header(None),
+):
+    _require_superadmin(x_operator_id)
+    if str(operator_id) == str(x_operator_id):
+        raise HTTPException(status_code=400, detail="Tidak dapat menghapus akun sendiri")
+    ok = delete_operator(operator_id)
+    if not ok:
+        raise HTTPException(status_code=400, detail="Tidak dapat menghapus: akun tidak ditemukan atau superadmin terakhir")
+    return {"success": True}

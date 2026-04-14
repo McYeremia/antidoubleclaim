@@ -4,23 +4,43 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 
-const OPERATOR_PASSWORD = "operator";
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export default function LoginPage() {
   const router = useRouter();
   const [role, setRole] = useState("mahasiswa");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loadingGoogle, setLoadingGoogle] = useState(false);
+  const [loadingLogin, setLoadingLogin] = useState(false);
 
-  const handleOperatorLogin = (e) => {
+  const handleOperatorLogin = async (e) => {
     e.preventDefault();
     setError("");
-    if (password === OPERATOR_PASSWORD) {
+    setLoadingLogin(true);
+    try {
+      const res = await fetch(`${API}/login-operator`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.detail || "Username atau password salah.");
+        return;
+      }
+      const { user } = await res.json();
       sessionStorage.setItem("role", "operator");
+      sessionStorage.setItem("operator_id", String(user.id));
+      sessionStorage.setItem("operator_nama", user.nama);
+      sessionStorage.setItem("operator_username", user.username);
+      sessionStorage.setItem("operator_role", user.role);
       router.push("/operator");
-    } else {
-      setError("Password salah. Silakan coba lagi.");
+    } catch {
+      setError("Tidak dapat terhubung ke server. Pastikan backend berjalan.");
+    } finally {
+      setLoadingLogin(false);
     }
   };
 
@@ -90,9 +110,20 @@ export default function LoginPage() {
           </div>
         )}
 
-        {/* Form Operator — Password */}
+        {/* Form Operator — Username + Password */}
         {role === "operator" && (
-          <form onSubmit={handleOperatorLogin} className="space-y-5">
+          <form onSubmit={handleOperatorLogin} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+              <input
+                type="text"
+                required
+                value={username}
+                onChange={(e) => { setUsername(e.target.value); setError(""); }}
+                placeholder="Masukkan username"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
               <input
@@ -107,9 +138,10 @@ export default function LoginPage() {
             {error && <p className="text-sm text-red-600 text-center">{error}</p>}
             <button
               type="submit"
-              className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              disabled={loadingLogin}
+              className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-60"
             >
-              Masuk
+              {loadingLogin ? "Memverifikasi..." : "Masuk"}
             </button>
           </form>
         )}

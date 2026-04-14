@@ -1,5 +1,6 @@
 import sqlite3
 import os
+import bcrypt
 from backend.image_hash import generate_phash, hamming_distance
 from backend.text_similarity import token_sort_ratio
 import imagehash
@@ -137,11 +138,15 @@ def create_database():
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_pengajuan_email ON PENGAJUAN (mahasiswa_email)")
 
     # Migrasi: tambah kolom baru ke tabel lama jika belum ada
-    try:
-        cursor.execute("ALTER TABLE PENGAJUAN ADD COLUMN estimasi_reward INTEGER")
-        conn.commit()
-    except Exception:
-        pass  # kolom sudah ada
+    for migration in [
+        "ALTER TABLE PENGAJUAN ADD COLUMN estimasi_reward INTEGER",
+        "ALTER TABLE USERS ADD COLUMN role TEXT NOT NULL DEFAULT 'operator'",
+    ]:
+        try:
+            cursor.execute(migration)
+            conn.commit()
+        except Exception:
+            pass  # kolom sudah ada
 
     # ── Tabel PENGAJUAN_ANGGOTA ───────────────────────────────────────────────
     cursor.execute("""
@@ -191,15 +196,17 @@ def create_database():
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_reward_claim  ON REWARD_KONFIRMASI (claim_id)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_reward_status ON REWARD_KONFIRMASI (reward_status)")
 
-    cursor.execute("""
-    INSERT OR IGNORE INTO USERS (username, password_hash, nama, email)
-    VALUES (
-        'admin',
-        '$2b$12$placeholder_hash_ganti_dengan_bcrypt',
-        'Administrator',
-        'admin@campus.ac.id'
-    )
-    """)
+    # Seed akun superadmin default jika belum ada
+    cursor.execute("SELECT id FROM USERS WHERE username = 'admin'")
+    if not cursor.fetchone():
+        default_hash = bcrypt.hashpw(b"admin123", bcrypt.gensalt()).decode()
+        cursor.execute(
+            "INSERT INTO USERS (username, password_hash, nama, email, role) VALUES (?, ?, ?, ?, ?)",
+            ("admin", default_hash, "Super Admin", "admin@campus.ac.id", "superadmin"),
+        )
+    else:
+        # Pastikan admin lama memiliki role superadmin
+        cursor.execute("UPDATE USERS SET role = 'superadmin' WHERE username = 'admin'")
 
     conn.commit()
     conn.close()
@@ -529,5 +536,108 @@ def update_reward_status(reward_id: int, status: str, catatan: str = None):
             "UPDATE REWARD_KONFIRMASI SET reward_status = ? WHERE id = ?",
             (status, reward_id)
         )
+    conn.commit()
+    conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Autentikasi Operator
+# ---------------------------------------------------------------------------
+def get_all_operators() -> list:
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, username, nama, email, role FROM USERS ORDER BY id")
+    rows = cursor.fetchall()
+    cols = [d[0] for d in cursor.description]
+    conn.close()
+    return [dict(zip(cols, row)) for row in rows]
+
+
+def get_operator_by_id(operator_id: int):
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT id, username, nama, email, role FROM USERS WHERE id = ?",
+        (operator_id,)
+    )
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        return None
+    cols = ["id", "username", "nama", "email", "role"]
+    return dict(zip(cols, row))
+
+
+def authenticate_operator(username: str, password: str):
+    """Verifikasi username + password. Kembalikan dict user jika valid, None jika tidak."""
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT id, username, password_hash, nama, email, role FROM USERS WHERE username = ?",
+        (username,)
+    )
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        return None
+    uid, uname, pw_hash, nama, email, role = row
+    try:
+        ok = bcrypt.checkpw(password.encode(), pw_hash.encode())
+    except Exception:
+        ok = False
+    if not ok:
+        return None
+    return {"id": uid, "username": uname, "nama": nama, "email": email, "role": role}
+
+
+def create_operator(username: str, password: str, nama: str, email: str, role: str = "operator"):
+    """Buat akun operator baru. role: 'operator' atau 'superadmin'."""
+    if role not in ("operator", "superadmin"):
+        return False
+    pw_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+    conn = _get_conn()
+    try:
+        conn.execute(
+            "INSERT INTO USERS (username, password_hash, nama, email, role) VALUES (?, ?, ?, ?, ?)",
+            (username, pw_hash, nama, email, role)
+        )
+        conn.commit()
+        return True
+    except sqlite3.IntegrityError:
+        return False
+    finally:
+        conn.close()
+
+
+def delete_operator(operator_id: int) -> bool:
+    """Hapus akun operator. Tidak bisa hapus superadmin terakhir."""
+    conn = _get_conn()
+    cursor = conn.cursor()
+    # Cek apakah ini superadmin terakhir
+    cursor.execute("SELECT role FROM USERS WHERE id = ?", (operator_id,))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return False
+    if row[0] == "superadmin":
+        cursor.execute("SELECT COUNT(*) FROM USERS WHERE role = 'superadmin'")
+        count = cursor.fetchone()[0]
+        if count <= 1:
+            conn.close()
+            return False  # tidak boleh hapus superadmin terakhir
+    conn.execute("DELETE FROM USERS WHERE id = ?", (operator_id,))
+    conn.commit()
+    conn.close()
+    return True
+
+
+def update_operator_password(username: str, new_password: str):
+    """Ganti password operator."""
+    pw_hash = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt()).decode()
+    conn = _get_conn()
+    conn.execute(
+        "UPDATE USERS SET password_hash = ? WHERE username = ?",
+        (pw_hash, username)
+    )
     conn.commit()
     conn.close()
