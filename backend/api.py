@@ -15,7 +15,7 @@ from backend.database import (
     insert_pengajuan, get_pengajuan_by_email, get_pengajuan_by_claim_id,
     update_pengajuan,
     insert_reward_konfirmasi, get_reward_konfirmasi_by_claim_id,
-    get_reward_konfirmasi_by_email, update_reward_status,
+    get_reward_konfirmasi_by_email, update_reward_status, update_reward_konfirmasi,
     authenticate_operator, get_all_operators, get_operator_by_id,
     create_operator, delete_operator,
 )
@@ -66,11 +66,12 @@ async def detail_claim(claim_id: int):
     return claim
 
 @app.patch("/claims/{claim_id}/approve")
-async def approve(claim_id: int):
+async def approve(claim_id: int, x_operator_id: Optional[str] = Header(None)):
     claim = get_claim_by_id(claim_id)
     if not claim:
         raise HTTPException(status_code=404, detail="Klaim tidak ditemukan")
-    approve_claim(claim_id)
+    op_id = int(x_operator_id) if x_operator_id and x_operator_id.isdigit() else None
+    approve_claim(claim_id, operator_id=op_id)
     return {"message": "Klaim disetujui", "id": claim_id}
 
 @app.delete("/claims/{claim_id}")
@@ -351,7 +352,12 @@ async def list_rewards(email: Optional[str] = None):
     from backend.database import _get_conn
     conn = _get_conn()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM REWARD_KONFIRMASI ORDER BY id DESC")
+    cursor.execute("""
+        SELECT rk.*, c.nama_lomba
+        FROM REWARD_KONFIRMASI rk
+        LEFT JOIN CLAIMS c ON c.id = rk.claim_id
+        ORDER BY rk.id DESC
+    """)
     rows = cursor.fetchall()
     cols = [d[0] for d in cursor.description]
     conn.close()
@@ -368,6 +374,63 @@ async def get_reward(claim_id: int):
     if not data:
         raise HTTPException(status_code=404, detail="Data reward tidak ditemukan")
     return data
+
+@app.put("/reward-konfirmasi/{reward_id}")
+async def resubmit_reward(
+    reward_id: int,
+    tahun_klaim:           str            = Form(...),
+    periode:               str            = Form(...),
+    nomor_urut_lampiran:   str            = Form(...),
+    kategori_lomba:        str            = Form(...),
+    kompetisi_puspresnas:  Optional[str]  = Form(None),
+    judul_lomba:           Optional[str]  = Form(None),
+    tahun_kegiatan:        str            = Form(...),
+    nama_ketua:            str            = Form(...),
+    nomor_wa:              str            = Form(...),
+    nama_pemilik_rekening: str            = Form(...),
+    bank:                  str            = Form("BNI"),
+    nomor_rekening:        Optional[str]  = Form(None),
+    bersedia:              str            = Form(...),
+    data_benar:            str            = Form(...),
+    foto_buku_tabungan:    Optional[UploadFile] = File(None),
+    foto_ktm:              Optional[UploadFile] = File(None),
+    foto_ktp:              Optional[UploadFile] = File(None),
+    pakta_integritas:      Optional[UploadFile] = File(None),
+    laporan_akhir:         Optional[UploadFile] = File(None),
+    karya_publikasi:       Optional[UploadFile] = File(None),
+):
+    def save_file(upload: Optional[UploadFile]) -> Optional[str]:
+        if not upload or not upload.filename:
+            return None
+        path = os.path.join(UPLOAD_FOLDER, upload.filename)
+        with open(path, "wb") as f:
+            shutil.copyfileobj(upload.file, f)
+        return path
+
+    data = {
+        "tahun_klaim":            tahun_klaim,
+        "periode":                periode,
+        "nomor_urut_lampiran":    nomor_urut_lampiran,
+        "kategori_lomba":         kategori_lomba,
+        "kompetisi_puspresnas":   kompetisi_puspresnas,
+        "judul_lomba":            judul_lomba,
+        "tahun_kegiatan":         tahun_kegiatan,
+        "nama_ketua":             nama_ketua,
+        "nomor_wa":               nomor_wa,
+        "nama_pemilik_rekening":  nama_pemilik_rekening,
+        "bank":                   bank,
+        "nomor_rekening":         nomor_rekening,
+        "bersedia":               bersedia == "true",
+        "data_benar":             data_benar == "true",
+        "foto_buku_tabungan_path": save_file(foto_buku_tabungan),
+        "foto_ktm_path":          save_file(foto_ktm),
+        "foto_ktp_path":          save_file(foto_ktp),
+        "pakta_integritas_path":  save_file(pakta_integritas),
+        "laporan_akhir_path":     save_file(laporan_akhir),
+        "karya_publikasi_path":   save_file(karya_publikasi),
+    }
+    update_reward_konfirmasi(reward_id, data)
+    return {"success": True}
 
 
 # ── Autentikasi & Manajemen Operator ─────────────────────────────────────────

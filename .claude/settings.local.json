@@ -15,7 +15,8 @@
       "Bash(./venv/Scripts/pip install:*)",
       "Bash(./venv/Scripts/python ocr_sk_rektor.py)",
       "Bash(npx next:*)",
-      "Bash(./venv/Scripts/python -c \"import bcrypt; print\\('bcrypt ok'\\)\")"
+      "Bash(./venv/Scripts/python -c \"import bcrypt; print\\('bcrypt ok'\\)\")",
+      "Bash(node -e ':*)"
     ]
   }
 }

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import TambahKlaimWizard from "./TambahKlaimWizard";
+import KonfirmasiRewardFormPanel from "./KonfirmasiRewardFormPanel";
 
 // ── Status mahasiswa (disederhanakan) ─────────────────────────────────────────
 const STATUS_LABEL = (status) =>
@@ -15,8 +16,20 @@ const STATUS_STYLE = (status) =>
     : "bg-blue-100 text-blue-700";
 
 // ── Status reward ─────────────────────────────────────────────────────────────
-const REWARD_LABEL = { menunggu: "Sedang Diproses", diproses: "Sedang Diproses", selesai: "Reward Dikirim" };
-const REWARD_STYLE = { menunggu: "bg-blue-100 text-blue-700", diproses: "bg-blue-100 text-blue-700", selesai: "bg-green-100 text-green-700" };
+const REWARD_LABEL = {
+  menunggu:     "Sedang Diproses",
+  diproses:     "Sedang Diproses",
+  selesai:      "Reward Dikirim",
+  dikembalikan: "Perlu Diperbaiki",
+  ditolak:      "Ditolak",
+};
+const REWARD_STYLE = {
+  menunggu:     "bg-blue-100 text-blue-700",
+  diproses:     "bg-blue-100 text-blue-700",
+  selesai:      "bg-green-100 text-green-700",
+  dikembalikan: "bg-orange-100 text-orange-700",
+  ditolak:      "bg-red-100 text-red-700",
+};
 
 // ── Ikon sidebar ──────────────────────────────────────────────────────────────
 const IconPlus = () => (
@@ -381,8 +394,7 @@ function DetailModal({ claim, onClose }) {
 }
 
 // ── Konten: Daftar Klaim ──────────────────────────────────────────────────────
-function DaftarKlaim({ session, search }) {
-  const router                       = useRouter();
+function DaftarKlaim({ session, search, onOpenForm }) {
   const [claims, setClaims]          = useState([]);
   const [rewardMap, setRewardMap]    = useState({});   // claim_id → reward object
   const [loading, setLoading]        = useState(true);
@@ -459,7 +471,7 @@ function DaftarKlaim({ session, search }) {
                         </span>
                       ) : (
                         <button
-                          onClick={() => router.push(`/mahasiswa/konfirmasi-reward/${claim.id}`)}
+                          onClick={() => onOpenForm?.(claim.id)}
                           className="px-3 py-1.5 rounded-md text-xs font-semibold bg-orange-500 text-white hover:bg-orange-600 transition-colors whitespace-nowrap"
                         >
                           Isi Data Reward
@@ -479,22 +491,31 @@ function DaftarKlaim({ session, search }) {
 }
 
 // ── Konten: Konfirmasi Reward ─────────────────────────────────────────────────
-function KonfirmasiReward({ session }) {
-  const router = useRouter();
-  const [claims,       setClaims]       = useState([]);
-  const [rewardMap,    setRewardMap]    = useState({});
-  const [pengajuanMap, setPengajuanMap] = useState({});
-  const [loading,      setLoading]      = useState(true);
+function KonfirmasiReward({ session, initialClaimId = null, onClearInitial }) {
+  const [claims,          setClaims]          = useState([]);
+  const [rewardMap,       setRewardMap]       = useState({});
+  const [pengajuanMap,    setPengajuanMap]    = useState({});
+  const [loading,         setLoading]         = useState(true);
+  const [selectedClaimId, setSelectedClaimId] = useState(initialClaimId);
 
+  // Sync jika initialClaimId berubah dari luar (misal dari DaftarKlaim)
   useEffect(() => {
+    if (initialClaimId) {
+      setSelectedClaimId(initialClaimId);
+      onClearInitial?.();
+    }
+  }, [initialClaimId]);
+
+  const fetchAll = () => {
+    setLoading(true);
     Promise.all([
       fetch(`http://127.0.0.1:8000/claims?email=${encodeURIComponent(session.user.email)}`),
       fetch(`http://127.0.0.1:8000/reward-konfirmasi?email=${encodeURIComponent(session.user.email)}`),
       fetch(`http://127.0.0.1:8000/pengajuan?email=${encodeURIComponent(session.user.email)}`),
     ]).then(async ([claimRes, rewardRes, pengajuanRes]) => {
       const claimData     = await claimRes.json();
-      const rewardData    = rewardRes.ok     ? await rewardRes.json()    : [];
-      const pengajuanData = pengajuanRes.ok  ? await pengajuanRes.json() : [];
+      const rewardData    = rewardRes.ok    ? await rewardRes.json()    : [];
+      const pengajuanData = pengajuanRes.ok ? await pengajuanRes.json() : [];
       setClaims(claimData.filter(c => c.status === "sudah dicek"));
       const rMap = {};
       rewardData.forEach(r => { rMap[r.claim_id] = r; });
@@ -504,12 +525,15 @@ function KonfirmasiReward({ session }) {
       setPengajuanMap(pMap);
     }).catch(() => setClaims([]))
       .finally(() => setLoading(false));
-  }, []);
+  };
 
-  const belumDiisi = claims.filter(c => !rewardMap[c.id]);
-  const sudahDiisi = claims.filter(c =>  rewardMap[c.id]);
+  useEffect(() => { fetchAll(); }, []);
 
-  const ClaimTable = ({ items, showButton }) => (
+  const belumDiisi      = claims.filter(c => !rewardMap[c.id]);
+  const dikembalikan    = claims.filter(c => rewardMap[c.id]?.reward_status === "dikembalikan");
+  const sudahDiisi      = claims.filter(c => rewardMap[c.id] && rewardMap[c.id].reward_status !== "dikembalikan");
+
+  const ClaimTable = ({ items, mode }) => (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
       <table className="w-full text-sm text-left">
         <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
@@ -518,12 +542,15 @@ function KonfirmasiReward({ session }) {
             <th className="px-4 py-3">Tingkat</th>
             <th className="px-4 py-3">Peringkat</th>
             <th className="px-4 py-3">Estimasi Dana</th>
-            <th className="px-4 py-3 text-right">{showButton ? "Aksi" : "Status Reward"}</th>
+            <th className="px-4 py-3 text-right">
+              {mode === "isi" ? "Aksi" : mode === "kembali" ? "Aksi" : "Status Reward"}
+            </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
           {items.map(claim => {
             const estimasi = pengajuanMap[claim.id]?.estimasi_reward;
+            const reward   = rewardMap[claim.id];
             return (
               <tr key={claim.id} className="hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-3 font-medium text-gray-900">{claim.nama_lomba}</td>
@@ -535,16 +562,25 @@ function KonfirmasiReward({ session }) {
                     : <span className="text-gray-400">—</span>}
                 </td>
                 <td className="px-4 py-3 text-right">
-                  {showButton ? (
+                  {mode === "isi" && (
                     <button
-                      onClick={() => router.push(`/mahasiswa/konfirmasi-reward/${claim.id}`)}
+                      onClick={() => setSelectedClaimId(claim.id)}
                       className="px-3 py-1.5 rounded-md text-xs font-semibold bg-orange-500 text-white hover:bg-orange-600 transition-colors"
                     >
                       Isi Data Reward
                     </button>
-                  ) : (
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${REWARD_STYLE[rewardMap[claim.id]?.reward_status] ?? "bg-gray-100 text-gray-600"}`}>
-                      {REWARD_LABEL[rewardMap[claim.id]?.reward_status] ?? "—"}
+                  )}
+                  {mode === "kembali" && (
+                    <button
+                      onClick={() => setSelectedClaimId(claim.id)}
+                      className="px-3 py-1.5 rounded-md text-xs font-semibold bg-orange-600 text-white hover:bg-orange-700 transition-colors"
+                    >
+                      Perbaiki & Kirim Ulang
+                    </button>
+                  )}
+                  {mode === "status" && (
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${REWARD_STYLE[reward?.reward_status] ?? "bg-gray-100 text-gray-600"}`}>
+                      {REWARD_LABEL[reward?.reward_status] ?? "—"}
                     </span>
                   )}
                 </td>
@@ -555,6 +591,18 @@ function KonfirmasiReward({ session }) {
       </table>
     </div>
   );
+
+  // Render panel form jika ada claim yang dipilih
+  if (selectedClaimId) {
+    return (
+      <KonfirmasiRewardFormPanel
+        claimId={selectedClaimId}
+        session={session}
+        onBack={() => setSelectedClaimId(null)}
+        onSuccess={() => { setSelectedClaimId(null); fetchAll(); }}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -573,20 +621,52 @@ function KonfirmasiReward({ session }) {
         </div>
       ) : (
         <>
-          {belumDiisi.length > 0 && (
+          {/* Dikembalikan — paling atas karena perlu tindakan segera */}
+          {dikembalikan.length > 0 && (
             <div>
-              <h3 className="text-sm font-semibold text-orange-700 mb-2">
-                Belum Diisi ({belumDiisi.length})
+              <h3 className="text-sm font-semibold text-orange-700 mb-2 flex items-center gap-2">
+                <span className="inline-block w-2 h-2 rounded-full bg-orange-500"></span>
+                Perlu Diperbaiki ({dikembalikan.length})
               </h3>
-              <ClaimTable items={belumDiisi} showButton={true} />
+              <div className="space-y-3">
+                {dikembalikan.map(claim => {
+                  const reward = rewardMap[claim.id];
+                  return (
+                    <div key={claim.id} className="rounded-xl border border-orange-200 overflow-hidden">
+                      {reward?.catatan_operator && (
+                        <div className="bg-orange-50 px-4 py-3 border-b border-orange-200 flex gap-3">
+                          <svg className="w-4 h-4 text-orange-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <div>
+                            <p className="text-xs font-semibold text-orange-700 mb-0.5">Catatan dari Operator:</p>
+                            <p className="text-sm text-orange-800">{reward.catatan_operator}</p>
+                          </div>
+                        </div>
+                      )}
+                      <ClaimTable items={[claim]} mode="kembali" />
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
+
+          {belumDiisi.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold text-orange-600 mb-2">
+                Belum Diisi ({belumDiisi.length})
+              </h3>
+              <ClaimTable items={belumDiisi} mode="isi" />
+            </div>
+          )}
+
           {sudahDiisi.length > 0 && (
             <div>
               <h3 className="text-sm font-semibold text-gray-500 mb-2">
                 Sudah Diisi ({sudahDiisi.length})
               </h3>
-              <ClaimTable items={sudahDiisi} showButton={false} />
+              <ClaimTable items={sudahDiisi} mode="status" />
             </div>
           )}
         </>
@@ -872,6 +952,7 @@ export default function MahasiswaDashboard() {
   const [showTambah,       setShowTambah]       = useState(false);
   const [search,           setSearch]           = useState("");
   const [claimsRefreshKey, setClaimsRefreshKey] = useState(0);
+  const [rewardOpenId,     setRewardOpenId]     = useState(null); // buka form reward langsung
 
   if (status === "loading") {
     return <p className="text-center mt-20 text-gray-400">Memuat sesi...</p>;
@@ -978,8 +1059,9 @@ export default function MahasiswaDashboard() {
 
         {/* Konten */}
         <main className="flex-1 px-8 py-8 overflow-y-auto">
-          {activeMenu === "daftar"      && <DaftarKlaim key={claimsRefreshKey} session={session} search={search} />}
-          {activeMenu === "reward"      && <KonfirmasiReward session={session} />}
+          {activeMenu === "daftar"      && <DaftarKlaim key={claimsRefreshKey} session={session} search={search}
+                                              onOpenForm={(id) => { setRewardOpenId(id); setActiveMenu("reward"); }} />}
+          {activeMenu === "reward"      && <KonfirmasiReward session={session} initialClaimId={rewardOpenId} onClearInitial={() => setRewardOpenId(null)} />}
           {activeMenu === "visualisasi" && <VisualisasiData />}
           {activeMenu === "sk-rektor"   && <SKRektor />}
         </main>

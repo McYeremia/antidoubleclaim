@@ -38,11 +38,17 @@ const STATUS_BADGE = {
 function PengajuanClaim({ router }) {
   const [claims, setClaims]   = useState([]);
   const [loading, setLoading] = useState(true);
+  const [opId,    setOpId]    = useState(null);
+
+  useEffect(() => {
+    setOpId(sessionStorage.getItem("operator_id"));
+    fetchClaims();
+  }, []);
 
   const fetchClaims = async () => {
     setLoading(true);
     try {
-      const res  = await fetch("http://127.0.0.1:8000/claims");
+      const res  = await fetch(`${API}/claims`);
       const data = await res.json();
       setClaims(data);
     } catch {
@@ -52,18 +58,21 @@ function PengajuanClaim({ router }) {
     }
   };
 
-  useEffect(() => { fetchClaims(); }, []);
+  const opHeaders = (extra = {}) => ({
+    ...extra,
+    ...(opId ? { "x-operator-id": opId } : {}),
+  });
 
   const handleApprove = async (id, e) => {
     e.stopPropagation();
-    await fetch(`http://127.0.0.1:8000/claims/${id}/approve`, { method: "PATCH" });
+    await fetch(`${API}/claims/${id}/approve`, { method: "PATCH", headers: opHeaders() });
     fetchClaims();
   };
 
   const handleDiscard = async (id, e) => {
     e.stopPropagation();
     if (!confirm("Yakin ingin menghapus klaim ini?")) return;
-    await fetch(`http://127.0.0.1:8000/claims/${id}`, { method: "DELETE" });
+    await fetch(`${API}/claims/${id}`, { method: "DELETE", headers: opHeaders() });
     fetchClaims();
   };
 
@@ -71,7 +80,7 @@ function PengajuanClaim({ router }) {
   const belumDicek    = claims.filter(c => c.status === "belum dicek");
   const sudahDicek    = claims.filter(c => c.status === "sudah dicek");
 
-  const Section = ({ title, color, items, showActions, showMirip }) => (
+  const Section = ({ title, color, items, showActions, showMirip, showVerified }) => (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
       <div className={`px-5 py-3 border-b flex items-center justify-between ${color}`}>
         <h2 className="font-semibold text-sm uppercase tracking-wide">{title}</h2>
@@ -88,8 +97,9 @@ function PengajuanClaim({ router }) {
               <th className="px-4 py-2">Tingkat</th>
               <th className="px-4 py-2">Peringkat</th>
               <th className="px-4 py-2">Tanggal</th>
-              {showMirip   && <th className="px-4 py-2">Mirip Dengan</th>}
-              {showActions && <th className="px-4 py-2 text-right">Aksi</th>}
+              {showMirip    && <th className="px-4 py-2">Mirip Dengan</th>}
+              {showVerified && <th className="px-4 py-2">Diverifikasi Oleh</th>}
+              {showActions  && <th className="px-4 py-2 text-right">Aksi</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -112,6 +122,18 @@ function PengajuanClaim({ router }) {
                         #{claim.mirip_dengan_id}
                       </button>
                     ) : "—"}
+                  </td>
+                )}
+                {showVerified && (
+                  <td className="px-4 py-3">
+                    {claim.verified_by_nama ? (
+                      <div>
+                        <p className="font-medium text-gray-800">{claim.verified_by_nama}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{claim.verified_at ?? "—"}</p>
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">—</span>
+                    )}
                   </td>
                 )}
                 {showActions && (
@@ -166,13 +188,13 @@ function PengajuanClaim({ router }) {
         <>
           <Section title="Perlu Ditinjau"
             color="bg-yellow-50 text-yellow-800 border-yellow-200"
-            items={perluDitinjau} showActions={true} showMirip={true} />
+            items={perluDitinjau} showActions={true}  showMirip={true}  showVerified={false} />
           <Section title="Belum Dicek"
             color="bg-blue-50 text-blue-800 border-blue-200"
-            items={belumDicek} showActions={true} showMirip={false} />
+            items={belumDicek}    showActions={true}  showMirip={false} showVerified={false} />
           <Section title="Sudah Dicek"
             color="bg-green-50 text-green-800 border-green-200"
-            items={sudahDicek} showActions={false} showMirip={false} />
+            items={sudahDicek}    showActions={false} showMirip={false} showVerified={true} />
         </>
       )}
     </div>
@@ -187,10 +209,11 @@ const KATEGORI_LABEL = {
 };
 
 const REWARD_STATUS_BADGE = {
-  menunggu: "bg-yellow-100 text-yellow-800",
-  diproses: "bg-blue-100 text-blue-800",
-  selesai:  "bg-green-100 text-green-800",
-  ditolak:  "bg-red-100 text-red-800",
+  menunggu:     "bg-yellow-100 text-yellow-800",
+  diproses:     "bg-blue-100 text-blue-800",
+  selesai:      "bg-green-100 text-green-800",
+  ditolak:      "bg-red-100 text-red-800",
+  dikembalikan: "bg-orange-100 text-orange-800",
 };
 
 // ── Helper ────────────────────────────────────────────────────────────────────
@@ -369,17 +392,28 @@ function RewardDetailModal({ reward, onClose, onStatusUpdate }) {
             />
           </div>
 
-          {/* Tombol Approve / Tolak */}
+          {/* Tombol Aksi */}
           {reward.reward_status !== "selesai" && reward.reward_status !== "ditolak" && (
-            <div className="flex gap-3 pt-1">
-              <button onClick={() => handleStatus("selesai")} disabled={updating}
-                className="px-4 py-2 rounded-lg text-sm font-semibold bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 transition-colors">
-                {updating ? "Memproses..." : "Approve Data Rekening"}
-              </button>
-              <button onClick={() => handleStatus("ditolak")} disabled={updating}
-                className="px-4 py-2 rounded-lg text-sm font-semibold bg-red-100 text-red-700 hover:bg-red-200 disabled:opacity-50 transition-colors">
-                {updating ? "Memproses..." : "Tolak"}
-              </button>
+            <div className="space-y-3 pt-1">
+              {reward.reward_status === "dikembalikan" && (
+                <div className="rounded-lg bg-orange-50 border border-orange-200 px-4 py-3 text-sm text-orange-700">
+                  Form ini sudah dikembalikan ke mahasiswa. Tunggu mahasiswa memperbaiki dan mengirim ulang.
+                </div>
+              )}
+              <div className="flex gap-3">
+                <button onClick={() => handleStatus("selesai")} disabled={updating}
+                  className="px-4 py-2 rounded-lg text-sm font-semibold bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 transition-colors">
+                  {updating ? "Memproses..." : "Approve Data Rekening"}
+                </button>
+                <button onClick={() => handleStatus("dikembalikan")} disabled={updating}
+                  className="px-4 py-2 rounded-lg text-sm font-semibold bg-orange-100 text-orange-700 hover:bg-orange-200 disabled:opacity-50 transition-colors">
+                  {updating ? "Memproses..." : "Kembalikan ke Mahasiswa"}
+                </button>
+                <button onClick={() => handleStatus("ditolak")} disabled={updating}
+                  className="px-4 py-2 rounded-lg text-sm font-semibold bg-red-100 text-red-700 hover:bg-red-200 disabled:opacity-50 transition-colors">
+                  {updating ? "Memproses..." : "Tolak"}
+                </button>
+              </div>
             </div>
           )}
 
@@ -426,6 +460,7 @@ function PengajuanReward() {
         <table className="w-full text-sm text-left">
           <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
             <tr>
+              <th className="px-4 py-2">Nama Lomba</th>
               <th className="px-4 py-2">Nama Ketua</th>
               <th className="px-4 py-2">NIM</th>
               <th className="px-4 py-2">Kategori</th>
@@ -439,6 +474,7 @@ function PengajuanReward() {
           <tbody className="divide-y divide-gray-100">
             {items.map(r => (
               <tr key={r.id} className="hover:bg-gray-50 transition-colors">
+                <td className="px-4 py-3 text-gray-700">{r.nama_lomba ?? <span className="text-gray-400">—</span>}</td>
                 <td className="px-4 py-3 font-medium text-gray-900">{r.nama_ketua}</td>
                 <td className="px-4 py-3 font-mono text-gray-600">{r.nim}</td>
                 <td className="px-4 py-3 text-gray-600">{KATEGORI_LABEL[r.kategori_lomba] ?? r.kategori_lomba}</td>
