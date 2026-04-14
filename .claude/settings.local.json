@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"from backend.database import create_database; create_database\\(\\); print\\('Database berhasil dibuat'\\)\")",
+      "Bash(python -m pip show imagehash)",
+      "Bash(ls *.cfg *.toml requirements*)",
+      "Bash(ls venv:*)",
+      "Bash(./venv/Scripts/python -c \"from backend.database import create_database; create_database\\(\\); print\\('Database berhasil dibuat'\\)\")",
+      "Bash(./venv/Scripts/python -c ':*)"
+    ]
+  }
+}
