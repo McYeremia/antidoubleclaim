@@ -3,6 +3,7 @@ import os
 from backend.image_hash import generate_phash, hamming_distance
 from backend.text_similarity import token_sort_ratio
 import imagehash
+import json
 
 PHASH_THRESHOLD = 10  # Maximum Hamming distance agar dianggap mirip secara visual
 
@@ -145,6 +146,42 @@ def create_database():
     )
     """)
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_anggota_pengajuan ON PENGAJUAN_ANGGOTA (pengajuan_id)")
+
+    # ── Tabel REWARD_KONFIRMASI ───────────────────────────────────────────────
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS REWARD_KONFIRMASI (
+        id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+        claim_id                INTEGER NOT NULL UNIQUE,
+        mahasiswa_email         TEXT    NOT NULL,
+        tahun_klaim             TEXT    NOT NULL,
+        periode                 TEXT    NOT NULL,
+        nomor_urut_lampiran     TEXT    NOT NULL,
+        kategori_lomba          TEXT    NOT NULL,
+        kompetisi_puspresnas    TEXT,
+        judul_lomba             TEXT,
+        tahun_kegiatan          TEXT,
+        nama_ketua              TEXT    NOT NULL,
+        nim                     TEXT    NOT NULL,
+        nomor_wa                TEXT    NOT NULL,
+        nama_pemilik_rekening   TEXT    NOT NULL,
+        bank                    TEXT    NOT NULL DEFAULT 'BNI',
+        nomor_rekening          TEXT,
+        foto_buku_tabungan_path TEXT,
+        foto_ktm_path           TEXT,
+        foto_ktp_path           TEXT,
+        pakta_integritas_path   TEXT,
+        laporan_akhir_path      TEXT,
+        karya_publikasi_path    TEXT,
+        bersedia                INTEGER NOT NULL DEFAULT 0,
+        data_benar              INTEGER NOT NULL DEFAULT 0,
+        reward_status           TEXT    NOT NULL DEFAULT 'menunggu',
+        catatan_operator        TEXT,
+        created_at              TEXT    NOT NULL DEFAULT (DATETIME('now', 'localtime')),
+        FOREIGN KEY (claim_id) REFERENCES CLAIMS (id)
+    )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_reward_claim  ON REWARD_KONFIRMASI (claim_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_reward_status ON REWARD_KONFIRMASI (reward_status)")
 
     cursor.execute("""
     INSERT OR IGNORE INTO USERS (username, password_hash, nama, email)
@@ -381,3 +418,80 @@ def get_claim_by_id(claim_id):
     row = cursor.fetchone()
     conn.close()
     return _row_to_dict(row) if row else None
+
+# ---------------------------------------------------------------------------
+# Reward Konfirmasi
+# ---------------------------------------------------------------------------
+def insert_reward_konfirmasi(data: dict) -> int:
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO REWARD_KONFIRMASI (
+            claim_id, mahasiswa_email, tahun_klaim, periode, nomor_urut_lampiran,
+            kategori_lomba, kompetisi_puspresnas, judul_lomba, tahun_kegiatan,
+            nama_ketua, nim, nomor_wa, nama_pemilik_rekening, bank, nomor_rekening,
+            foto_buku_tabungan_path, foto_ktm_path, foto_ktp_path,
+            pakta_integritas_path, laporan_akhir_path, karya_publikasi_path,
+            bersedia, data_benar
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    """, (
+        data.get("claim_id"),            data.get("mahasiswa_email"),
+        data.get("tahun_klaim"),         data.get("periode"),
+        data.get("nomor_urut_lampiran"), data.get("kategori_lomba"),
+        data.get("kompetisi_puspresnas"),data.get("judul_lomba"),
+        data.get("tahun_kegiatan"),      data.get("nama_ketua"),
+        data.get("nim"),                 data.get("nomor_wa"),
+        data.get("nama_pemilik_rekening"), data.get("bank", "BNI"),
+        data.get("nomor_rekening"),
+        data.get("foto_buku_tabungan_path"), data.get("foto_ktm_path"),
+        data.get("foto_ktp_path"),       data.get("pakta_integritas_path"),
+        data.get("laporan_akhir_path"),  data.get("karya_publikasi_path"),
+        1 if data.get("bersedia")   else 0,
+        1 if data.get("data_benar") else 0,
+    ))
+    reward_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return reward_id
+
+
+def get_reward_konfirmasi_by_claim_id(claim_id: int):
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM REWARD_KONFIRMASI WHERE claim_id = ?", (claim_id,))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return None
+    cols = [d[0] for d in cursor.description]
+    conn.close()
+    return dict(zip(cols, row))
+
+
+def get_reward_konfirmasi_by_email(email: str) -> list:
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT * FROM REWARD_KONFIRMASI WHERE mahasiswa_email = ? ORDER BY id DESC",
+        (email,)
+    )
+    rows = cursor.fetchall()
+    cols = [d[0] for d in cursor.description]
+    conn.close()
+    return [dict(zip(cols, row)) for row in rows]
+
+
+def update_reward_status(reward_id: int, status: str, catatan: str = None):
+    conn = _get_conn()
+    if catatan is not None:
+        conn.execute(
+            "UPDATE REWARD_KONFIRMASI SET reward_status = ?, catatan_operator = ? WHERE id = ?",
+            (status, catatan, reward_id)
+        )
+    else:
+        conn.execute(
+            "UPDATE REWARD_KONFIRMASI SET reward_status = ? WHERE id = ?",
+            (status, reward_id)
+        )
+    conn.commit()
+    conn.close()

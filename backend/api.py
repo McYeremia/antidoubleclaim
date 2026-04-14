@@ -1,6 +1,7 @@
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 from typing import Optional
 import shutil
 import os
@@ -12,6 +13,8 @@ from backend.database import (
     get_all_claims, get_claims_by_email, get_claim_by_id,
     approve_claim, discard_claim,
     insert_pengajuan, get_pengajuan_by_email, get_pengajuan_by_claim_id,
+    insert_reward_konfirmasi, get_reward_konfirmasi_by_claim_id,
+    get_reward_konfirmasi_by_email, update_reward_status,
 )
 from backend.nim_parser import parse_nim
 
@@ -221,4 +224,104 @@ async def pengajuan_by_claim(claim_id: int):
     data = get_pengajuan_by_claim_id(claim_id)
     if not data:
         raise HTTPException(status_code=404, detail="Data pengajuan tidak ditemukan")
+    return data
+
+# ── Reward Konfirmasi ──────────────────────────────────────────────────────────
+@app.post("/reward-konfirmasi")
+async def submit_reward_konfirmasi(
+    claim_id:               str                    = Form(...),
+    mahasiswa_email:        str                    = Form(...),
+    tahun_klaim:            str                    = Form(...),
+    periode:                str                    = Form(...),
+    nomor_urut_lampiran:    str                    = Form(...),
+    kategori_lomba:         str                    = Form(...),
+    kompetisi_puspresnas:   Optional[str]          = Form(None),
+    judul_lomba:            Optional[str]          = Form(None),
+    tahun_kegiatan:         Optional[str]          = Form(None),
+    nama_ketua:             str                    = Form(...),
+    nim:                    str                    = Form(...),
+    nomor_wa:               str                    = Form(...),
+    nama_pemilik_rekening:  str                    = Form(...),
+    bank:                   str                    = Form("BNI"),
+    nomor_rekening:         Optional[str]          = Form(None),
+    bersedia:               str                    = Form("false"),
+    data_benar:             str                    = Form("false"),
+    foto_buku_tabungan:     Optional[UploadFile]   = File(None),
+    foto_ktm:               Optional[UploadFile]   = File(None),
+    foto_ktp:               Optional[UploadFile]   = File(None),
+    pakta_integritas:       Optional[UploadFile]   = File(None),
+    laporan_akhir:          Optional[UploadFile]   = File(None),
+    karya_publikasi:        Optional[UploadFile]   = File(None),
+):
+    try:
+        def save_file(upload: Optional[UploadFile], prefix: str) -> Optional[str]:
+            if not upload or not upload.filename:
+                return None
+            fname = f"{prefix}_{upload.filename}"
+            fpath = os.path.join(UPLOAD_FOLDER, fname)
+            with open(fpath, "wb") as buf:
+                shutil.copyfileobj(upload.file, buf)
+            return fpath
+
+        data = {
+            "claim_id":               int(claim_id),
+            "mahasiswa_email":        mahasiswa_email,
+            "tahun_klaim":            tahun_klaim,
+            "periode":                periode,
+            "nomor_urut_lampiran":    nomor_urut_lampiran,
+            "kategori_lomba":         kategori_lomba,
+            "kompetisi_puspresnas":   kompetisi_puspresnas,
+            "judul_lomba":            judul_lomba,
+            "tahun_kegiatan":         tahun_kegiatan,
+            "nama_ketua":             nama_ketua,
+            "nim":                    nim,
+            "nomor_wa":               nomor_wa,
+            "nama_pemilik_rekening":  nama_pemilik_rekening,
+            "bank":                   bank,
+            "nomor_rekening":         nomor_rekening,
+            "foto_buku_tabungan_path": save_file(foto_buku_tabungan, "reward_buku_tabungan"),
+            "foto_ktm_path":           save_file(foto_ktm,           "reward_ktm"),
+            "foto_ktp_path":           save_file(foto_ktp,           "reward_ktp"),
+            "pakta_integritas_path":   save_file(pakta_integritas,   "reward_pakta"),
+            "laporan_akhir_path":      save_file(laporan_akhir,      "reward_laporan"),
+            "karya_publikasi_path":    save_file(karya_publikasi,    "reward_karya"),
+            "bersedia":   bersedia.lower()   == "true",
+            "data_benar": data_benar.lower() == "true",
+        }
+
+        reward_id = insert_reward_konfirmasi(data)
+        return {"success": True, "reward_id": reward_id}
+
+    except Exception as e:
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class RewardStatusUpdate(BaseModel):
+    status: str
+    catatan: Optional[str] = None
+
+@app.get("/reward-konfirmasi")
+async def list_rewards(email: Optional[str] = None):
+    if email:
+        return get_reward_konfirmasi_by_email(email)
+    from backend.database import _get_conn
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM REWARD_KONFIRMASI ORDER BY id DESC")
+    rows = cursor.fetchall()
+    cols = [d[0] for d in cursor.description]
+    conn.close()
+    return [dict(zip(cols, row)) for row in rows]
+
+@app.patch("/reward-konfirmasi/{reward_id}/status")
+async def update_reward(reward_id: int, body: RewardStatusUpdate):
+    update_reward_status(reward_id, body.status, body.catatan)
+    return {"success": True}
+
+@app.get("/reward-konfirmasi/{claim_id}")
+async def get_reward(claim_id: int):
+    data = get_reward_konfirmasi_by_claim_id(claim_id)
+    if not data:
+        raise HTTPException(status_code=404, detail="Data reward tidak ditemukan")
     return data

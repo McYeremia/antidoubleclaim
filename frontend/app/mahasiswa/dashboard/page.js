@@ -14,6 +14,10 @@ const STATUS_STYLE = (status) =>
     ? "bg-green-100 text-green-700"
     : "bg-blue-100 text-blue-700";
 
+// ── Status reward ─────────────────────────────────────────────────────────────
+const REWARD_LABEL = { menunggu: "Sedang Diproses", diproses: "Sedang Diproses", selesai: "Reward Dikirim" };
+const REWARD_STYLE = { menunggu: "bg-blue-100 text-blue-700", diproses: "bg-blue-100 text-blue-700", selesai: "bg-green-100 text-green-700" };
+
 // ── Ikon sidebar ──────────────────────────────────────────────────────────────
 const IconPlus = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -362,15 +366,23 @@ function DetailModal({ claim, onClose }) {
 function DaftarKlaim({ session, search }) {
   const router                       = useRouter();
   const [claims, setClaims]          = useState([]);
+  const [rewardMap, setRewardMap]    = useState({});   // claim_id → reward object
   const [loading, setLoading]        = useState(true);
   const [selectedClaim, setSelected] = useState(null);
 
   const fetchClaims = async () => {
     setLoading(true);
     try {
-      const res  = await fetch(`http://127.0.0.1:8000/claims?email=${encodeURIComponent(session.user.email)}`);
-      const data = await res.json();
-      setClaims(data);
+      const [claimRes, rewardRes] = await Promise.all([
+        fetch(`http://127.0.0.1:8000/claims?email=${encodeURIComponent(session.user.email)}`),
+        fetch(`http://127.0.0.1:8000/reward-konfirmasi?email=${encodeURIComponent(session.user.email)}`),
+      ]);
+      const claimData  = await claimRes.json();
+      const rewardData = rewardRes.ok ? await rewardRes.json() : [];
+      setClaims(claimData);
+      const map = {};
+      rewardData.forEach(r => { map[r.claim_id] = r; });
+      setRewardMap(map);
     } catch {
       setClaims([]);
     } finally {
@@ -423,12 +435,18 @@ function DaftarKlaim({ session, search }) {
                   </td>
                   <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                     {claim.status === "sudah dicek" && (
-                      <button
-                        onClick={() => router.push(`/mahasiswa/konfirmasi-reward/${claim.id}`)}
-                        className="px-3 py-1.5 rounded-md text-xs font-semibold bg-orange-500 text-white hover:bg-orange-600 transition-colors whitespace-nowrap"
-                      >
-                        Isi Data Reward
-                      </button>
+                      rewardMap[claim.id] ? (
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${REWARD_STYLE[rewardMap[claim.id].reward_status] ?? "bg-gray-100 text-gray-600"}`}>
+                          {REWARD_LABEL[rewardMap[claim.id].reward_status] ?? rewardMap[claim.id].reward_status}
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => router.push(`/mahasiswa/konfirmasi-reward/${claim.id}`)}
+                          className="px-3 py-1.5 rounded-md text-xs font-semibold bg-orange-500 text-white hover:bg-orange-600 transition-colors whitespace-nowrap"
+                        >
+                          Isi Data Reward
+                        </button>
+                      )
                     )}
                   </td>
                 </tr>
@@ -445,62 +463,102 @@ function DaftarKlaim({ session, search }) {
 // ── Konten: Konfirmasi Reward ─────────────────────────────────────────────────
 function KonfirmasiReward({ session }) {
   const router = useRouter();
-  const [claims, setClaims]   = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [claims,    setClaims]    = useState([]);
+  const [rewardMap, setRewardMap] = useState({});
+  const [loading,   setLoading]   = useState(true);
 
   useEffect(() => {
-    fetch(`http://127.0.0.1:8000/claims?email=${encodeURIComponent(session.user.email)}`)
-      .then(r => r.json())
-      .then(data => setClaims(data.filter(c => c.status === "sudah dicek")))
-      .catch(() => setClaims([]))
+    Promise.all([
+      fetch(`http://127.0.0.1:8000/claims?email=${encodeURIComponent(session.user.email)}`),
+      fetch(`http://127.0.0.1:8000/reward-konfirmasi?email=${encodeURIComponent(session.user.email)}`),
+    ]).then(async ([claimRes, rewardRes]) => {
+      const claimData  = await claimRes.json();
+      const rewardData = rewardRes.ok ? await rewardRes.json() : [];
+      setClaims(claimData.filter(c => c.status === "sudah dicek"));
+      const map = {};
+      rewardData.forEach(r => { map[r.claim_id] = r; });
+      setRewardMap(map);
+    }).catch(() => setClaims([]))
       .finally(() => setLoading(false));
   }, []);
 
+  const belumDiisi = claims.filter(c => !rewardMap[c.id]);
+  const sudahDiisi = claims.filter(c =>  rewardMap[c.id]);
+
+  const ClaimTable = ({ items, showButton }) => (
+    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <table className="w-full text-sm text-left">
+        <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
+          <tr>
+            <th className="px-4 py-3">Nama Lomba</th>
+            <th className="px-4 py-3">Tingkat</th>
+            <th className="px-4 py-3">Peringkat</th>
+            <th className="px-4 py-3">Tanggal</th>
+            <th className="px-4 py-3 text-right">{showButton ? "Aksi" : "Status Reward"}</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-100">
+          {items.map(claim => (
+            <tr key={claim.id} className="hover:bg-gray-50 transition-colors">
+              <td className="px-4 py-3 font-medium text-gray-900">{claim.nama_lomba}</td>
+              <td className="px-4 py-3 text-gray-600">{claim.tingkat}</td>
+              <td className="px-4 py-3 text-gray-600">{claim.peringkat}</td>
+              <td className="px-4 py-3 text-gray-600">{claim.tanggal}</td>
+              <td className="px-4 py-3 text-right">
+                {showButton ? (
+                  <button
+                    onClick={() => router.push(`/mahasiswa/konfirmasi-reward/${claim.id}`)}
+                    className="px-3 py-1.5 rounded-md text-xs font-semibold bg-orange-500 text-white hover:bg-orange-600 transition-colors"
+                  >
+                    Isi Data Reward
+                  </button>
+                ) : (
+                  <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${REWARD_STYLE[rewardMap[claim.id]?.reward_status] ?? "bg-gray-100 text-gray-600"}`}>
+                    {REWARD_LABEL[rewardMap[claim.id]?.reward_status] ?? "—"}
+                  </span>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+
   return (
-    <div>
-      <h2 className="text-xl font-bold text-gray-900 mb-1">Konfirmasi Reward</h2>
-      <p className="text-sm text-gray-500 mb-5">
-        Klaim yang telah disetujui operator memerlukan data rekening untuk pencairan reward.
-      </p>
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-xl font-bold text-gray-900 mb-1">Konfirmasi Reward</h2>
+        <p className="text-sm text-gray-500">
+          Klaim yang telah disetujui operator memerlukan data rekening untuk pencairan reward.
+        </p>
+      </div>
 
       {loading ? (
         <p className="text-center text-gray-400 py-16">Memuat data...</p>
       ) : claims.length === 0 ? (
         <div className="flex items-center justify-center h-48 bg-white rounded-xl border border-dashed border-gray-300">
-          <p className="text-gray-400 text-sm">Belum ada klaim yang perlu dikonfirmasi.</p>
+          <p className="text-gray-400 text-sm">Belum ada klaim yang disetujui.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
-              <tr>
-                <th className="px-4 py-3">Nama Lomba</th>
-                <th className="px-4 py-3">Tingkat</th>
-                <th className="px-4 py-3">Peringkat</th>
-                <th className="px-4 py-3">Tanggal</th>
-                <th className="px-4 py-3 text-right">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {claims.map(claim => (
-                <tr key={claim.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 font-medium text-gray-900">{claim.nama_lomba}</td>
-                  <td className="px-4 py-3 text-gray-600">{claim.tingkat}</td>
-                  <td className="px-4 py-3 text-gray-600">{claim.peringkat}</td>
-                  <td className="px-4 py-3 text-gray-600">{claim.tanggal}</td>
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      onClick={() => router.push(`/mahasiswa/konfirmasi-reward/${claim.id}`)}
-                      className="px-3 py-1.5 rounded-md text-xs font-semibold bg-orange-500 text-white hover:bg-orange-600 transition-colors"
-                    >
-                      Isi Data Reward
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          {belumDiisi.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold text-orange-700 mb-2">
+                Belum Diisi ({belumDiisi.length})
+              </h3>
+              <ClaimTable items={belumDiisi} showButton={true} />
+            </div>
+          )}
+          {sudahDiisi.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold text-gray-500 mb-2">
+                Sudah Diisi ({sudahDiisi.length})
+              </h3>
+              <ClaimTable items={sudahDiisi} showButton={false} />
+            </div>
+          )}
+        </>
       )}
     </div>
   );
