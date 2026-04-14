@@ -13,6 +13,7 @@ from backend.database import (
     get_all_claims, get_claims_by_email, get_claim_by_id,
     approve_claim, discard_claim,
     insert_pengajuan, get_pengajuan_by_email, get_pengajuan_by_claim_id,
+    update_pengajuan,
     insert_reward_konfirmasi, get_reward_konfirmasi_by_claim_id,
     get_reward_konfirmasi_by_email, update_reward_status,
 )
@@ -227,6 +228,44 @@ async def pengajuan_by_claim(claim_id: int):
     if not data:
         raise HTTPException(status_code=404, detail="Data pengajuan tidak ditemukan")
     return data
+
+class PengajuanUpdate(BaseModel):
+    nama_display:        Optional[str] = None
+    nomor_wa:            Optional[str] = None
+    ada_dospem:          Optional[str] = None
+    nidn_dospem:         Optional[str] = None
+    kategori_simkatmawa: Optional[str] = None
+    jenis_kepesertaan:   Optional[str] = None
+    nama_kegiatan:       Optional[str] = None
+    kategori_kegiatan:   Optional[str] = None
+    tingkatan:           Optional[str] = None
+    tahun_kegiatan:      Optional[str] = None
+    model_pelaksanaan:   Optional[str] = None
+    jumlah_peserta:      Optional[int] = None
+    capaian:             Optional[str] = None
+    tanggal_mulai:       Optional[str] = None
+    tanggal_selesai:     Optional[str] = None
+    url_penyelenggara:   Optional[str] = None
+    keterangan:          Optional[str] = None
+    nama_lembaga:        Optional[str] = None
+    jenis_karya_teks:    Optional[str] = None
+    jenis_karya_pilihan: Optional[str] = None
+    deskripsi_karya:     Optional[str] = None
+    manfaat_karya:       Optional[str] = None
+    nomor_surat:         Optional[str] = None
+    tanggal_surat:       Optional[str] = None
+    nama_ketua:          Optional[str] = None
+    peran_pengeclaim:    Optional[str] = None
+    keterangan_kelompok: Optional[str] = None
+    estimasi_reward:     Optional[int] = None
+
+@app.patch("/pengajuan/{pengajuan_id}")
+async def edit_pengajuan(pengajuan_id: int, body: PengajuanUpdate):
+    data = {k: v for k, v in body.model_dump().items() if v is not None}
+    if not data:
+        raise HTTPException(status_code=400, detail="Tidak ada data yang diubah")
+    update_pengajuan(pengajuan_id, data)
+    return {"success": True}
 
 # ── Reward Konfirmasi ──────────────────────────────────────────────────────────
 @app.post("/reward-konfirmasi")

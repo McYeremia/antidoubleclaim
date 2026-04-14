@@ -402,6 +402,33 @@ def get_pengajuan_by_claim_id(claim_id: int):
     return dict(zip(cols, row))
 
 
+def update_pengajuan(pengajuan_id: int, data: dict):
+    # Kolom yang boleh diedit oleh operator
+    EDITABLE = [
+        "nama_display", "nomor_wa", "ada_dospem", "nidn_dospem",
+        "kategori_simkatmawa", "jenis_kepesertaan", "nama_kegiatan",
+        "kategori_kegiatan", "tingkatan", "tahun_kegiatan", "model_pelaksanaan",
+        "jumlah_peserta", "capaian", "tanggal_mulai", "tanggal_selesai",
+        "url_penyelenggara", "keterangan",
+        "nama_lembaga", "jenis_karya_teks", "jenis_karya_pilihan",
+        "deskripsi_karya", "manfaat_karya", "nomor_surat", "tanggal_surat",
+        "nama_ketua", "peran_pengeclaim", "keterangan_kelompok",
+        "estimasi_reward",
+    ]
+    sets   = [f"{col} = ?" for col in EDITABLE if col in data]
+    values = [data[col]    for col in EDITABLE if col in data]
+    if not sets:
+        return
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute(
+        f"UPDATE PENGAJUAN SET {', '.join(sets)} WHERE id = ?",
+        (*values, pengajuan_id),
+    )
+    conn.commit()
+    conn.close()
+
+
 def get_claims_by_email(email):
     conn = _get_conn()
     cursor = conn.cursor()
