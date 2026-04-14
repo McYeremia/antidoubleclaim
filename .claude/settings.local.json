@@ -14,7 +14,8 @@
       "Read(//c/Program Files \\(x86\\)/**)",
       "Bash(./venv/Scripts/pip install:*)",
       "Bash(./venv/Scripts/python ocr_sk_rektor.py)",
-      "Bash(npx next:*)"
+      "Bash(npx next:*)",
+      "Bash(./venv/Scripts/python -c \"import bcrypt; print\\('bcrypt ok'\\)\")"
     ]
   }
 }
