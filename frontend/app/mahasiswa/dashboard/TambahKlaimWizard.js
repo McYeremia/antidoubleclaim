@@ -8,6 +8,55 @@ import { useState, useEffect } from "react";
 const TAHUN_INI   = new Date().getFullYear();
 const TAHUN_OPSI  = [String(TAHUN_INI), String(TAHUN_INI - 1)];
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Kalkulasi Reward (SK Rektor No. 078/B.02/UKDW/2023)
+// ─────────────────────────────────────────────────────────────────────────────
+const PENGALI_REWARD = 225_000; // Rp per poin
+
+const TABEL_NON_PUSPRESNAS = {
+  "Provinsi / Wilayah": { peserta: 0.5, juara3: 1,  juara2: 2,  juara1: 4,  terbaik: 5,  terbaikPlus: 6  },
+  "Nasional":            { peserta: 0.5, juara3: 2,  juara2: 4,  juara1: 8,  terbaik: 10, terbaikPlus: 12 },
+  "Internasional":       { peserta: 0.5, juara3: 3,  juara2: 6,  juara1: 12, terbaik: 15, terbaikPlus: 18 },
+};
+
+function capaianKePoin(capaian, tabel) {
+  if (!capaian || !tabel) return null;
+  if (capaian.includes("Juara 1"))                                          return tabel.juara1;
+  if (capaian.includes("Juara 2"))                                          return tabel.juara2;
+  if (capaian.includes("Juara 3") || capaian.startsWith("Harapan"))        return tabel.juara3;
+  if (capaian.includes("Apresiasi") || capaian.includes("Juara umum"))     return tabel.terbaikPlus;
+  if (capaian.includes("Partisipasi") || capaian.includes("Peserta"))      return tabel.peserta;
+  return null;
+}
+
+function hitungReward(data) {
+  const { kategori_simkatmawa, kategori_kegiatan, capaian, jenis_kepesertaan, jumlah_anggota } = data;
+
+  if (kategori_simkatmawa !== "lomba_mandiri") return null;
+
+  const tabel = TABEL_NON_PUSPRESNAS[kategori_kegiatan];
+  let poin = capaianKePoin(capaian, tabel);
+  if (poin == null) return null;
+
+  const n = Math.max(1, parseInt(jumlah_anggota) || 1);
+  if (jenis_kepesertaan === "kelompok") {
+    // Bonus berdasarkan jumlah anggota tim (SK Rektor Pasal 5)
+    const bonus = n <= 5 ? 1 : n <= 10 ? 1.25 : 1.5;
+    poin = poin * bonus;
+    // Dana total diberikan ke ketua — pembagian antar anggota di luar sistem
+  }
+
+  return {
+    poin: Math.round(poin * 100) / 100,
+    total: Math.round(poin * PENGALI_REWARD),
+    jumlah_anggota: n,
+  };
+}
+
+function formatRupiah(n) {
+  return "Rp " + n.toLocaleString("id-ID");
+}
+
 const KATEGORI_REKOGNISI = [
   "Karya Mahasiswa berupa teknologi tepat guna/seni budaya/produk kreatif untuk UMKM dan Industri",
   "Juri/Pelatih/Wasit",
@@ -703,11 +752,36 @@ function Step6({ data, onChange, nimInfo }) {
         </div>
       </div>
 
-      {/* Poin */}
-      <div className="bg-blue-50 rounded-xl p-4 flex items-center justify-between">
-        <span className="text-sm font-medium text-blue-700">Estimasi Total Poin</span>
-        <span className="text-2xl font-bold text-blue-700">0</span>
-      </div>
+      {/* Estimasi Reward */}
+      {(() => {
+        const hasil = hitungReward(data);
+        if (!hasil) {
+          return (
+            <div className="bg-gray-50 rounded-xl p-4 flex items-center justify-between border border-gray-200">
+              <div>
+                <span className="text-sm font-medium text-gray-600">Estimasi Dana Penghargaan</span>
+                <p className="text-xs text-gray-400 mt-0.5">Tidak dapat dihitung otomatis untuk kategori ini</p>
+              </div>
+              <span className="text-sm text-gray-400 font-medium">—</span>
+            </div>
+          );
+        }
+        return (
+          <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-sm font-medium text-blue-700">Estimasi Dana Penghargaan</span>
+                <p className="text-xs text-blue-500 mt-0.5">{hasil.poin} poin × Rp 225.000 (SK Rektor 078/2023)</p>
+              </div>
+              <span className="text-2xl font-bold text-blue-700">{formatRupiah(hasil.total)}</span>
+            </div>
+            <p className="text-xs text-blue-400 mt-2">
+              * Estimasi untuk Non PUSPRESNAS. Perhitungan akhir ditentukan oleh operator.
+              {data.jenis_kepesertaan === "kelompok" && ` Dana total diberikan ke ketua tim (${hasil.jumlah_anggota} anggota) — pembagian ke anggota diatur oleh tim.`}
+            </p>
+          </div>
+        );
+      })()}
 
       {/* Persetujuan */}
       <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 space-y-3">
@@ -926,6 +1000,8 @@ export default function TambahKlaimWizard({ session, onClose, onSuccess }) {
       appendIfValue("keterangan_kelompok", data.keterangan_kelompok);
       pengajuanPayload.append("setuju",    String(data.setuju));
       if (claimId) pengajuanPayload.append("claim_id", String(claimId));
+      const rewardHasil = hitungReward(data);
+      if (rewardHasil) pengajuanPayload.append("estimasi_reward", String(rewardHasil.total));
 
       // Anggota kelompok (JSON string)
       if (data.jenis_kepesertaan === "kelompok" && data.anggota?.length > 0) {

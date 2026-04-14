@@ -6,7 +6,15 @@
       "Bash(ls *.cfg *.toml requirements*)",
       "Bash(ls venv:*)",
       "Bash(./venv/Scripts/python -c \"from backend.database import create_database; create_database\\(\\); print\\('Database berhasil dibuat'\\)\")",
-      "Bash(./venv/Scripts/python -c ':*)"
+      "Bash(./venv/Scripts/python -c ':*)",
+      "Bash(./venv/Scripts/pip show:*)",
+      "Bash(where tesseract:*)",
+      "Bash(./venv/Scripts/pip list:*)",
+      "Read(//c/Program Files/**)",
+      "Read(//c/Program Files \\(x86\\)/**)",
+      "Bash(./venv/Scripts/pip install:*)",
+      "Bash(./venv/Scripts/python ocr_sk_rektor.py)",
+      "Bash(npx next:*)"
     ]
   }
 }

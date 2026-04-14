@@ -129,11 +129,19 @@ def create_database():
         keterangan_kelompok     TEXT,
         claim_id                INTEGER,
         setuju                  INTEGER NOT NULL DEFAULT 0,
+        estimasi_reward         INTEGER,
         created_at              TEXT    NOT NULL DEFAULT (DATETIME('now', 'localtime')),
         FOREIGN KEY (claim_id) REFERENCES CLAIMS (id)
     )
     """)
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_pengajuan_email ON PENGAJUAN (mahasiswa_email)")
+
+    # Migrasi: tambah kolom baru ke tabel lama jika belum ada
+    try:
+        cursor.execute("ALTER TABLE PENGAJUAN ADD COLUMN estimasi_reward INTEGER")
+        conn.commit()
+    except Exception:
+        pass  # kolom sudah ada
 
     # ── Tabel PENGAJUAN_ANGGOTA ───────────────────────────────────────────────
     cursor.execute("""
@@ -325,9 +333,9 @@ def insert_pengajuan(data: dict, anggota: list = None) -> int:
             nama_lembaga, jenis_karya_teks, jenis_karya_pilihan,
             deskripsi_karya, manfaat_karya, nomor_surat, tanggal_surat,
             nama_ketua, peran_pengeclaim, keterangan_kelompok,
-            claim_id, setuju
+            claim_id, setuju, estimasi_reward
         ) VALUES (
-            ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
+            ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
         )
     """, (
         data.get("mahasiswa_email"), data.get("nama_display"), data.get("nomor_wa"),
@@ -342,6 +350,7 @@ def insert_pengajuan(data: dict, anggota: list = None) -> int:
         data.get("deskripsi_karya"), data.get("manfaat_karya"), data.get("nomor_surat"), data.get("tanggal_surat"),
         data.get("nama_ketua"), data.get("peran_pengeclaim"), data.get("keterangan_kelompok"),
         data.get("claim_id"), 1 if data.get("setuju") else 0,
+        data.get("estimasi_reward"),
     ))
     pengajuan_id = cursor.lastrowid
 

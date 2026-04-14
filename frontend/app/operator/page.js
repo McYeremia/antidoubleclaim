@@ -212,6 +212,7 @@ function DocLink({ label, path }) {
 // ── Modal Detail Reward ───────────────────────────────────────────────────────
 function RewardDetailModal({ reward, onClose, onStatusUpdate }) {
   const [claim,       setClaim]       = useState(null);
+  const [pengajuan,   setPengajuan]   = useState(null);
   const [updating,    setUpdating]    = useState(false);
   const [catatan,     setCatatan]     = useState(reward.catatan_operator ?? "");
 
@@ -220,6 +221,10 @@ function RewardDetailModal({ reward, onClose, onStatusUpdate }) {
       fetch(`http://127.0.0.1:8000/claims/${reward.claim_id}`)
         .then(r => r.ok ? r.json() : null)
         .then(setClaim)
+        .catch(() => {});
+      fetch(`http://127.0.0.1:8000/pengajuan/by-claim/${reward.claim_id}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(setPengajuan)
         .catch(() => {});
     }
   }, [reward.claim_id]);
@@ -280,6 +285,19 @@ function RewardDetailModal({ reward, onClose, onStatusUpdate }) {
                   <p className="text-blue-800">{claim.tanggal}</p>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Estimasi Dana Penghargaan */}
+          {pengajuan?.estimasi_reward != null && (
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-blue-700">Estimasi Dana Penghargaan</p>
+                <p className="text-xs text-blue-400 mt-0.5">SK Rektor No. 078/B.02/UKDW/2023 · Non PUSPRESNAS</p>
+              </div>
+              <p className="text-xl font-bold text-blue-700">
+                {"Rp " + Number(pengajuan.estimasi_reward).toLocaleString("id-ID")}
+              </p>
             </div>
           )}
 

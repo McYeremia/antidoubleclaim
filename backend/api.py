@@ -149,6 +149,7 @@ async def submit_pengajuan(
     anggota_json:        Optional[str]  = Form(None),
     setuju:              str            = Form("false"),
     claim_id:            Optional[str]  = Form(None),
+    estimasi_reward:     Optional[str]  = Form(None),
     surat_tugas:         Optional[UploadFile] = File(None),
     foto_penyerahan:     Optional[UploadFile] = File(None),
     dokumen_sertifikat:  Optional[UploadFile] = File(None),
@@ -206,6 +207,7 @@ async def submit_pengajuan(
             "keterangan_kelompok":  keterangan_kelompok,
             "claim_id":             int(claim_id) if claim_id else None,
             "setuju":               setuju.lower() == "true",
+            "estimasi_reward":      int(estimasi_reward) if estimasi_reward else None,
         }
 
         pengajuan_id = insert_pengajuan(data, anggota)
