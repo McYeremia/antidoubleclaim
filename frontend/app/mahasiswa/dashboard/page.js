@@ -30,6 +30,11 @@ const IconChart = () => (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
   </svg>
 );
+const IconReward = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+  </svg>
+);
 
 // ── Popup: Form Tambah Klaim — digantikan TambahKlaimWizard ──────────────────
 function TambahKlaimModal({ session, onClose, onSuccess }) {
@@ -355,6 +360,7 @@ function DetailModal({ claim, onClose }) {
 
 // ── Konten: Daftar Klaim ──────────────────────────────────────────────────────
 function DaftarKlaim({ session, search }) {
+  const router                       = useRouter();
   const [claims, setClaims]          = useState([]);
   const [loading, setLoading]        = useState(true);
   const [selectedClaim, setSelected] = useState(null);
@@ -399,6 +405,7 @@ function DaftarKlaim({ session, search }) {
                 <th className="px-4 py-3">Peringkat</th>
                 <th className="px-4 py-3">Tanggal</th>
                 <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -414,6 +421,16 @@ function DaftarKlaim({ session, search }) {
                       {STATUS_LABEL(claim.status)}
                     </span>
                   </td>
+                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                    {claim.status === "sudah dicek" && (
+                      <button
+                        onClick={() => router.push(`/mahasiswa/konfirmasi-reward/${claim.id}`)}
+                        className="px-3 py-1.5 rounded-md text-xs font-semibold bg-orange-500 text-white hover:bg-orange-600 transition-colors whitespace-nowrap"
+                      >
+                        Isi Data Reward
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -421,6 +438,70 @@ function DaftarKlaim({ session, search }) {
         </div>
       )}
       <DetailModal claim={selectedClaim} onClose={() => setSelected(null)} />
+    </div>
+  );
+}
+
+// ── Konten: Konfirmasi Reward ─────────────────────────────────────────────────
+function KonfirmasiReward({ session }) {
+  const router = useRouter();
+  const [claims, setClaims]   = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`http://127.0.0.1:8000/claims?email=${encodeURIComponent(session.user.email)}`)
+      .then(r => r.json())
+      .then(data => setClaims(data.filter(c => c.status === "sudah dicek")))
+      .catch(() => setClaims([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <div>
+      <h2 className="text-xl font-bold text-gray-900 mb-1">Konfirmasi Reward</h2>
+      <p className="text-sm text-gray-500 mb-5">
+        Klaim yang telah disetujui operator memerlukan data rekening untuk pencairan reward.
+      </p>
+
+      {loading ? (
+        <p className="text-center text-gray-400 py-16">Memuat data...</p>
+      ) : claims.length === 0 ? (
+        <div className="flex items-center justify-center h-48 bg-white rounded-xl border border-dashed border-gray-300">
+          <p className="text-gray-400 text-sm">Belum ada klaim yang perlu dikonfirmasi.</p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <table className="w-full text-sm text-left">
+            <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
+              <tr>
+                <th className="px-4 py-3">Nama Lomba</th>
+                <th className="px-4 py-3">Tingkat</th>
+                <th className="px-4 py-3">Peringkat</th>
+                <th className="px-4 py-3">Tanggal</th>
+                <th className="px-4 py-3 text-right">Aksi</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {claims.map(claim => (
+                <tr key={claim.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-4 py-3 font-medium text-gray-900">{claim.nama_lomba}</td>
+                  <td className="px-4 py-3 text-gray-600">{claim.tingkat}</td>
+                  <td className="px-4 py-3 text-gray-600">{claim.peringkat}</td>
+                  <td className="px-4 py-3 text-gray-600">{claim.tanggal}</td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      onClick={() => router.push(`/mahasiswa/konfirmasi-reward/${claim.id}`)}
+                      className="px-3 py-1.5 rounded-md text-xs font-semibold bg-orange-500 text-white hover:bg-orange-600 transition-colors"
+                    >
+                      Isi Data Reward
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
@@ -463,8 +544,9 @@ export default function MahasiswaDashboard() {
   };
 
   const menus = [
-    { key: "daftar",      label: "Daftar Klaim",     icon: <IconList /> },
-    { key: "visualisasi", label: "Visualisasi Data",  icon: <IconChart /> },
+    { key: "daftar",      label: "Daftar Klaim",      icon: <IconList />   },
+    { key: "reward",      label: "Konfirmasi Reward",  icon: <IconReward /> },
+    { key: "visualisasi", label: "Visualisasi Data",   icon: <IconChart />  },
   ];
 
   return (
@@ -550,9 +632,8 @@ export default function MahasiswaDashboard() {
 
         {/* Konten */}
         <main className="flex-1 px-8 py-8 overflow-y-auto">
-          {activeMenu === "daftar" && (
-            <DaftarKlaim key={claimsRefreshKey} session={session} search={search} />
-          )}
+          {activeMenu === "daftar"      && <DaftarKlaim key={claimsRefreshKey} session={session} search={search} />}
+          {activeMenu === "reward"      && <KonfirmasiReward session={session} />}
           {activeMenu === "visualisasi" && <VisualisasiData />}
         </main>
       </div>
