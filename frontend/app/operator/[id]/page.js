@@ -10,6 +10,44 @@ const STATUS_STYLE = {
   "sudah dicek":    "bg-green-100 text-green-800",
 };
 
+// ── Konstanta pilihan (sinkron dengan TambahKlaimWizard) ──────────────────────
+const TAHUN_INI = new Date().getFullYear();
+const OPT_TAHUN = [String(TAHUN_INI), String(TAHUN_INI - 1), String(TAHUN_INI - 2)];
+
+const OPT_KATEGORI_SIMKATMAWA = [
+  { value: "lomba_mandiri", label: "Lomba Mandiri" },
+  { value: "rekognisi",     label: "Rekognisi Non-Lomba" },
+];
+const OPT_JENIS_KEPESERTAAN = [
+  { value: "individu", label: "Individu" },
+  { value: "kelompok", label: "Kelompok" },
+];
+const OPT_ADA_DOSPEM = [
+  { value: "ya",    label: "Ya" },
+  { value: "tidak", label: "Tidak" },
+];
+const OPT_KATEGORI_LOMBA   = ["Provinsi / Wilayah", "Nasional", "Internasional"];
+const OPT_TINGKATAN        = ["Internasional", "Nasional", "Provinsi"];
+const OPT_MODEL_PELAKSANAAN = ["Online", "Offline"];
+const OPT_CAPAIAN = [
+  "Juara 1", "Juara 2", "Juara 3",
+  "Harapan 1", "Harapan 2", "Harapan 3",
+  "Apresiasi kejuaraan / Penghargaan tambahan / Juara umum",
+  "Partisipasi / Delegasi / Peserta kejuaraan",
+];
+const OPT_KATEGORI_REKOGNISI = [
+  "Karya Mahasiswa berupa teknologi tepat guna/seni budaya/produk kreatif untuk UMKM dan Industri",
+  "Juri/Pelatih/Wasit",
+  "Pemakalah/Speaker pada Conference/Seminar Ilmiah",
+  "Narasumber pada kegiatan/seminar",
+  "Peserta pameran karya seni",
+  "Penulisan ISBN",
+  "Paten/Paten Sederhana",
+  "Publikasi jurnal nasional Sinta 1 dan 2 dan/atau internasional bereputasi sebagai penulis pertama",
+  "Tuan rumah kejuaraan/kompetisi mandiri",
+];
+const OPT_JENIS_KARYA = ["Teknologi Tepat Guna", "Seni Budaya", "Produk Kreatif"];
+
 // ── Helper ────────────────────────────────────────────────────────────────────
 function InfoRow({ label, value }) {
   if (!value && value !== 0) return null;
@@ -48,30 +86,144 @@ function FileLink({ label, path }) {
   );
 }
 
+// ── Helper input untuk mode edit ─────────────────────────────────────────────
+function EditInput({ label, name, value, onChange, type = "text", span2 = false }) {
+  return (
+    <div className={span2 ? "col-span-2" : ""}>
+      <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">{label}</p>
+      <input
+        type={type}
+        value={value ?? ""}
+        onChange={e => onChange(name, e.target.value)}
+        className="block w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      />
+    </div>
+  );
+}
+
+function EditSelect({ label, name, value, onChange, options, span2 = false }) {
+  // options bisa berupa string[] atau {value, label}[]
+  return (
+    <div className={span2 ? "col-span-2" : ""}>
+      <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">{label}</p>
+      <select
+        value={value ?? ""}
+        onChange={e => onChange(name, e.target.value)}
+        className="block w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
+        <option value="">— pilih —</option>
+        {options.map(o => {
+          const val = typeof o === "object" ? o.value : o;
+          const lbl = typeof o === "object" ? o.label : o;
+          return <option key={val} value={val}>{lbl}</option>;
+        })}
+      </select>
+    </div>
+  );
+}
+
 // ── Blok data pengajuan lengkap ───────────────────────────────────────────────
-function PengajuanDetail({ p }) {
+function PengajuanDetail({ p, onSaved }) {
+  const [editing, setEditing]   = useState(false);
+  const [form,    setForm]      = useState({});
+  const [saving,  setSaving]    = useState(false);
+  const [saved,   setSaved]     = useState(false);
+
   if (!p) return null;
 
-  const isLomba   = p.kategori_simkatmawa === "lomba_mandiri";
-  const isKarya   = p.kategori_kegiatan?.startsWith("Karya Mahasiswa");
-  const isKelompok = p.jenis_kepesertaan === "kelompok";
+  const isLomba    = (editing ? form.kategori_simkatmawa : p.kategori_simkatmawa) === "lomba_mandiri";
+  const isKarya    = (editing ? form.kategori_kegiatan   : p.kategori_kegiatan)?.startsWith("Karya Mahasiswa");
+  const isKelompok = (editing ? form.jenis_kepesertaan   : p.jenis_kepesertaan)  === "kelompok";
 
-  // Parse anggota dari GROUP_CONCAT "nama|nim;;nama|nim"
   const anggota = p.anggota_list
-    ? p.anggota_list.split(";;").map((s) => { const [nama, nim] = s.split("|"); return { nama, nim }; })
+    ? p.anggota_list.split(";;").map(s => { const [nama, nim] = s.split("|"); return { nama, nim }; })
     : [];
+
+  const startEdit = () => {
+    setForm({ ...p });
+    setEditing(true);
+    setSaved(false);
+  };
+
+  const cancelEdit = () => setEditing(false);
+
+  const set = (name, value) => setForm(f => ({ ...f, [name]: value }));
+
+  const handleSave = async () => {
+    setSaving(true);
+    const payload = { ...form };
+    delete payload.anggota_list;
+    delete payload.id;
+    delete payload.mahasiswa_email;
+    delete payload.created_at;
+    delete payload.claim_id;
+    delete payload.setuju;
+    // hanya kirim field yang berubah
+    const changed = {};
+    for (const k of Object.keys(payload)) {
+      if (payload[k] !== p[k]) changed[k] = payload[k] === "" ? null : payload[k];
+    }
+    if (Object.keys(changed).length === 0) { setEditing(false); setSaving(false); return; }
+    await fetch(`http://127.0.0.1:8000/pengajuan/${p.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(changed),
+    });
+    setSaving(false);
+    setEditing(false);
+    setSaved(true);
+    onSaved?.();
+  };
+
+  const d = editing ? form : p;
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
-      <h2 className="text-base font-semibold text-gray-700">Data Pengajuan Lengkap</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-base font-semibold text-gray-700">Data Pengajuan Lengkap</h2>
+        <div className="flex items-center gap-2">
+          {saved && <span className="text-xs text-green-600 font-medium">Tersimpan</span>}
+          {editing ? (
+            <>
+              <button onClick={cancelEdit}
+                className="px-3 py-1.5 text-xs font-semibold rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50">
+                Batal
+              </button>
+              <button onClick={handleSave} disabled={saving}
+                className="px-3 py-1.5 text-xs font-semibold rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
+                {saving ? "Menyimpan..." : "Simpan Perubahan"}
+              </button>
+            </>
+          ) : (
+            <button onClick={startEdit}
+              className="px-3 py-1.5 text-xs font-semibold rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 flex items-center gap-1.5">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              Edit Data
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* Data Mahasiswa */}
       <div>
         <SectionTitle>Data Mahasiswa</SectionTitle>
         <div className="grid grid-cols-2 gap-4">
-          <InfoRow label="Nama"     value={p.nama_display} />
-          <InfoRow label="Email"    value={p.mahasiswa_email} />
-          <InfoRow label="Nomor WA" value={p.nomor_wa} />
+          {editing ? (
+            <>
+              <EditInput label="Nama"     name="nama_display" value={d.nama_display} onChange={set} />
+              <InfoRow   label="Email"    value={p.mahasiswa_email} />
+              <EditInput label="Nomor WA" name="nomor_wa"     value={d.nomor_wa}     onChange={set} />
+            </>
+          ) : (
+            <>
+              <InfoRow label="Nama"     value={p.nama_display} />
+              <InfoRow label="Email"    value={p.mahasiswa_email} />
+              <InfoRow label="Nomor WA" value={p.nomor_wa} />
+            </>
+          )}
         </div>
       </div>
 
@@ -79,8 +231,19 @@ function PengajuanDetail({ p }) {
       <div>
         <SectionTitle>Dosen Pembimbing</SectionTitle>
         <div className="grid grid-cols-2 gap-4">
-          <InfoRow label="Menggunakan Dospem" value={p.ada_dospem === "ya" ? "Ya" : "Tidak"} />
-          {p.ada_dospem === "ya" && <InfoRow label="NIK/NIDN/NIDK" value={p.nidn_dospem} />}
+          {editing ? (
+            <>
+              <EditSelect label="Menggunakan Dospem" name="ada_dospem" value={d.ada_dospem}
+                options={OPT_ADA_DOSPEM} onChange={set} />
+              {d.ada_dospem === "ya" &&
+                <EditInput label="NIK/NIDN/NIDK" name="nidn_dospem" value={d.nidn_dospem} onChange={set} />}
+            </>
+          ) : (
+            <>
+              <InfoRow label="Menggunakan Dospem" value={p.ada_dospem === "ya" ? "Ya" : "Tidak"} />
+              {p.ada_dospem === "ya" && <InfoRow label="NIK/NIDN/NIDK" value={p.nidn_dospem} />}
+            </>
+          )}
         </div>
         <div className="mt-3">
           <FileLink label="Surat Tugas Dospem" path={p.surat_tugas_path} />
@@ -91,32 +254,64 @@ function PengajuanDetail({ p }) {
       <div>
         <SectionTitle>Detail Kegiatan</SectionTitle>
         <div className="grid grid-cols-2 gap-4">
-          <InfoRow label="Kategori SIMKATMAWA"
-            value={isLomba ? "Lomba Mandiri" : "Rekognisi Non-Lomba"} />
-          <InfoRow label="Jenis Kepesertaan"  value={p.jenis_kepesertaan} />
-          <InfoRow label="Nama Kegiatan"      value={p.nama_kegiatan} />
-          <InfoRow label="Kategori Kegiatan"  value={p.kategori_kegiatan} />
-          {!isLomba && <InfoRow label="Tingkatan"     value={p.tingkatan} />}
-          <InfoRow label="Tahun Kegiatan"     value={p.tahun_kegiatan} />
-          {isLomba && <>
-            <InfoRow label="Model Pelaksanaan" value={p.model_pelaksanaan} />
-            <InfoRow label="Jumlah Peserta"    value={p.jumlah_peserta} />
-            <InfoRow label="Capaian"           value={p.capaian} />
-            <InfoRow label="Tanggal Mulai"     value={p.tanggal_mulai} />
-            <InfoRow label="Tanggal Selesai"   value={p.tanggal_selesai} />
-          </>}
-          <div className="col-span-2">
-            <InfoRow label="URL Penyelenggara" value={
-              p.url_penyelenggara
-                ? <a href={p.url_penyelenggara} target="_blank" rel="noopener noreferrer"
-                     className="text-blue-600 hover:underline">{p.url_penyelenggara}</a>
-                : null
-            } />
-          </div>
-          {p.keterangan && (
-            <div className="col-span-2">
-              <InfoRow label="Keterangan" value={p.keterangan} />
-            </div>
+          {editing ? (
+            <>
+              <EditSelect label="Kategori SIMKATMAWA" name="kategori_simkatmawa"
+                value={d.kategori_simkatmawa} options={OPT_KATEGORI_SIMKATMAWA} onChange={set} />
+              <EditSelect label="Jenis Kepesertaan" name="jenis_kepesertaan"
+                value={d.jenis_kepesertaan} options={OPT_JENIS_KEPESERTAAN} onChange={set} />
+              <EditInput label="Nama Kegiatan" name="nama_kegiatan" value={d.nama_kegiatan} onChange={set} span2 />
+              <EditSelect label="Kategori Kegiatan" name="kategori_kegiatan"
+                value={d.kategori_kegiatan}
+                options={isLomba ? OPT_KATEGORI_LOMBA : OPT_KATEGORI_REKOGNISI}
+                onChange={set} span2 />
+              {!isLomba && <EditSelect label="Tingkatan" name="tingkatan"
+                value={d.tingkatan} options={OPT_TINGKATAN} onChange={set} />}
+              <EditSelect label="Tahun Kegiatan" name="tahun_kegiatan"
+                value={d.tahun_kegiatan} options={OPT_TAHUN} onChange={set} />
+              {isLomba && <>
+                <EditSelect label="Model Pelaksanaan" name="model_pelaksanaan"
+                  value={d.model_pelaksanaan} options={OPT_MODEL_PELAKSANAAN} onChange={set} />
+                <EditInput label="Jumlah Peserta" name="jumlah_peserta"
+                  value={d.jumlah_peserta} onChange={set} type="number" />
+                <EditSelect label="Capaian" name="capaian"
+                  value={d.capaian} options={OPT_CAPAIAN} onChange={set} />
+                <EditInput label="Tanggal Mulai"   name="tanggal_mulai"
+                  value={d.tanggal_mulai}   onChange={set} type="date" />
+                <EditInput label="Tanggal Selesai" name="tanggal_selesai"
+                  value={d.tanggal_selesai} onChange={set} type="date" />
+              </>}
+              <EditInput label="URL Penyelenggara" name="url_penyelenggara"
+                value={d.url_penyelenggara} onChange={set} span2 />
+              <EditInput label="Keterangan" name="keterangan"
+                value={d.keterangan} onChange={set} span2 />
+            </>
+          ) : (
+            <>
+              <InfoRow label="Kategori SIMKATMAWA"
+                value={isLomba ? "Lomba Mandiri" : "Rekognisi Non-Lomba"} />
+              <InfoRow label="Jenis Kepesertaan"  value={p.jenis_kepesertaan} />
+              <InfoRow label="Nama Kegiatan"      value={p.nama_kegiatan} />
+              <InfoRow label="Kategori Kegiatan"  value={p.kategori_kegiatan} />
+              {!isLomba && <InfoRow label="Tingkatan" value={p.tingkatan} />}
+              <InfoRow label="Tahun Kegiatan"     value={p.tahun_kegiatan} />
+              {isLomba && <>
+                <InfoRow label="Model Pelaksanaan" value={p.model_pelaksanaan} />
+                <InfoRow label="Jumlah Peserta"    value={p.jumlah_peserta} />
+                <InfoRow label="Capaian"           value={p.capaian} />
+                <InfoRow label="Tanggal Mulai"     value={p.tanggal_mulai} />
+                <InfoRow label="Tanggal Selesai"   value={p.tanggal_selesai} />
+              </>}
+              <div className="col-span-2">
+                <InfoRow label="URL Penyelenggara" value={
+                  p.url_penyelenggara
+                    ? <a href={p.url_penyelenggara} target="_blank" rel="noopener noreferrer"
+                         className="text-blue-600 hover:underline">{p.url_penyelenggara}</a>
+                    : null
+                } />
+              </div>
+              {p.keterangan && <div className="col-span-2"><InfoRow label="Keterangan" value={p.keterangan} /></div>}
+            </>
           )}
         </div>
       </div>
@@ -126,13 +321,28 @@ function PengajuanDetail({ p }) {
         <div>
           <SectionTitle>Data Karya Mahasiswa</SectionTitle>
           <div className="grid grid-cols-2 gap-4">
-            <InfoRow label="Nama Lembaga/Mitra"  value={p.nama_lembaga} />
-            <InfoRow label="Jenis Karya"         value={p.jenis_karya_teks} />
-            <InfoRow label="Pilihan Jenis Karya" value={p.jenis_karya_pilihan} />
-            <InfoRow label="Nomor Surat"         value={p.nomor_surat} />
-            <InfoRow label="Tanggal Surat"       value={p.tanggal_surat} />
-            <div className="col-span-2"><InfoRow label="Deskripsi Karya" value={p.deskripsi_karya} /></div>
-            <div className="col-span-2"><InfoRow label="Manfaat Karya"   value={p.manfaat_karya} /></div>
+            {editing ? (
+              <>
+                <EditInput label="Nama Lembaga/Mitra"  name="nama_lembaga"        value={d.nama_lembaga}        onChange={set} />
+                <EditInput label="Jenis Karya"         name="jenis_karya_teks"    value={d.jenis_karya_teks}    onChange={set} />
+                <EditSelect label="Pilihan Jenis Karya" name="jenis_karya_pilihan"
+                  value={d.jenis_karya_pilihan} options={OPT_JENIS_KARYA} onChange={set} />
+                <EditInput label="Nomor Surat"         name="nomor_surat"         value={d.nomor_surat}         onChange={set} />
+                <EditInput label="Tanggal Surat"       name="tanggal_surat"       value={d.tanggal_surat}       onChange={set} />
+                <EditInput label="Deskripsi Karya"     name="deskripsi_karya"     value={d.deskripsi_karya}     onChange={set} span2 />
+                <EditInput label="Manfaat Karya"       name="manfaat_karya"       value={d.manfaat_karya}       onChange={set} span2 />
+              </>
+            ) : (
+              <>
+                <InfoRow label="Nama Lembaga/Mitra"  value={p.nama_lembaga} />
+                <InfoRow label="Jenis Karya"         value={p.jenis_karya_teks} />
+                <InfoRow label="Pilihan Jenis Karya" value={p.jenis_karya_pilihan} />
+                <InfoRow label="Nomor Surat"         value={p.nomor_surat} />
+                <InfoRow label="Tanggal Surat"       value={p.tanggal_surat} />
+                <div className="col-span-2"><InfoRow label="Deskripsi Karya" value={p.deskripsi_karya} /></div>
+                <div className="col-span-2"><InfoRow label="Manfaat Karya"   value={p.manfaat_karya} /></div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -142,12 +352,19 @@ function PengajuanDetail({ p }) {
         <div>
           <SectionTitle>Data Kelompok</SectionTitle>
           <div className="grid grid-cols-2 gap-4 mb-3">
-            <InfoRow label="Nama Ketua"           value={p.nama_ketua} />
-            <InfoRow label="Peran Pengeclaim"     value={p.peran_pengeclaim} />
-            {p.keterangan_kelompok && (
-              <div className="col-span-2">
-                <InfoRow label="Keterangan Kelompok" value={p.keterangan_kelompok} />
-              </div>
+            {editing ? (
+              <>
+                <EditInput label="Nama Ketua"           name="nama_ketua"           value={d.nama_ketua}           onChange={set} />
+                <EditInput label="Peran Pengeclaim"     name="peran_pengeclaim"     value={d.peran_pengeclaim}     onChange={set} />
+                <EditInput label="Keterangan Kelompok"  name="keterangan_kelompok"  value={d.keterangan_kelompok}  onChange={set} span2 />
+              </>
+            ) : (
+              <>
+                <InfoRow label="Nama Ketua"           value={p.nama_ketua} />
+                <InfoRow label="Peran Pengeclaim"     value={p.peran_pengeclaim} />
+                {p.keterangan_kelompok &&
+                  <div className="col-span-2"><InfoRow label="Keterangan Kelompok" value={p.keterangan_kelompok} /></div>}
+              </>
             )}
           </div>
           {anggota.length > 0 && (
@@ -177,7 +394,7 @@ function PengajuanDetail({ p }) {
       </div>
 
       {/* Estimasi Reward */}
-      {p.estimasi_reward != null && (
+      {d.estimasi_reward != null && (
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center justify-between">
           <div>
             <p className="text-sm font-semibold text-blue-700">Estimasi Dana Penghargaan</p>
@@ -185,9 +402,16 @@ function PengajuanDetail({ p }) {
               Berdasarkan SK Rektor No. 078/B.02/UKDW/2023 · Non PUSPRESNAS
             </p>
           </div>
-          <p className="text-2xl font-bold text-blue-700">
-            {"Rp " + Number(p.estimasi_reward).toLocaleString("id-ID")}
-          </p>
+          {editing ? (
+            <input type="number" value={d.estimasi_reward ?? ""}
+              onChange={e => set("estimasi_reward", e.target.value ? Number(e.target.value) : null)}
+              className="w-44 text-right px-2.5 py-1.5 border border-blue-300 rounded-lg text-lg font-bold text-blue-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          ) : (
+            <p className="text-2xl font-bold text-blue-700">
+              {"Rp " + Number(d.estimasi_reward).toLocaleString("id-ID")}
+            </p>
+          )}
         </div>
       )}
 
@@ -311,7 +535,7 @@ export default function DetailKlaim() {
         </div>
 
         {/* Data pengajuan lengkap */}
-        <PengajuanDetail p={pengajuan} />
+        <PengajuanDetail p={pengajuan} onSaved={fetchAll} />
 
         {/* Klaim yang mirip */}
         {claim.status === "perlu ditinjau" && miripClaim && (
