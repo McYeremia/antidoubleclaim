@@ -106,19 +106,20 @@ function SectionCard({ title, children }) {
   );
 }
 
-function RadioGroup({ label, name, options, value, onChange, required, error }) {
+function RadioGroup({ label, name, options, value, onChange, required, error, disabled }) {
   return (
     <div>
       <Label required={required}>{label}</Label>
       <div className="flex flex-wrap gap-3 mt-1">
         {options.map((opt) => (
-          <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+          <label key={opt.value} className={`flex items-center gap-2 ${disabled ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}>
             <input
               type="radio"
               name={name}
               value={opt.value}
               checked={value === opt.value}
               onChange={onChange}
+              disabled={disabled}
               className="accent-blue-600"
             />
             <span className="text-sm text-gray-700">{opt.label}</span>
@@ -130,6 +131,18 @@ function RadioGroup({ label, name, options, value, onChange, required, error }) 
   );
 }
 
+function PrefilledBadge() {
+  return (
+    <span className="inline-flex items-center gap-1 ml-2 px-1.5 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-600 border border-indigo-100">
+      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+          d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+      </svg>
+      dari pengajuan
+    </span>
+  );
+}
+
 // ── Halaman Utama ─────────────────────────────────────────────────────────────
 export default function KonfirmasiRewardForm() {
   const { id }                      = useParams();
@@ -137,14 +150,16 @@ export default function KonfirmasiRewardForm() {
   const { data: session, status }   = useSession();
 
   const [claim,         setClaim]         = useState(null);
+  const [pengajuan,     setPengajuan]     = useState(null);
   const [loading,       setLoading]       = useState(true);
   const [notFound,      setNotFound]      = useState(false);
   const [alreadyFilled, setAlreadyFilled] = useState(false);
-  const [isReturned,    setIsReturned]    = useState(false);   // status dikembalikan
-  const [existingReward, setExistingReward] = useState(null);  // data lama untuk pre-fill
+  const [isReturned,    setIsReturned]    = useState(false);
+  const [existingReward, setExistingReward] = useState(null);
   const [submitting,    setSubmitting]    = useState(false);
   const [submitted,     setSubmitted]     = useState(false);
   const [errors,        setErrors]        = useState({});
+  const [prefilledFields, setPrefilledFields] = useState(new Set());
 
   // NIM diambil dari email (format: NIM@students.ukdw.ac.id)
   const nim = session?.user?.email?.split("@")[0] ?? "";
@@ -185,37 +200,68 @@ export default function KonfirmasiRewardForm() {
   const isPublikasi     = form.kategori_lomba === "publikasi";
   const kategoriDipilih = isPuspresnas || isNonPuspresnas || isPublikasi;
 
-  // ── Fetch data klaim + cek apakah sudah pernah submit ─────────────────────
+  // ── Fetch data klaim + pengajuan + cek apakah sudah pernah submit ────────
   useEffect(() => {
     Promise.all([
       fetch(`http://127.0.0.1:8000/claims/${id}`),
       fetch(`http://127.0.0.1:8000/reward-konfirmasi/${id}`),
-    ]).then(async ([claimRes, rewardRes]) => {
+      fetch(`http://127.0.0.1:8000/pengajuan/by-claim/${id}`),
+    ]).then(async ([claimRes, rewardRes, pengajuanRes]) => {
       if (claimRes.status === 404) { setNotFound(true); return; }
       const claimData = await claimRes.json();
       setClaim(claimData);
-      // Pre-fill tahun_kegiatan dari tanggal klaim (ambil tahunnya saja)
-      if (claimData.tanggal) {
-        const tahun = claimData.tanggal.substring(0, 4);
-        setForm(f => ({ ...f, tahun_kegiatan: tahun }));
+
+      // ── Pre-fill dari data pengajuan ──────────────────────────────────
+      const filled = new Set();
+      if (pengajuanRes.ok) {
+        const pData = await pengajuanRes.json();
+        setPengajuan(pData);
+        const updates = {};
+        if (pData.nama_ketua) {
+          updates.nama_ketua = pData.nama_ketua;
+          filled.add("nama_ketua");
+        }
+        if (pData.nomor_wa) {
+          updates.nomor_wa = pData.nomor_wa;
+          filled.add("nomor_wa");
+        }
+        if (pData.nama_kegiatan) {
+          updates.judul_lomba = pData.nama_kegiatan;
+          filled.add("judul_lomba");
+        }
+        if (pData.tahun_kegiatan) {
+          updates.tahun_kegiatan = String(pData.tahun_kegiatan);
+          filled.add("tahun_kegiatan");
+        }
+        if (pData.kategori_simkatmawa === "rekognisi") {
+          updates.kategori_lomba = "publikasi";
+          filled.add("kategori_lomba");
+        }
+        if (Object.keys(updates).length > 0) {
+          setForm(f => ({ ...f, ...updates }));
+        }
+      } else if (claimData.tanggal) {
+        setForm(f => ({ ...f, tahun_kegiatan: claimData.tanggal.substring(0, 4) }));
       }
+      setPrefilledFields(filled);
+
+      // ── Cek reward lama ───────────────────────────────────────────────
       if (rewardRes.ok) {
         const rewardData = await rewardRes.json();
         setExistingReward(rewardData);
         if (rewardData.reward_status === "dikembalikan") {
           setIsReturned(true);
-          // Pre-fill form dengan data lama
           setForm(f => ({
             ...f,
             tahun_klaim:           rewardData.tahun_klaim           ?? f.tahun_klaim,
             periode:               rewardData.periode               ?? f.periode,
             nomor_urut_lampiran:   rewardData.nomor_urut_lampiran   ?? f.nomor_urut_lampiran,
-            kategori_lomba:        rewardData.kategori_lomba        ?? f.kategori_lomba,
+            kategori_lomba:        filled.has("kategori_lomba") ? f.kategori_lomba : (rewardData.kategori_lomba ?? f.kategori_lomba),
             kompetisi_puspresnas:  rewardData.kompetisi_puspresnas  ?? f.kompetisi_puspresnas,
-            judul_lomba:           rewardData.judul_lomba           ?? f.judul_lomba,
-            tahun_kegiatan:        rewardData.tahun_kegiatan        ?? f.tahun_kegiatan,
-            nama_ketua:            rewardData.nama_ketua            ?? f.nama_ketua,
-            nomor_wa:              rewardData.nomor_wa              ?? f.nomor_wa,
+            judul_lomba:           filled.has("judul_lomba")    ? f.judul_lomba    : (rewardData.judul_lomba    ?? f.judul_lomba),
+            tahun_kegiatan:        filled.has("tahun_kegiatan") ? f.tahun_kegiatan : (rewardData.tahun_kegiatan ?? f.tahun_kegiatan),
+            nama_ketua:            filled.has("nama_ketua")     ? f.nama_ketua     : (rewardData.nama_ketua     ?? f.nama_ketua),
+            nomor_wa:              filled.has("nomor_wa")       ? f.nomor_wa       : (rewardData.nomor_wa       ?? f.nomor_wa),
             nama_pemilik_rekening: rewardData.nama_pemilik_rekening ?? f.nama_pemilik_rekening,
             bank:                  rewardData.bank                  ?? f.bank,
             nomor_rekening:        rewardData.nomor_rekening        ?? f.nomor_rekening,
@@ -228,12 +274,15 @@ export default function KonfirmasiRewardForm() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  // Pre-fill nama dari session Google
+  // Pre-fill nama dari session Google (hanya jika belum di-prefill dari pengajuan)
   useEffect(() => {
     if (session?.user?.name) {
-      setForm(f => ({ ...f, nama_ketua: session.user.name }));
+      setForm(f => ({
+        ...f,
+        nama_ketua: prefilledFields.has("nama_ketua") ? f.nama_ketua : (f.nama_ketua || session.user.name),
+      }));
     }
-  }, [session]);
+  }, [session, prefilledFields]);
 
   // ── Handler ────────────────────────────────────────────────────────────────
   const handleChange = (e) => {
@@ -470,19 +519,25 @@ export default function KonfirmasiRewardForm() {
               ]}
             />
 
-            <RadioGroup
-              label="Kategori Lomba"
-              name="kategori_lomba"
-              required
-              value={form.kategori_lomba}
-              onChange={handleChange}
-              error={errors.kategori_lomba}
-              options={[
-                { value: "puspresnas",    label: "PUSPRESNAS (PKM, PPK Ormawa, P2MW, Gemastik, NUDC, KDMI, ONMIPA, dll)" },
-                { value: "non_puspresnas", label: "Non PUSPRESNAS" },
-                { value: "publikasi",     label: "Publikasi / Karya / HKI" },
-              ]}
-            />
+            <div>
+              <RadioGroup
+                label={<>Kategori Lomba{prefilledFields.has("kategori_lomba") && <PrefilledBadge />}</>}
+                name="kategori_lomba"
+                required={!prefilledFields.has("kategori_lomba")}
+                value={form.kategori_lomba}
+                onChange={handleChange}
+                error={errors.kategori_lomba}
+                disabled={prefilledFields.has("kategori_lomba")}
+                options={[
+                  { value: "puspresnas",     label: "PUSPRESNAS (PKM, PPK Ormawa, P2MW, Gemastik, NUDC, KDMI, ONMIPA, dll)" },
+                  { value: "non_puspresnas", label: "Non PUSPRESNAS" },
+                  { value: "publikasi",      label: "Publikasi / Karya / HKI" },
+                ]}
+              />
+              {prefilledFields.has("kategori_lomba") && (
+                <p className="mt-1 text-xs text-indigo-500">Diisi otomatis berdasarkan kategori SimKatmawa pada pengajuan klaim.</p>
+              )}
+            </div>
           </SectionCard>
 
           {/* ── Detail Kegiatan (muncul setelah kategori dipilih) ── */}
@@ -507,8 +562,13 @@ export default function KonfirmasiRewardForm() {
 
               {(isPuspresnas || isNonPuspresnas) && (
                 <div>
-                  <Label required>Judul Lomba / Proposal</Label>
-                  <p className="text-xs text-gray-400 mb-1">Pastikan sama dengan pengumpulan prestasi sebelumnya.</p>
+                  <Label required={!prefilledFields.has("judul_lomba")}>
+                    Judul Lomba / Proposal{prefilledFields.has("judul_lomba") && <PrefilledBadge />}
+                  </Label>
+                  {prefilledFields.has("judul_lomba")
+                    ? <p className="text-xs text-gray-400 mb-1">Diisi otomatis dari nama kegiatan pada pengajuan klaim.</p>
+                    : <p className="text-xs text-gray-400 mb-1">Pastikan sama dengan pengumpulan prestasi sebelumnya.</p>
+                  }
                   <Input
                     type="text"
                     name="judul_lomba"
@@ -516,13 +576,20 @@ export default function KonfirmasiRewardForm() {
                     onChange={handleChange}
                     placeholder="Masukkan judul lomba atau proposal"
                     error={errors.judul_lomba}
+                    disabled={prefilledFields.has("judul_lomba")}
                   />
                 </div>
               )}
 
               <div>
-                <Label>Tahun Kegiatan</Label>
-                <p className="text-xs text-gray-400 mb-1">Diambil otomatis dari tanggal klaim.</p>
+                <Label>
+                  Tahun Kegiatan{prefilledFields.has("tahun_kegiatan") && <PrefilledBadge />}
+                </Label>
+                <p className="text-xs text-gray-400 mb-1">
+                  {prefilledFields.has("tahun_kegiatan")
+                    ? "Diisi otomatis dari tahun kegiatan pada pengajuan klaim."
+                    : "Diambil otomatis dari tanggal klaim."}
+                </p>
                 <Input
                   type="text"
                   value={form.tahun_kegiatan}
@@ -536,8 +603,8 @@ export default function KonfirmasiRewardForm() {
           {kategoriDipilih && (
             <SectionCard title="Data Diri">
               <div>
-                <Label required>
-                  {isPublikasi ? "Nama Lengkap Ketua" : isPuspresnas ? "Nama Lengkap Ketua" : "Nama Lengkap Ketua"}
+                <Label required={!prefilledFields.has("nama_ketua")}>
+                  Nama Lengkap Ketua{prefilledFields.has("nama_ketua") && <PrefilledBadge />}
                 </Label>
                 <Input
                   type="text"
@@ -546,21 +613,19 @@ export default function KonfirmasiRewardForm() {
                   onChange={handleChange}
                   placeholder="Nama lengkap sesuai KTP"
                   error={errors.nama_ketua}
+                  disabled={prefilledFields.has("nama_ketua")}
                 />
               </div>
 
               <div>
                 <Label>NIM</Label>
-                <Input
-                  type="text"
-                  value={nim}
-                  disabled
-                  className="bg-gray-50 text-gray-500"
-                />
+                <Input type="text" value={nim} disabled />
               </div>
 
               <div>
-                <Label required>Nomor WhatsApp</Label>
+                <Label required={!prefilledFields.has("nomor_wa")}>
+                  Nomor WhatsApp{prefilledFields.has("nomor_wa") && <PrefilledBadge />}
+                </Label>
                 <Input
                   type="text"
                   name="nomor_wa"
@@ -568,6 +633,7 @@ export default function KonfirmasiRewardForm() {
                   onChange={handleChange}
                   placeholder="Contoh: 08123456789"
                   error={errors.nomor_wa}
+                  disabled={prefilledFields.has("nomor_wa")}
                 />
               </div>
             </SectionCard>
