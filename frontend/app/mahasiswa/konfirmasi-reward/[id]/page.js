@@ -16,7 +16,7 @@ const TAHUN_INI = new Date().getFullYear();
 // ── Helper UI ─────────────────────────────────────────────────────────────────
 function Label({ children, required }) {
   return (
-    <label className="block text-sm font-medium text-gray-700 mb-1">
+    <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">
       {children} {required && <span className="text-red-500">*</span>}
     </label>
   );
@@ -26,11 +26,11 @@ function Input({ error, ...props }) {
   return (
     <>
       <input
-        className={`block w-full px-3 py-2 border rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500
-          ${error ? "border-red-400 bg-red-50" : "border-gray-300"}`}
+        className={`block w-full px-4 py-3 bg-gray-50 border rounded-2xl text-[14px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all disabled:opacity-60
+          ${error ? "border-red-400" : "border-gray-200"}`}
         {...props}
       />
-      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+      {error && <p className="mt-1.5 text-[11px] font-bold text-red-500 ml-1">{error}</p>}
     </>
   );
 }
@@ -39,13 +39,13 @@ function Select({ children, error, ...props }) {
   return (
     <>
       <select
-        className={`block w-full px-3 py-2 border rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500
-          ${error ? "border-red-400 bg-red-50" : "border-gray-300"}`}
+        className={`block w-full px-4 py-3 bg-gray-50 border rounded-2xl text-[14px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all
+          ${error ? "border-red-400" : "border-gray-200"}`}
         {...props}
       >
         {children}
       </select>
-      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+      {error && <p className="mt-1.5 text-[11px] font-bold text-red-500 ml-1">{error}</p>}
     </>
   );
 }
@@ -54,54 +54,55 @@ function FileInput({ label, name, onChange, required, hint, currentFile, existin
   const existingFilename = existingPath ? existingPath.split(/[\\/]/).pop() : null;
   const existingUrl      = existingFilename ? `http://127.0.0.1:8000/uploads/${existingFilename}` : null;
   const hasExisting      = !!existingUrl;
-  // Jika ada file lama, upload jadi opsional (tidak wajib)
   const isRequired = required && !hasExisting;
 
   return (
     <div>
       <Label required={isRequired}>{label}</Label>
-      {hint && <p className="text-xs text-gray-400 mb-1">{hint}</p>}
+      {hint && <p className="text-[11px] text-gray-400 mb-2 ml-1 italic">{hint}</p>}
 
-      {/* File lama — tampil jika ada dan belum diganti */}
       {hasExisting && !currentFile && (
-        <div className="mb-1.5 flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+        <div className="mb-3 flex items-center gap-3 px-4 py-3 bg-green-50 border border-green-100 rounded-2xl">
           <svg className="w-4 h-4 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <span className="text-xs text-green-700 flex-1 truncate">File tersimpan: {existingFilename}</span>
+          <span className="text-[12px] text-green-700 font-bold flex-1 truncate uppercase tracking-tight">Tersimpan: {existingFilename}</span>
           <a href={existingUrl} target="_blank" rel="noopener noreferrer"
-             className="text-xs text-blue-600 hover:underline flex-shrink-0">Lihat ↗</a>
+             className="text-[11px] font-black text-blue-600 hover:underline flex-shrink-0">LIHAT ↗</a>
         </div>
       )}
 
-      <input
-        type="file"
-        name={name}
-        onChange={onChange}
-        accept=".pdf"
-        className="block w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-      />
+      <div className="relative group">
+        <input
+          type="file"
+          name={name}
+          onChange={onChange}
+          accept=".pdf"
+          className="block w-full text-[12px] text-gray-400 file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-[11px] file:font-black file:bg-gray-900 file:text-white hover:file:bg-gray-700 cursor-pointer"
+        />
+      </div>
+      
       {hasExisting && !currentFile && (
-        <p className="mt-0.5 text-xs text-gray-400">Kosongkan jika tidak ingin mengganti file.</p>
+        <p className="mt-2 text-[10px] text-gray-300 font-bold uppercase tracking-widest ml-1">Kosongkan jika tidak ingin mengganti file.</p>
       )}
       {currentFile && (
-        <p className="mt-1 text-xs text-green-600 flex items-center gap-1">
+        <p className="mt-2 text-[11px] text-blue-600 font-bold flex items-center gap-1 ml-1 animate-in fade-in">
           <span>✓</span>
           <span className="truncate">{currentFile.name} (akan mengganti file lama)</span>
         </p>
       )}
-      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+      {error && <p className="mt-1.5 text-[11px] font-bold text-red-500 ml-1">{error}</p>}
     </div>
   );
 }
 
 function SectionCard({ title, children }) {
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-      <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100 pb-2 mb-5">
+    <div className="bg-white rounded-[32px] shadow-sm border border-gray-100 p-8 space-y-6">
+      <h2 className="text-[11px] font-black text-gray-300 uppercase tracking-[0.3em] border-b border-gray-50 pb-3">
         {title}
       </h2>
-      <div className="space-y-4">{children}</div>
+      <div className="space-y-6">{children}</div>
     </div>
   );
 }
@@ -110,9 +111,11 @@ function RadioGroup({ label, name, options, value, onChange, required, error, di
   return (
     <div>
       <Label required={required}>{label}</Label>
-      <div className="flex flex-wrap gap-3 mt-1">
+      <div className="grid grid-cols-1 gap-3 mt-2">
         {options.map((opt) => (
-          <label key={opt.value} className={`flex items-center gap-2 ${disabled ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}>
+          <label key={opt.value} className={`flex items-center gap-3 p-4 rounded-2xl border transition-all cursor-pointer
+            ${value === opt.value ? "bg-gray-900 border-gray-900 text-white" : "bg-gray-50 border-gray-100 text-gray-600 hover:bg-gray-100"}
+            ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}>
             <input
               type="radio"
               name={name}
@@ -120,25 +123,29 @@ function RadioGroup({ label, name, options, value, onChange, required, error, di
               checked={value === opt.value}
               onChange={onChange}
               disabled={disabled}
-              className="accent-blue-600"
+              className="hidden"
             />
-            <span className="text-sm text-gray-700">{opt.label}</span>
+            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0
+              ${value === opt.value ? "border-white" : "border-gray-300"}`}>
+              {value === opt.value && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+            </div>
+            <span className="text-[13px] font-bold tracking-tight">{opt.label}</span>
           </label>
         ))}
       </div>
-      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+      {error && <p className="mt-2 text-[11px] font-bold text-red-500 ml-1">{error}</p>}
     </div>
   );
 }
 
 function PrefilledBadge() {
   return (
-    <span className="inline-flex items-center gap-1 ml-2 px-1.5 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-600 border border-indigo-100">
+    <span className="inline-flex items-center gap-1 ml-3 px-2 py-0.5 rounded-lg text-[10px] font-black bg-blue-50 text-blue-600 uppercase tracking-widest border border-blue-100">
       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3}
           d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
       </svg>
-      dari pengajuan
+      SYSTEM FILL
     </span>
   );
 }
@@ -161,10 +168,8 @@ export default function KonfirmasiRewardForm() {
   const [errors,        setErrors]        = useState({});
   const [prefilledFields, setPrefilledFields] = useState(new Set());
 
-  // NIM diambil dari email (format: NIM@students.ukdw.ac.id)
   const nim = session?.user?.email?.split("@")[0] ?? "";
 
-  // ── State form teks ────────────────────────────────────────────────────────
   const [form, setForm] = useState({
     tahun_klaim:            String(TAHUN_INI),
     periode:                "",
@@ -180,7 +185,6 @@ export default function KonfirmasiRewardForm() {
     nomor_rekening:         "",
   });
 
-  // ── State file ─────────────────────────────────────────────────────────────
   const [files, setFiles] = useState({
     foto_buku_tabungan: null,
     foto_ktm:           null,
@@ -190,17 +194,14 @@ export default function KonfirmasiRewardForm() {
     karya_publikasi:    null,
   });
 
-  // ── Konfirmasi ─────────────────────────────────────────────────────────────
   const [bersedia,  setBersedia]  = useState(false);
   const [dataBenar, setDataBenar] = useState(false);
 
-  // ── Computed helpers ───────────────────────────────────────────────────────
   const isPuspresnas    = form.kategori_lomba === "puspresnas";
   const isNonPuspresnas = form.kategori_lomba === "non_puspresnas";
   const isPublikasi     = form.kategori_lomba === "publikasi";
   const kategoriDipilih = isPuspresnas || isNonPuspresnas || isPublikasi;
 
-  // ── Fetch data klaim + pengajuan + cek apakah sudah pernah submit ────────
   useEffect(() => {
     Promise.all([
       fetch(`http://127.0.0.1:8000/claims/${id}`),
@@ -211,41 +212,22 @@ export default function KonfirmasiRewardForm() {
       const claimData = await claimRes.json();
       setClaim(claimData);
 
-      // ── Pre-fill dari data pengajuan ──────────────────────────────────
       const filled = new Set();
       if (pengajuanRes.ok) {
         const pData = await pengajuanRes.json();
         setPengajuan(pData);
         const updates = {};
-        if (pData.nama_ketua) {
-          updates.nama_ketua = pData.nama_ketua;
-          filled.add("nama_ketua");
-        }
-        if (pData.nomor_wa) {
-          updates.nomor_wa = pData.nomor_wa;
-          filled.add("nomor_wa");
-        }
-        if (pData.nama_kegiatan) {
-          updates.judul_lomba = pData.nama_kegiatan;
-          filled.add("judul_lomba");
-        }
-        if (pData.tahun_kegiatan) {
-          updates.tahun_kegiatan = String(pData.tahun_kegiatan);
-          filled.add("tahun_kegiatan");
-        }
-        if (pData.kategori_simkatmawa === "rekognisi") {
-          updates.kategori_lomba = "publikasi";
-          filled.add("kategori_lomba");
-        }
-        if (Object.keys(updates).length > 0) {
-          setForm(f => ({ ...f, ...updates }));
-        }
+        if (pData.nama_ketua) { updates.nama_ketua = pData.nama_ketua; filled.add("nama_ketua"); }
+        if (pData.nomor_wa) { updates.nomor_wa = pData.nomor_wa; filled.add("nomor_wa"); }
+        if (pData.nama_kegiatan) { updates.judul_lomba = pData.nama_kegiatan; filled.add("judul_lomba"); }
+        if (pData.tahun_kegiatan) { updates.tahun_kegiatan = String(pData.tahun_kegiatan); filled.add("tahun_kegiatan"); }
+        if (pData.kategori_simkatmawa === "rekognisi") { updates.kategori_lomba = "publikasi"; filled.add("kategori_lomba"); }
+        if (Object.keys(updates).length > 0) setForm(f => ({ ...f, ...updates }));
       } else if (claimData.tanggal) {
         setForm(f => ({ ...f, tahun_kegiatan: claimData.tanggal.substring(0, 4) }));
       }
       setPrefilledFields(filled);
 
-      // ── Cek reward lama ───────────────────────────────────────────────
       if (rewardRes.ok) {
         const rewardData = await rewardRes.json();
         setExistingReward(rewardData);
@@ -266,25 +248,18 @@ export default function KonfirmasiRewardForm() {
             bank:                  rewardData.bank                  ?? f.bank,
             nomor_rekening:        rewardData.nomor_rekening        ?? f.nomor_rekening,
           }));
-        } else {
-          setAlreadyFilled(true);
-        }
+        } else setAlreadyFilled(true);
       }
     }).catch(() => setNotFound(true))
       .finally(() => setLoading(false));
   }, [id]);
 
-  // Pre-fill nama dari session Google (hanya jika belum di-prefill dari pengajuan)
   useEffect(() => {
     if (session?.user?.name) {
-      setForm(f => ({
-        ...f,
-        nama_ketua: prefilledFields.has("nama_ketua") ? f.nama_ketua : (f.nama_ketua || session.user.name),
-      }));
+      setForm(f => ({ ...f, nama_ketua: prefilledFields.has("nama_ketua") ? f.nama_ketua : (f.nama_ketua || session.user.name) }));
     }
   }, [session, prefilledFields]);
 
-  // ── Handler ────────────────────────────────────────────────────────────────
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm(f => ({ ...f, [name]: value }));
@@ -297,7 +272,6 @@ export default function KonfirmasiRewardForm() {
     setErrors(prev => ({ ...prev, [name]: "" }));
   };
 
-  // ── Validasi ───────────────────────────────────────────────────────────────
   const validate = () => {
     const errs = {};
     if (!form.periode)                                          errs.periode               = "Wajib dipilih";
@@ -309,502 +283,219 @@ export default function KonfirmasiRewardForm() {
     if (!form.nomor_wa.trim())                                  errs.nomor_wa              = "Wajib diisi";
     if (!form.nama_pemilik_rekening.trim())                     errs.nama_pemilik_rekening = "Wajib diisi";
     if (kategoriDipilih && !form.nomor_rekening.trim())         errs.nomor_rekening        = "Wajib diisi";
-    // File wajib upload hanya jika belum ada file lama (mode kirim pertama kali)
     const ex = existingReward;
     if (!files.foto_buku_tabungan && !ex?.foto_buku_tabungan_path) errs.foto_buku_tabungan = "Wajib diupload";
     if (!files.foto_ktm           && !ex?.foto_ktm_path)           errs.foto_ktm           = "Wajib diupload";
     if (!files.foto_ktp           && !ex?.foto_ktp_path)           errs.foto_ktp           = "Wajib diupload";
     if (!files.pakta_integritas   && !ex?.pakta_integritas_path)   errs.pakta_integritas   = "Wajib diupload";
-    if ((isPuspresnas || isNonPuspresnas) && !files.laporan_akhir && !ex?.laporan_akhir_path)
-      errs.laporan_akhir = "Wajib diupload";
-    if (isPublikasi && !files.karya_publikasi && !ex?.karya_publikasi_path)
-      errs.karya_publikasi = "Wajib diupload";
+    if ((isPuspresnas || isNonPuspresnas) && !files.laporan_akhir && !ex?.laporan_akhir_path) errs.laporan_akhir = "Wajib diupload";
+    if (isPublikasi && !files.karya_publikasi && !ex?.karya_publikasi_path) errs.karya_publikasi = "Wajib diupload";
     if (!bersedia)  errs.bersedia  = "Wajib dicentang";
     if (!dataBenar) errs.data_benar = "Wajib dicentang";
     return errs;
   };
 
-  // ── Submit ─────────────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
     const errs = validate();
-    if (Object.keys(errs).length > 0) {
-      setErrors(errs);
-      // scroll ke atas untuk lihat error
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      return;
-    }
-
+    if (Object.keys(errs).length > 0) { setErrors(errs); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
     setSubmitting(true);
     const formData = new FormData();
-
-    formData.append("claim_id",       id);
+    formData.append("claim_id", id);
     formData.append("mahasiswa_email", session.user.email);
-    formData.append("nim",            nim);
-    formData.append("bersedia",       String(bersedia));
-    formData.append("data_benar",     String(dataBenar));
-
-    Object.entries(form).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) formData.append(key, value);
-    });
-
-    Object.entries(files).forEach(([key, file]) => {
-      if (file) formData.append(key, file);
-    });
-
+    formData.append("nim", nim);
+    formData.append("bersedia", String(bersedia));
+    formData.append("data_benar", String(dataBenar));
+    Object.entries(form).forEach(([key, value]) => { if (value !== undefined && value !== null) formData.append(key, value); });
+    Object.entries(files).forEach(([key, file]) => { if (file) formData.append(key, file); });
     try {
-      const url    = isReturned
-        ? `http://127.0.0.1:8000/reward-konfirmasi/${existingReward.id}`
-        : "http://127.0.0.1:8000/reward-konfirmasi";
+      const url = isReturned ? `http://127.0.0.1:8000/reward-konfirmasi/${existingReward.id}` : "http://127.0.0.1:8000/reward-konfirmasi";
       const method = isReturned ? "PUT" : "POST";
-
       const res = await fetch(url, { method, body: formData });
-      if (res.ok) {
-        setSubmitted(true);
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      } else {
-        const err = await res.json();
-        alert("Gagal mengirim: " + err.detail);
-      }
-    } catch {
-      alert("Terjadi kesalahan. Coba lagi.");
-    } finally {
-      setSubmitting(false);
-    }
+      if (res.ok) { setSubmitted(true); window.scrollTo({ top: 0, behavior: "smooth" }); }
+      else { const err = await res.json(); alert("Gagal mengirim: " + err.detail); }
+    } catch { alert("Terjadi kesalahan. Coba lagi."); }
+    finally { setSubmitting(false); }
   };
 
-  // ── Guard states ───────────────────────────────────────────────────────────
-  if (status === "loading" || loading) {
-    return <p className="text-center mt-20 text-gray-400">Memuat data...</p>;
-  }
-
-  if (status === "unauthenticated") {
-    router.replace("/");
-    return null;
-  }
-
-  if (notFound) return (
-    <div className="text-center mt-20">
-      <p className="text-gray-500">Klaim tidak ditemukan.</p>
-      <Link href="/mahasiswa/dashboard" className="text-blue-600 hover:underline text-sm mt-2 inline-block">
-        ← Kembali ke Dashboard
-      </Link>
+  if (status === "loading" || loading) return (
+    <div className="flex items-center justify-center min-h-screen bg-[#f7f7f8]">
+       <svg className="w-8 h-8 text-gray-200 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
     </div>
   );
 
-  // ── Sukses ─────────────────────────────────────────────────────────────────
+  if (notFound) return (
+    <div className="min-h-screen bg-[#f7f7f8] flex flex-col items-center justify-center p-4">
+      <div className="bg-white p-12 rounded-[32px] shadow-xl text-center border border-gray-100 max-w-sm">
+        <p className="text-[16px] font-black text-gray-900 mb-2 uppercase tracking-tight">Klaim Tidak Ditemukan</p>
+        <p className="text-[13px] text-gray-400 font-medium mb-8">Data tidak valid atau sudah dihapus.</p>
+        <Link href="/mahasiswa/dashboard" className="inline-block px-8 py-3 bg-gray-900 text-white rounded-xl text-[12px] font-black">← KEMBALI</Link>
+      </div>
+    </div>
+  );
+
   if (submitted || alreadyFilled) return (
-    <main className="min-h-screen bg-gray-50 py-10 px-4 sm:px-8">
-      <div className="max-w-2xl mx-auto text-center space-y-4">
-        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-          <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+    <main className="min-h-screen bg-[#f7f7f8] flex items-center justify-center p-4" style={{ fontFamily: "var(--font-poppins, sans-serif)" }}>
+      <div className="max-w-md w-full bg-white rounded-[40px] shadow-2xl shadow-gray-200/50 p-12 text-center border border-gray-100 animate-in zoom-in-95 duration-500">
+        <div className="w-20 h-20 bg-green-500 rounded-[24px] flex items-center justify-center mx-auto mb-8 shadow-lg shadow-green-200">
+          <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <h1 className="text-2xl font-bold text-gray-900">
-          {alreadyFilled && !submitted ? "Data Sudah Dikirim" : submitted && isReturned ? "Data Berhasil Diperbaiki!" : "Data Berhasil Dikirim!"}
+        <h1 className="text-[24px] font-black text-gray-900 leading-tight uppercase tracking-tight mb-4">
+          {alreadyFilled && !submitted ? "DATA SUDAH<br/>DIKIRIM" : "PENGIRIMAN<br/>BERHASIL"}
         </h1>
-        <p className="text-gray-500 text-sm">
+        <p className="text-[13px] text-gray-400 font-medium leading-relaxed mb-10">
           {alreadyFilled && !submitted
-            ? "Kamu sudah pernah mengisi data reward untuk klaim ini."
-            : submitted && isReturned
-            ? `Data reward untuk klaim "${claim?.nama_lomba}" telah diperbaiki dan dikirim ulang. Operator akan meninjau kembali.`
-            : `Data rekening untuk klaim "${claim?.nama_lomba}" telah berhasil dikirimkan. Divisi Bakat Minat akan segera memproses reward kamu.`
+            ? "Anda telah menyelesaikan proses pengisian data reward untuk klaim prestasi ini."
+            : "Data rekening telah kami terima dan akan segera diproses oleh Divisi Bakat Minat."
           }
         </p>
-        <Link
-          href="/mahasiswa/dashboard"
-          className="inline-block mt-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          Kembali ke Dashboard
+        <Link href="/mahasiswa/dashboard" className="w-full inline-block py-4 bg-gray-900 text-white rounded-2xl text-[12px] font-black uppercase tracking-widest hover:bg-gray-700 transition-all">
+          KEMBALI KE DASHBOARD
         </Link>
       </div>
     </main>
   );
 
-  // ── Form ───────────────────────────────────────────────────────────────────
-  const hasErrors = Object.keys(errors).length > 0;
-
   return (
-    <main className="min-h-screen bg-gray-50 py-10 px-4 sm:px-8">
-      <div className="max-w-2xl mx-auto space-y-5">
+    <main className="min-h-screen bg-[#f7f7f8] py-12 px-4 sm:px-10" style={{ fontFamily: "var(--font-poppins, sans-serif)" }}>
+      <div className="max-w-2xl mx-auto space-y-10 animate-in fade-in duration-500">
 
         {/* Header */}
-        <div>
-          <Link href="/mahasiswa/dashboard" className="text-sm text-blue-600 hover:underline">
-            ← Kembali ke Dashboard
+        <div className="flex flex-col gap-4">
+          <Link href="/mahasiswa/dashboard" className="text-[11px] font-black text-gray-400 uppercase tracking-widest hover:text-gray-900 transition-colors flex items-center gap-2">
+             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" /></svg>
+             Dashboard
           </Link>
-          <h1 className="text-2xl font-bold text-gray-900 mt-1">Konfirmasi Data Reward</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            Klaim: <span className="font-medium text-gray-700">{claim?.nama_lomba}</span>
-            <span className="mx-2 text-gray-300">|</span>
-            <span className="text-gray-600">{claim?.peringkat} · {claim?.tingkat}</span>
-          </p>
+          <h1 className="text-4xl font-black text-gray-900 tracking-tight">Konfirmasi Reward</h1>
+          <div className="bg-white p-6 rounded-[24px] border border-gray-100 shadow-sm">
+             <p className="text-[10px] font-black text-gray-300 uppercase tracking-[0.2em] mb-1">Klaim Terkait</p>
+             <p className="text-[15px] font-black text-gray-900">{claim?.nama_lomba}</p>
+             <div className="flex items-center gap-2 mt-2">
+                <span className="text-[11px] font-bold text-gray-400 uppercase">{claim?.peringkat}</span>
+                <span className="w-1 h-1 rounded-full bg-gray-200" />
+                <span className="text-[11px] font-bold text-gray-400 uppercase">{claim?.tingkat}</span>
+             </div>
+          </div>
         </div>
 
-        {/* Banner dikembalikan */}
         {isReturned && existingReward?.catatan_operator && (
-          <div className="bg-orange-50 border border-orange-300 rounded-xl px-5 py-4">
-            <div className="flex gap-3">
-              <svg className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+          <div className="bg-orange-900 rounded-[24px] p-8 text-white shadow-xl shadow-orange-200">
+            <div className="flex gap-4">
+              <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+                 <svg className="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              </div>
               <div>
-                <p className="text-sm font-semibold text-orange-800 mb-1">Form dikembalikan oleh Operator</p>
-                <p className="text-sm text-orange-700">{existingReward.catatan_operator}</p>
-                <p className="text-xs text-orange-500 mt-1">Perbaiki data di bawah, lalu kirim ulang. File yang tidak diganti akan tetap digunakan.</p>
+                <p className="text-[11px] font-black text-orange-400 uppercase tracking-widest mb-1">Catatan Revisi Operator</p>
+                <p className="text-[14px] font-bold leading-relaxed">{existingReward.catatan_operator}</p>
               </div>
             </div>
           </div>
         )}
 
-        {/* Error summary */}
-        {hasErrors && (
-          <div className="bg-red-50 border border-red-300 rounded-xl px-5 py-3 text-sm text-red-700">
-            Terdapat beberapa field yang belum diisi dengan benar. Mohon periksa kembali.
-          </div>
-        )}
-
-        {/* Info banner */}
-        <div className="bg-blue-50 border border-blue-200 rounded-xl px-5 py-4 text-sm text-blue-800 space-y-1">
-          <p className="font-semibold">Pengumpulan Data Rekening Penerima Prestasi</p>
-          <p>Kategori Kelompok hanya diisi oleh <span className="font-medium">Ketua Kelompok</span> sesuai data yang terlampir di surat.</p>
-          <p>
-            📣 Konsultasi:{" "}
-            <a href="https://wa.me/6281336660839" target="_blank" rel="noopener noreferrer"
-               className="underline hover:text-blue-600">
-              Divisi Bakat Minat
-            </a>
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-5">
-
-          {/* ── Info Dasar ── */}
-          <SectionCard title="Informasi Dasar">
-            <div className="grid grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="space-y-8">
+          <SectionCard title="Parameter Administrasi">
+            <div className="grid grid-cols-2 gap-6">
               <div>
                 <Label>Tahun Klaim</Label>
-                <p className="text-xs text-gray-400 mb-1">Tahun klaim saat ini, bukan tahun lomba.</p>
-                <Input
-                  type="text"
-                  value={form.tahun_klaim}
-                  disabled
-                />
+                <Input type="text" value={form.tahun_klaim} disabled />
               </div>
               <div>
-                <Label required>Nomor Urut pada Lampiran</Label>
-                <p className="text-xs text-gray-400 mb-1">Sesuai Surat Pemberitahuan.</p>
-                <Input
-                  type="text"
-                  name="nomor_urut_lampiran"
-                  value={form.nomor_urut_lampiran}
-                  onChange={handleChange}
-                  placeholder="Contoh: 3"
-                  error={errors.nomor_urut_lampiran}
-                />
+                <Label required>No. Urut Lampiran</Label>
+                <Input type="text" name="nomor_urut_lampiran" value={form.nomor_urut_lampiran} onChange={handleChange} placeholder="Lihat di SK" error={errors.nomor_urut_lampiran} />
               </div>
             </div>
-
-            <RadioGroup
-              label="Klaim di Periode ke?"
-              name="periode"
-              required
-              value={form.periode}
-              onChange={handleChange}
-              error={errors.periode}
-              options={[
-                { value: "1", label: "1 — Periode Februari - Juli" },
-                { value: "2", label: "2 — Periode Agustus - November" },
-              ]}
-            />
-
-            <div>
-              <RadioGroup
-                label={<>Kategori Lomba{prefilledFields.has("kategori_lomba") && <PrefilledBadge />}</>}
-                name="kategori_lomba"
-                required={!prefilledFields.has("kategori_lomba")}
-                value={form.kategori_lomba}
-                onChange={handleChange}
-                error={errors.kategori_lomba}
-                disabled={prefilledFields.has("kategori_lomba")}
-                options={[
-                  { value: "puspresnas",     label: "PUSPRESNAS (PKM, PPK Ormawa, P2MW, Gemastik, NUDC, KDMI, ONMIPA, dll)" },
-                  { value: "non_puspresnas", label: "Non PUSPRESNAS" },
-                  { value: "publikasi",      label: "Publikasi / Karya / HKI" },
-                ]}
-              />
-              {prefilledFields.has("kategori_lomba") && (
-                <p className="mt-1 text-xs text-indigo-500">Diisi otomatis berdasarkan kategori SimKatmawa pada pengajuan klaim.</p>
-              )}
-            </div>
+            <RadioGroup label="Periode Pengajuan" name="periode" required value={form.periode} onChange={handleChange} error={errors.periode} options={[{ value: "1", label: "Periode 1 (Feb - Jul)" }, { value: "2", label: "Periode 2 (Agt - Nov)" }]} />
+            <RadioGroup label={<>Kategori Lomba{prefilledFields.has("kategori_lomba") && <PrefilledBadge />}</>} name="kategori_lomba" required={!prefilledFields.has("kategori_lomba")} value={form.kategori_lomba} onChange={handleChange} error={errors.kategori_lomba} disabled={prefilledFields.has("kategori_lomba")} options={[{ value: "puspresnas", label: "PUSPRESNAS" }, { value: "non_puspresnas", label: "NON PUSPRESNAS" }, { value: "publikasi", label: "PUBLIKASI / KARYA" }]} />
           </SectionCard>
 
-          {/* ── Detail Kegiatan (muncul setelah kategori dipilih) ── */}
           {kategoriDipilih && (
-            <SectionCard title="Detail Kegiatan">
+            <SectionCard title="Identitas Prestasi">
               {isPuspresnas && (
                 <div>
                   <Label required>Kompetisi PUSPRESNAS</Label>
-                  <Select
-                    name="kompetisi_puspresnas"
-                    value={form.kompetisi_puspresnas}
-                    onChange={handleChange}
-                    error={errors.kompetisi_puspresnas}
-                  >
+                  <Select name="kompetisi_puspresnas" value={form.kompetisi_puspresnas} onChange={handleChange} error={errors.kompetisi_puspresnas}>
                     <option value="">Pilih kompetisi</option>
-                    {KOMPETISI_PUSPRESNAS.map(k => (
-                      <option key={k} value={k}>{k}</option>
-                    ))}
+                    {KOMPETISI_PUSPRESNAS.map(k => <option key={k} value={k}>{k}</option>)}
                   </Select>
                 </div>
               )}
-
               {(isPuspresnas || isNonPuspresnas) && (
                 <div>
-                  <Label required={!prefilledFields.has("judul_lomba")}>
-                    Judul Lomba / Proposal{prefilledFields.has("judul_lomba") && <PrefilledBadge />}
-                  </Label>
-                  {prefilledFields.has("judul_lomba")
-                    ? <p className="text-xs text-gray-400 mb-1">Diisi otomatis dari nama kegiatan pada pengajuan klaim.</p>
-                    : <p className="text-xs text-gray-400 mb-1">Pastikan sama dengan pengumpulan prestasi sebelumnya.</p>
-                  }
-                  <Input
-                    type="text"
-                    name="judul_lomba"
-                    value={form.judul_lomba}
-                    onChange={handleChange}
-                    placeholder="Masukkan judul lomba atau proposal"
-                    error={errors.judul_lomba}
-                    disabled={prefilledFields.has("judul_lomba")}
-                  />
+                  <Label required={!prefilledFields.has("judul_lomba")}>Judul Lomba / Proposal{prefilledFields.has("judul_lomba") && <PrefilledBadge />}</Label>
+                  <Input type="text" name="judul_lomba" value={form.judul_lomba} onChange={handleChange} placeholder="Sesuai pengajuan klaim" error={errors.judul_lomba} disabled={prefilledFields.has("judul_lomba")} />
                 </div>
               )}
-
               <div>
-                <Label>
-                  Tahun Kegiatan{prefilledFields.has("tahun_kegiatan") && <PrefilledBadge />}
-                </Label>
-                <p className="text-xs text-gray-400 mb-1">
-                  {prefilledFields.has("tahun_kegiatan")
-                    ? "Diisi otomatis dari tahun kegiatan pada pengajuan klaim."
-                    : "Diambil otomatis dari tanggal klaim."}
-                </p>
-                <Input
-                  type="text"
-                  value={form.tahun_kegiatan}
-                  disabled
-                />
+                <Label>Tahun Kegiatan{prefilledFields.has("tahun_kegiatan") && <PrefilledBadge />}</Label>
+                <Input type="text" value={form.tahun_kegiatan} disabled />
               </div>
             </SectionCard>
           )}
 
-          {/* ── Data Diri ── */}
           {kategoriDipilih && (
-            <SectionCard title="Data Diri">
+            <SectionCard title="Profil Penerima">
               <div>
-                <Label required={!prefilledFields.has("nama_ketua")}>
-                  Nama Lengkap Ketua{prefilledFields.has("nama_ketua") && <PrefilledBadge />}
-                </Label>
-                <Input
-                  type="text"
-                  name="nama_ketua"
-                  value={form.nama_ketua}
-                  onChange={handleChange}
-                  placeholder="Nama lengkap sesuai KTP"
-                  error={errors.nama_ketua}
-                  disabled={prefilledFields.has("nama_ketua")}
-                />
+                <Label required={!prefilledFields.has("nama_ketua")}>Nama Lengkap Ketua{prefilledFields.has("nama_ketua") && <PrefilledBadge />}</Label>
+                <Input type="text" name="nama_ketua" value={form.nama_ketua} onChange={handleChange} placeholder="Sesuai KTP" error={errors.nama_ketua} disabled={prefilledFields.has("nama_ketua")} />
               </div>
-
-              <div>
-                <Label>NIM</Label>
-                <Input type="text" value={nim} disabled />
-              </div>
-
-              <div>
-                <Label required={!prefilledFields.has("nomor_wa")}>
-                  Nomor WhatsApp{prefilledFields.has("nomor_wa") && <PrefilledBadge />}
-                </Label>
-                <Input
-                  type="text"
-                  name="nomor_wa"
-                  value={form.nomor_wa}
-                  onChange={handleChange}
-                  placeholder="Contoh: 08123456789"
-                  error={errors.nomor_wa}
-                  disabled={prefilledFields.has("nomor_wa")}
-                />
+              <div className="grid grid-cols-2 gap-6">
+                <div><Label>NIM</Label><Input type="text" value={nim} disabled /></div>
+                <div><Label required={!prefilledFields.has("nomor_wa")}>WhatsApp{prefilledFields.has("nomor_wa") && <PrefilledBadge />}</Label><Input type="text" name="nomor_wa" value={form.nomor_wa} onChange={handleChange} placeholder="08..." error={errors.nomor_wa} disabled={prefilledFields.has("nomor_wa")} /></div>
               </div>
             </SectionCard>
           )}
 
-          {/* ── Data Rekening ── */}
           {kategoriDipilih && (
-            <SectionCard title="Data Rekening">
-              <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 text-xs text-amber-800">
-                Rekening yang digunakan hanya <span className="font-semibold">Bank BNI</span>.
-              </div>
-
+            <SectionCard title="Alokasi Dana (Bank BNI)">
               <div>
-                <Label required>Nama Lengkap Pemilik Rekening</Label>
-                <p className="text-xs text-gray-400 mb-1">Pastikan isi dengan lengkap dan benar agar tidak terjadi kendala.</p>
-                <Input
-                  type="text"
-                  name="nama_pemilik_rekening"
-                  value={form.nama_pemilik_rekening}
-                  onChange={handleChange}
-                  placeholder="Nama sesuai buku tabungan"
-                  error={errors.nama_pemilik_rekening}
-                />
+                <Label required>Nama Pemilik Rekening</Label>
+                <Input type="text" name="nama_pemilik_rekening" value={form.nama_pemilik_rekening} onChange={handleChange} placeholder="Sesuai buku tabungan" error={errors.nama_pemilik_rekening} />
               </div>
-
-              <div>
-                <Label>Bank</Label>
-                <Input type="text" value="BNI" disabled />
-              </div>
-
-              <div>
-                <Label required>Nomor Rekening</Label>
-                <Input
-                  type="text"
-                  name="nomor_rekening"
-                  value={form.nomor_rekening}
-                  onChange={handleChange}
-                  placeholder="Masukkan nomor rekening BNI"
-                  error={errors.nomor_rekening}
-                />
+              <div className="grid grid-cols-2 gap-6">
+                <div><Label>Nama Bank</Label><Input type="text" value="BNI" disabled /></div>
+                <div><Label required>Nomor Rekening</Label><Input type="text" name="nomor_rekening" value={form.nomor_rekening} onChange={handleChange} placeholder="Masukkan No. Rek" error={errors.nomor_rekening} /></div>
               </div>
             </SectionCard>
           )}
 
-          {/* ── Upload Dokumen ── */}
           {kategoriDipilih && (
-            <SectionCard title="Upload Dokumen">
-              <p className="text-xs text-gray-400 -mt-2">Semua dokumen dalam format PDF.</p>
-
-              <div className="grid grid-cols-1 gap-5">
-                <FileInput
-                  label="Foto Buku Tabungan"
-                  name="foto_buku_tabungan"
-                  onChange={handleFileChange}
-                  required
-                  hint={`Format nama file: ${isPuspresnas ? (form.kompetisi_puspresnas || "KategoriKompetisi") : isNonPuspresnas ? "NonPUSPRESNAS" : "Publikasi"}_${form.nama_pemilik_rekening || "NamaPemilik"}_Buku Tabungan`}
-                  currentFile={files.foto_buku_tabungan}
-                  existingPath={existingReward?.foto_buku_tabungan_path}
-                  error={errors.foto_buku_tabungan}
-                />
-
-                <FileInput
-                  label="Foto Scan KTM"
-                  name="foto_ktm"
-                  onChange={handleFileChange}
-                  required
-                  hint={`Format nama file: ${isPuspresnas ? (form.kompetisi_puspresnas || "KategoriKompetisi") : isNonPuspresnas ? "NonPUSPRESNAS" : "Publikasi"}_${form.nama_pemilik_rekening || "NamaPemilik"}_KTM`}
-                  currentFile={files.foto_ktm}
-                  existingPath={existingReward?.foto_ktm_path}
-                  error={errors.foto_ktm}
-                />
-
-                <FileInput
-                  label="Foto Scan KTP"
-                  name="foto_ktp"
-                  onChange={handleFileChange}
-                  required
-                  hint={`Format nama file: ${isPuspresnas ? (form.kompetisi_puspresnas || "KategoriKompetisi") : isNonPuspresnas ? "NonPUSPRESNAS" : "Publikasi"}_${form.nama_pemilik_rekening || "NamaPemilik"}_KTP`}
-                  currentFile={files.foto_ktp}
-                  existingPath={existingReward?.foto_ktp_path}
-                  error={errors.foto_ktp}
-                />
-
-                <div>
-                  <FileInput
-                    label="Pakta Integritas"
-                    name="pakta_integritas"
-                    onChange={handleFileChange}
-                    required
-                    currentFile={files.pakta_integritas}
-                    existingPath={existingReward?.pakta_integritas_path}
-                    error={errors.pakta_integritas}
-                  />
-                  <p className="mt-1 text-xs text-blue-600">
-                    Unduh template:{" "}
-                    <span className="underline cursor-pointer">Template Pakta Integritas Kelompok/Individu</span>
-                  </p>
-                </div>
-
-                {(isPuspresnas || isNonPuspresnas) && (
-                  <FileInput
-                    label="Laporan Akhir / Proposal / Karya Terakhir"
-                    name="laporan_akhir"
-                    onChange={handleFileChange}
-                    required
-                    hint="Lampirkan Laporan Akhir / Proposal Akhir / Karya / Bukti Pendukung."
-                    currentFile={files.laporan_akhir}
-                    existingPath={existingReward?.laporan_akhir_path}
-                    error={errors.laporan_akhir}
-                  />
-                )}
-
-                {isPublikasi && (
-                  <FileInput
-                    label="Karya Publikasi"
-                    name="karya_publikasi"
-                    onChange={handleFileChange}
-                    required
-                    hint="Lampirkan karya publikasi."
-                    currentFile={files.karya_publikasi}
-                    existingPath={existingReward?.karya_publikasi_path}
-                    error={errors.karya_publikasi}
-                  />
-                )}
+            <SectionCard title="Dokumen Validasi (PDF)">
+              <div className="grid grid-cols-1 gap-8">
+                <FileInput label="Buku Tabungan" name="foto_buku_tabungan" onChange={handleFileChange} required currentFile={files.foto_buku_tabungan} existingPath={existingReward?.foto_buku_tabungan_path} error={errors.foto_buku_tabungan} />
+                <FileInput label="Scan KTM" name="foto_ktm" onChange={handleFileChange} required currentFile={files.foto_ktm} existingPath={existingReward?.foto_ktm_path} error={errors.foto_ktm} />
+                <FileInput label="Scan KTP" name="foto_ktp" onChange={handleFileChange} required currentFile={files.foto_ktp} existingPath={existingReward?.foto_ktp_path} error={errors.foto_ktp} />
+                <FileInput label="Pakta Integritas" name="pakta_integritas" onChange={handleFileChange} required currentFile={files.pakta_integritas} existingPath={existingReward?.pakta_integritas_path} error={errors.pakta_integritas} />
+                {(isPuspresnas || isNonPuspresnas) && <FileInput label="Laporan Akhir" name="laporan_akhir" onChange={handleFileChange} required hint="Proposal / Laporan / Bukti" currentFile={files.laporan_akhir} existingPath={existingReward?.laporan_akhir_path} error={errors.laporan_akhir} />}
+                {isPublikasi && <FileInput label="Karya Publikasi" name="karya_publikasi" onChange={handleFileChange} required currentFile={files.karya_publikasi} existingPath={existingReward?.karya_publikasi_path} error={errors.karya_publikasi} />}
               </div>
             </SectionCard>
           )}
 
-          {/* ── Konfirmasi ── */}
           {kategoriDipilih && (
-            <SectionCard title="Konfirmasi">
-              <div className="space-y-3">
-                <label className="flex items-start gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={bersedia}
-                    onChange={e => { setBersedia(e.target.checked); setErrors(prev => ({ ...prev, bersedia: "" })); }}
-                    className="mt-0.5 accent-blue-600 w-4 h-4 flex-shrink-0"
-                  />
-                  <span className="text-sm text-gray-700">
-                    Saya bersedia mengikuti proses yang ada.
-                  </span>
+            <div className="space-y-6">
+              <div className="bg-gray-900 rounded-[32px] p-8 text-white space-y-4">
+                <label className="flex items-start gap-4 cursor-pointer group">
+                  <input type="checkbox" checked={bersedia} onChange={e => { setBersedia(e.target.checked); setErrors(prev => ({ ...prev, bersedia: "" })); }} className="hidden" />
+                  <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all ${bersedia ? "bg-blue-500 border-blue-500 shadow-lg shadow-blue-500/30" : "border-gray-700"}`}>
+                    {bersedia && <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>}
+                  </div>
+                  <span className="text-[13px] font-bold text-gray-300 group-hover:text-white transition-colors">Saya bersedia mengikuti prosedur administrasi yang ditetapkan.</span>
                 </label>
-                {errors.bersedia && <p className="text-xs text-red-500 pl-7">{errors.bersedia}</p>}
-
-                <label className="flex items-start gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={dataBenar}
-                    onChange={e => { setDataBenar(e.target.checked); setErrors(prev => ({ ...prev, data_benar: "" })); }}
-                    className="mt-0.5 accent-blue-600 w-4 h-4 flex-shrink-0"
-                  />
-                  <span className="text-sm text-gray-700">
-                    Saya sudah mengisi data dengan <span className="font-medium">sadar dan benar</span>.
-                  </span>
+                <label className="flex items-start gap-4 cursor-pointer group">
+                  <input type="checkbox" checked={dataBenar} onChange={e => { setDataBenar(e.target.checked); setErrors(prev => ({ ...prev, data_benar: "" })); }} className="hidden" />
+                  <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all ${dataBenar ? "bg-blue-500 border-blue-500 shadow-lg shadow-blue-500/30" : "border-gray-700"}`}>
+                    {dataBenar && <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>}
+                  </div>
+                  <span className="text-[13px] font-bold text-gray-300 group-hover:text-white transition-colors">Data yang saya kirimkan adalah benar dan dapat dipertanggungjawabkan.</span>
                 </label>
-                {errors.data_benar && <p className="text-xs text-red-500 pl-7">{errors.data_benar}</p>}
               </div>
-
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors"
-                >
-                  {submitting ? "Mengirim..." : "Kirim Data Reward"}
-                </button>
-              </div>
-            </SectionCard>
+              <button type="submit" disabled={submitting} className="w-full py-5 bg-gray-900 hover:bg-gray-700 disabled:opacity-50 text-white rounded-[24px] text-[14px] font-black uppercase tracking-[0.2em] transition-all hover:scale-[1.02] active:scale-95 shadow-2xl shadow-gray-200">
+                {submitting ? "PROSES PENGIRIMAN..." : "KIRIM KONFIRMASI REWARD"}
+              </button>
+            </div>
           )}
-
         </form>
       </div>
     </main>

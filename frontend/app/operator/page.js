@@ -5,33 +5,28 @@ import { useRouter } from "next/navigation";
 
 const API = "http://127.0.0.1:8000";
 
-// ── Ikon ──────────────────────────────────────────────────────────────────────
+// ── Ikon Sidebar ──────────────────────────────────────────────────────────────
 const IconClaim = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
   </svg>
 );
-
 const IconReward = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-      d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
   </svg>
 );
-
 const IconUsers = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-      d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
   </svg>
 );
 
 // ── Badge status claim ────────────────────────────────────────────────────────
 const STATUS_BADGE = {
-  "perlu ditinjau": "bg-yellow-100 text-yellow-800",
-  "belum dicek":    "bg-blue-100 text-blue-800",
-  "sudah dicek":    "bg-green-100 text-green-800",
+  "perlu ditinjau": "bg-orange-100 text-orange-700",
+  "belum dicek":    "bg-blue-100 text-blue-700",
+  "sudah dicek":    "bg-green-100 text-green-700",
 };
 
 // ── Konten: Pengajuan Claim ───────────────────────────────────────────────────
@@ -81,70 +76,77 @@ function PengajuanClaim({ router }) {
   const sudahDicek    = claims.filter(c => c.status === "sudah dicek");
 
   const Section = ({ title, color, items, showActions, showMirip, showVerified }) => (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-      <div className={`px-5 py-3 border-b flex items-center justify-between ${color}`}>
-        <h2 className="font-semibold text-sm uppercase tracking-wide">{title}</h2>
-        <span className="text-xs font-bold">{items.length}</span>
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-8">
+      <div className={`px-6 py-4 border-b flex items-center justify-between border-gray-50 ${color}`}>
+        <h2 className="font-bold text-[11px] uppercase tracking-widest">{title}</h2>
+        <span className="text-[11px] font-black bg-white/50 px-2 py-0.5 rounded-full">{items.length}</span>
       </div>
       {items.length === 0 ? (
-        <p className="text-center text-gray-400 text-sm py-8">Tidak ada data.</p>
+        <p className="text-center text-gray-400 text-[13px] py-12">Tidak ada data untuk kategori ini.</p>
       ) : (
         <table className="w-full text-sm text-left">
-          <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
-            <tr>
-              <th className="px-4 py-2">ID</th>
-              <th className="px-4 py-2">Nama Lomba</th>
-              <th className="px-4 py-2">Tingkat</th>
-              <th className="px-4 py-2">Peringkat</th>
-              <th className="px-4 py-2">Tanggal</th>
-              {showMirip    && <th className="px-4 py-2">Mirip Dengan</th>}
-              {showVerified && <th className="px-4 py-2">Diverifikasi Oleh</th>}
-              {showActions  && <th className="px-4 py-2 text-right">Aksi</th>}
+          <thead>
+            <tr className="border-b border-gray-50">
+              <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest w-16">ID</th>
+              <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Nama Lomba</th>
+              <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Tingkat</th>
+              <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Peringkat</th>
+              <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Tanggal</th>
+              {showMirip    && <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Mirip Dengan</th>}
+              {showVerified && <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Diverifikasi Oleh</th>}
+              {showActions  && <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest text-right">Aksi</th>}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody>
             {items.map(claim => (
               <tr key={claim.id}
                   onClick={() => router.push(`/operator/${claim.id}`)}
-                  className="hover:bg-gray-50 cursor-pointer transition-colors">
-                <td className="px-4 py-3 font-mono text-gray-400">#{claim.id}</td>
-                <td className="px-4 py-3 font-medium text-gray-900">{claim.nama_lomba}</td>
-                <td className="px-4 py-3 text-gray-600">{claim.tingkat}</td>
-                <td className="px-4 py-3 text-gray-600">{claim.peringkat}</td>
-                <td className="px-4 py-3 text-gray-600">{claim.tanggal}</td>
+                  className="hover:bg-gray-50/60 cursor-pointer transition-colors border-b border-gray-50 last:border-0">
+                <td className="px-6 py-4 font-mono text-[12px] text-gray-300 font-bold tabular-nums">#{claim.id}</td>
+                <td className="px-6 py-4">
+                   <p className="font-bold text-gray-900 text-[13px]">{claim.nama_lomba}</p>
+                   <p className="text-[11px] text-gray-400 mt-0.5 font-medium">{claim.nama_display}</p>
+                </td>
+                <td className="px-6 py-4 text-[13px] text-gray-500 font-medium">{claim.tingkat}</td>
+                <td className="px-6 py-4">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-black bg-gray-900 text-white">
+                    {claim.peringkat}
+                  </span>
+                </td>
+                <td className="px-6 py-4 text-[12px] text-gray-400 font-medium">{claim.tanggal}</td>
                 {showMirip && (
-                  <td className="px-4 py-3">
+                  <td className="px-6 py-4">
                     {claim.mirip_dengan_id ? (
                       <button
                         onClick={e => { e.stopPropagation(); router.push(`/operator/${claim.mirip_dengan_id}`); }}
-                        className="px-2 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
+                        className="px-2.5 py-1 rounded-full text-[11px] font-black bg-orange-100 text-orange-700 hover:bg-orange-200"
                       >
                         #{claim.mirip_dengan_id}
                       </button>
-                    ) : "—"}
+                    ) : <span className="text-gray-200">—</span>}
                   </td>
                 )}
                 {showVerified && (
-                  <td className="px-4 py-3">
+                  <td className="px-6 py-4">
                     {claim.verified_by_nama ? (
                       <div>
-                        <p className="font-medium text-gray-800">{claim.verified_by_nama}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">{claim.verified_at ?? "—"}</p>
+                        <p className="font-bold text-gray-900 text-[13px]">{claim.verified_by_nama}</p>
+                        <p className="text-[11px] text-gray-400 mt-0.5 font-medium">{claim.verified_at ?? "—"}</p>
                       </div>
                     ) : (
-                      <span className="text-gray-400">—</span>
+                      <span className="text-gray-200">—</span>
                     )}
                   </td>
                 )}
                 {showActions && (
-                  <td className="px-4 py-3 text-right space-x-2" onClick={e => e.stopPropagation()}>
+                  <td className="px-6 py-4 text-right space-x-2" onClick={e => e.stopPropagation()}>
                     <button onClick={e => handleApprove(claim.id, e)}
-                      className="px-3 py-1 rounded-md text-xs font-semibold bg-green-600 text-white hover:bg-green-700">
-                      Approve
+                      className="px-3 py-1.5 rounded-xl text-[11px] font-black bg-gray-900 text-white hover:bg-gray-700 transition-colors">
+                      APPROVE
                     </button>
                     <button onClick={e => handleDiscard(claim.id, e)}
-                      className="px-3 py-1 rounded-md text-xs font-semibold bg-red-100 text-red-700 hover:bg-red-200">
-                      Discard
+                      className="px-3 py-1.5 rounded-xl text-[11px] font-black bg-red-50 text-red-600 hover:bg-red-100 transition-colors border border-red-100">
+                      DISCARD
                     </button>
                   </td>
                 )}
@@ -157,45 +159,58 @@ function PengajuanClaim({ router }) {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Pengajuan Claim</h2>
-          <p className="text-sm text-gray-500 mt-0.5">Tinjau dan verifikasi klaim sertifikat mahasiswa</p>
+          <h1 className="text-4xl font-black text-gray-900 leading-none tracking-tight">Pengajuan Claim</h1>
+          <p className="text-gray-400 mt-3 text-[14px]">Tinjau dan verifikasi klaim sertifikat prestasi mahasiswa.</p>
         </div>
-        <button onClick={fetchClaims} className="text-sm text-blue-600 hover:underline">Refresh</button>
+        <button
+          onClick={fetchClaims}
+          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-500 text-[12px] font-bold rounded-xl hover:bg-gray-50 transition-colors mt-1"
+        >
+          <svg className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          REFRESH
+        </button>
       </div>
 
       {/* Statistik */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl shadow-sm p-5 border border-yellow-200">
-          <p className="text-xs text-gray-500 uppercase">Perlu Ditinjau</p>
-          <p className="text-4xl font-bold text-yellow-600 mt-1">{perluDitinjau.length}</p>
+      <div className="grid grid-cols-3 gap-6">
+        <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+          <p className="text-[10px] font-black text-orange-400 uppercase tracking-[0.2em]">Perlu Ditinjau</p>
+          <p className="text-5xl font-black text-gray-900 mt-3 leading-none">{perluDitinjau.length}</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-5 border border-blue-200">
-          <p className="text-xs text-gray-500 uppercase">Belum Dicek</p>
-          <p className="text-4xl font-bold text-blue-600 mt-1">{belumDicek.length}</p>
+        <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+          <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em]">Belum Dicek</p>
+          <p className="text-5xl font-black text-gray-900 mt-3 leading-none">{belumDicek.length}</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-5 border border-green-200">
-          <p className="text-xs text-gray-500 uppercase">Sudah Dicek</p>
-          <p className="text-4xl font-bold text-green-600 mt-1">{sudahDicek.length}</p>
+        <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+          <p className="text-[10px] font-black text-green-400 uppercase tracking-[0.2em]">Sudah Dicek</p>
+          <p className="text-5xl font-black text-gray-900 mt-3 leading-none">{sudahDicek.length}</p>
         </div>
       </div>
 
       {loading ? (
-        <p className="text-center text-gray-400 py-12">Memuat data...</p>
+        <div className="flex items-center justify-center py-24">
+          <svg className="w-8 h-8 text-gray-200 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+        </div>
       ) : (
-        <>
-          <Section title="Perlu Ditinjau"
-            color="bg-yellow-50 text-yellow-800 border-yellow-200"
+        <div>
+          <Section title="Terdeteksi Mirip (Perlu Ditinjau)"
+            color="bg-orange-50/30 text-orange-600 border-orange-50"
             items={perluDitinjau} showActions={true}  showMirip={true}  showVerified={false} />
-          <Section title="Belum Dicek"
-            color="bg-blue-50 text-blue-800 border-blue-200"
+          <Section title="Menunggu Verifikasi (Belum Dicek)"
+            color="bg-blue-50/30 text-blue-600 border-blue-50"
             items={belumDicek}    showActions={true}  showMirip={false} showVerified={false} />
-          <Section title="Sudah Dicek"
-            color="bg-green-50 text-green-800 border-green-200"
+          <Section title="Riwayat Verifikasi (Sudah Dicek)"
+            color="bg-green-50/30 text-green-600 border-green-50"
             items={sudahDicek}    showActions={false} showMirip={false} showVerified={true} />
-        </>
+        </div>
       )}
     </div>
   );
@@ -209,11 +224,11 @@ const KATEGORI_LABEL = {
 };
 
 const REWARD_STATUS_BADGE = {
-  menunggu:     "bg-yellow-100 text-yellow-800",
-  diproses:     "bg-blue-100 text-blue-800",
-  selesai:      "bg-green-100 text-green-800",
-  ditolak:      "bg-red-100 text-red-800",
-  dikembalikan: "bg-orange-100 text-orange-800",
+  menunggu:     "bg-blue-100 text-blue-700",
+  diproses:     "bg-blue-100 text-blue-700",
+  selesai:      "bg-green-100 text-green-700",
+  ditolak:      "bg-red-100 text-red-700",
+  dikembalikan: "bg-orange-100 text-orange-700",
 };
 
 // ── Helper ────────────────────────────────────────────────────────────────────
@@ -221,8 +236,8 @@ function InfoRow({ label, value }) {
   if (!value && value !== 0) return null;
   return (
     <div>
-      <p className="text-xs text-gray-400 uppercase tracking-wide">{label}</p>
-      <p className="text-gray-900 mt-0.5 text-sm">{value}</p>
+      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{label}</p>
+      <p className="text-gray-900 mt-1 text-[13px] font-medium">{value}</p>
     </div>
   );
 }
@@ -232,9 +247,9 @@ function DocLink({ label, path }) {
   const filename = path.split(/[\\/]/).pop();
   return (
     <div>
-      <p className="text-xs text-gray-400 uppercase">{label}</p>
+      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{label}</p>
       <a href={`http://127.0.0.1:8000/uploads/${filename}`} target="_blank" rel="noopener noreferrer"
-         className="text-sm text-blue-600 hover:underline mt-0.5 inline-block">
+         className="text-[13px] font-bold text-gray-900 underline underline-offset-2 hover:text-blue-600 mt-1 inline-block">
         {filename} ↗
       </a>
     </div>
@@ -279,145 +294,137 @@ function RewardDetailModal({ reward, onClose, onStatusUpdate }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
          onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+      <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
            onClick={e => e.stopPropagation()}>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white z-10">
-          <div className="flex items-center gap-3">
-            <h3 className="text-base font-bold text-gray-900">Detail Pengajuan Reward</h3>
-            <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${REWARD_STATUS_BADGE[reward.reward_status] ?? "bg-gray-100 text-gray-600"}`}>
+        <div className="flex items-center justify-between px-8 py-5 border-b border-gray-100 flex-shrink-0">
+          <div className="flex items-center gap-4">
+            <h3 className="text-[16px] font-black text-gray-900 tracking-tight">Detail Pengajuan Reward</h3>
+            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${REWARD_STATUS_BADGE[reward.reward_status] ?? "bg-gray-100 text-gray-600"}`}>
               {reward.reward_status}
             </span>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-900 text-2xl leading-none">&times;</button>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-8 space-y-8">
 
           {/* Klaim Terkait */}
           {claim && (
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-              <p className="text-xs font-semibold text-blue-600 uppercase mb-2">Klaim Terkait</p>
-              <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="bg-gray-900 rounded-2xl p-6 text-white shadow-xl shadow-gray-200">
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Klaim Terkait</p>
+              <div className="grid grid-cols-2 gap-y-4 gap-x-6 text-sm">
                 <div>
-                  <p className="text-xs text-blue-400">Nama Lomba</p>
-                  <p className="font-medium text-blue-900">{claim.nama_lomba}</p>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Nama Lomba</p>
+                  <p className="font-bold text-white mt-0.5">{claim.nama_lomba}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-blue-400">Mahasiswa</p>
-                  <p className="font-medium text-blue-900">{claim.nama_display}</p>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Mahasiswa</p>
+                  <p className="font-bold text-white mt-0.5">{claim.nama_display}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-blue-400">Peringkat</p>
-                  <p className="text-blue-800">{claim.peringkat} · {claim.tingkat}</p>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Peringkat & Tingkat</p>
+                  <p className="text-gray-200 mt-0.5">{claim.peringkat} · {claim.tingkat}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-blue-400">Tanggal Klaim</p>
-                  <p className="text-blue-800">{claim.tanggal}</p>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Tanggal Klaim</p>
+                  <p className="text-gray-200 mt-0.5">{claim.tanggal}</p>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Estimasi Dana Penghargaan */}
+          {/* Estimasi Dana */}
           {pengajuan?.estimasi_reward != null && (
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center justify-between">
+            <div className="bg-blue-50 border border-blue-100 rounded-2xl p-6 flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold text-blue-700">Estimasi Dana Penghargaan</p>
-                <p className="text-xs text-blue-400 mt-0.5">SK Rektor No. 078/B.02/UKDW/2023 · Non PUSPRESNAS</p>
+                <p className="text-[11px] font-black text-blue-700 uppercase tracking-wider">Estimasi Dana Penghargaan</p>
+                <p className="text-[11px] text-blue-400 mt-1 font-medium italic">SK Rektor No. 078/B.02/UKDW/2023</p>
               </div>
-              <p className="text-xl font-bold text-blue-700">
+              <p className="text-3xl font-black text-blue-700 tracking-tight">
                 {"Rp " + Number(pengajuan.estimasi_reward).toLocaleString("id-ID")}
               </p>
             </div>
           )}
 
-          {/* Data Diri */}
-          <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase border-b pb-1.5 mb-3">Data Diri</p>
-            <div className="grid grid-cols-3 gap-4">
-              <InfoRow label="Nama Ketua"    value={reward.nama_ketua} />
-              <InfoRow label="NIM"           value={reward.nim} />
-              <InfoRow label="Nomor WA"      value={reward.nomor_wa} />
-            </div>
-          </div>
-
-          {/* Info Pengajuan */}
-          <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase border-b pb-1.5 mb-3">Info Pengajuan</p>
-            <div className="grid grid-cols-2 gap-4">
-              <InfoRow label="Kategori"      value={KATEGORI_LABEL[reward.kategori_lomba] ?? reward.kategori_lomba} />
-              {isPuspresnas && <InfoRow label="Kompetisi"   value={reward.kompetisi_puspresnas} />}
-              {(isPuspresnas || isNonPuspresnas) && <InfoRow label="Judul Lomba" value={reward.judul_lomba} />}
-              <InfoRow label="Tahun Klaim"   value={reward.tahun_klaim} />
-              <InfoRow label="Tahun Kegiatan" value={reward.tahun_kegiatan} />
-              <InfoRow label="Periode"        value={`Periode ${reward.periode}`} />
-              <InfoRow label="No. Urut Lampiran" value={reward.nomor_urut_lampiran} />
-            </div>
-          </div>
-
-          {/* Data Rekening */}
-          <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase border-b pb-1.5 mb-3">Data Rekening</p>
-            <div className="grid grid-cols-3 gap-4">
-              <InfoRow label="Nama Pemilik"  value={reward.nama_pemilik_rekening} />
-              <InfoRow label="Bank"          value={reward.bank} />
-              <InfoRow label="No. Rekening"  value={reward.nomor_rekening ?? "—"} />
-            </div>
-          </div>
-
-          {/* Dokumen */}
-          <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase border-b pb-1.5 mb-3">Dokumen</p>
-            <div className="grid grid-cols-2 gap-4">
-              <DocLink label="Buku Tabungan"     path={reward.foto_buku_tabungan_path} />
-              <DocLink label="KTM"               path={reward.foto_ktm_path} />
-              <DocLink label="KTP"               path={reward.foto_ktp_path} />
-              <DocLink label="Pakta Integritas"  path={reward.pakta_integritas_path} />
-              <DocLink label="Laporan Akhir"     path={reward.laporan_akhir_path} />
-              <DocLink label="Karya Publikasi"   path={reward.karya_publikasi_path} />
-            </div>
-          </div>
-
-          {/* Catatan Operator */}
-          <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase border-b pb-1.5 mb-3">Catatan Operator</p>
-            <textarea
-              rows={3}
-              value={catatan}
-              onChange={e => setCatatan(e.target.value)}
-              placeholder="Tulis catatan jika diperlukan..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          {/* Tombol Aksi */}
-          {reward.reward_status !== "selesai" && reward.reward_status !== "ditolak" && (
-            <div className="space-y-3 pt-1">
-              {reward.reward_status === "dikembalikan" && (
-                <div className="rounded-lg bg-orange-50 border border-orange-200 px-4 py-3 text-sm text-orange-700">
-                  Form ini sudah dikembalikan ke mahasiswa. Tunggu mahasiswa memperbaiki dan mengirim ulang.
-                </div>
-              )}
-              <div className="flex gap-3">
-                <button onClick={() => handleStatus("selesai")} disabled={updating}
-                  className="px-4 py-2 rounded-lg text-sm font-semibold bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 transition-colors">
-                  {updating ? "Memproses..." : "Approve Data Rekening"}
-                </button>
-                <button onClick={() => handleStatus("dikembalikan")} disabled={updating}
-                  className="px-4 py-2 rounded-lg text-sm font-semibold bg-orange-100 text-orange-700 hover:bg-orange-200 disabled:opacity-50 transition-colors">
-                  {updating ? "Memproses..." : "Kembalikan ke Mahasiswa"}
-                </button>
-                <button onClick={() => handleStatus("ditolak")} disabled={updating}
-                  className="px-4 py-2 rounded-lg text-sm font-semibold bg-red-100 text-red-700 hover:bg-red-200 disabled:opacity-50 transition-colors">
-                  {updating ? "Memproses..." : "Tolak"}
-                </button>
+          {/* Grid data */}
+          <div className="space-y-8">
+            <section>
+              <h4 className="text-[11px] font-black text-gray-300 uppercase tracking-[0.3em] border-b border-gray-50 pb-2 mb-4">Data Diri</h4>
+              <div className="grid grid-cols-3 gap-6">
+                <InfoRow label="Nama Ketua"    value={reward.nama_ketua} />
+                <InfoRow label="NIM"           value={reward.nim} />
+                <InfoRow label="Nomor WA"      value={reward.nomor_wa} />
               </div>
-            </div>
-          )}
+            </section>
 
+            <section>
+              <h4 className="text-[11px] font-black text-gray-300 uppercase tracking-[0.3em] border-b border-gray-50 pb-2 mb-4">Info Pengajuan</h4>
+              <div className="grid grid-cols-2 gap-6">
+                <InfoRow label="Kategori"      value={KATEGORI_LABEL[reward.kategori_lomba] ?? reward.kategori_lomba} />
+                {isPuspresnas && <InfoRow label="Kompetisi"   value={reward.kompetisi_puspresnas} />}
+                {(isPuspresnas || isNonPuspresnas) && <InfoRow label="Judul Lomba" value={reward.judul_lomba} />}
+                <InfoRow label="Tahun Klaim"   value={reward.tahun_klaim} />
+                <InfoRow label="Tahun Kegiatan" value={reward.tahun_kegiatan} />
+                <InfoRow label="Periode"        value={`Periode ${reward.periode}`} />
+                <InfoRow label="No. Urut Lampiran" value={reward.nomor_urut_lampiran} />
+              </div>
+            </section>
+
+            <section>
+              <h4 className="text-[11px] font-black text-gray-300 uppercase tracking-[0.3em] border-b border-gray-50 pb-2 mb-4">Data Rekening</h4>
+              <div className="grid grid-cols-3 gap-6">
+                <InfoRow label="Nama Pemilik"  value={reward.nama_pemilik_rekening} />
+                <InfoRow label="Bank"          value={reward.bank} />
+                <InfoRow label="No. Rekening"  value={reward.nomor_rekening ?? "—"} />
+              </div>
+            </section>
+
+            <section>
+              <h4 className="text-[11px] font-black text-gray-300 uppercase tracking-[0.3em] border-b border-gray-50 pb-2 mb-4">Dokumen</h4>
+              <div className="grid grid-cols-2 gap-y-6 gap-x-12">
+                <DocLink label="Buku Tabungan"     path={reward.foto_buku_tabungan_path} />
+                <DocLink label="Kartu Tanda Mahasiswa" path={reward.foto_ktm_path} />
+                <DocLink label="Kartu Tanda Penduduk"  path={reward.foto_ktp_path} />
+                <DocLink label="Pakta Integritas"  path={reward.pakta_integritas_path} />
+                <DocLink label="Laporan Akhir"     path={reward.laporan_akhir_path} />
+                <DocLink label="Karya Publikasi"   path={reward.karya_publikasi_path} />
+              </div>
+            </section>
+
+            <section>
+              <h4 className="text-[11px] font-black text-gray-300 uppercase tracking-[0.3em] border-b border-gray-50 pb-2 mb-4">Catatan Verifikasi</h4>
+              <textarea
+                rows={3}
+                value={catatan}
+                onChange={e => setCatatan(e.target.value)}
+                placeholder="Tulis catatan revisi atau penolakan..."
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-[14px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all"
+              />
+            </section>
+          </div>
         </div>
+
+        {/* Footer Aksi */}
+        {reward.reward_status !== "selesai" && reward.reward_status !== "ditolak" && (
+          <div className="px-8 py-6 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between flex-shrink-0">
+            <div className="flex gap-2">
+               <button onClick={() => handleStatus("dikembalikan")} disabled={updating}
+                className="px-4 py-2.5 rounded-xl text-[12px] font-black bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors">
+                KEMBALIKAN
+              </button>
+              <button onClick={() => handleStatus("ditolak")} disabled={updating}
+                className="px-4 py-2.5 rounded-xl text-[12px] font-black bg-red-50 text-red-600 hover:bg-red-100 transition-colors">
+                TOLAK
+              </button>
+            </div>
+            <button onClick={() => handleStatus("selesai")} disabled={updating}
+              className="px-8 py-2.5 rounded-xl text-[12px] font-black bg-gray-900 text-white hover:bg-gray-700 transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-gray-200">
+              {updating ? "MEMPROSES..." : "APPROVE DATA REKENING"}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -449,45 +456,52 @@ function PengajuanReward() {
   const selesai  = rewards.filter(r => r.reward_status === "selesai");
 
   const Section = ({ title, color, items }) => (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-      <div className={`px-5 py-3 border-b flex items-center justify-between ${color}`}>
-        <h3 className="font-semibold text-sm uppercase tracking-wide">{title}</h3>
-        <span className="text-xs font-bold">{items.length}</span>
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-8">
+      <div className={`px-6 py-4 border-b flex items-center justify-between border-gray-50 ${color}`}>
+        <h3 className="font-bold text-[11px] uppercase tracking-widest">{title}</h3>
+        <span className="text-[11px] font-black bg-white/50 px-2 py-0.5 rounded-full">{items.length}</span>
       </div>
       {items.length === 0 ? (
-        <p className="text-center text-gray-400 text-sm py-8">Tidak ada data.</p>
+        <p className="text-center text-gray-400 text-[13px] py-12">Tidak ada data.</p>
       ) : (
         <table className="w-full text-sm text-left">
-          <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
-            <tr>
-              <th className="px-4 py-2">Nama Lomba</th>
-              <th className="px-4 py-2">Nama Ketua</th>
-              <th className="px-4 py-2">NIM</th>
-              <th className="px-4 py-2">Kategori</th>
-              <th className="px-4 py-2">Periode</th>
-              <th className="px-4 py-2">Bank</th>
-              <th className="px-4 py-2">No. Rekening</th>
-              <th className="px-4 py-2">Tgl. Pengajuan</th>
-              <th className="px-4 py-2">Aksi</th>
+          <thead>
+            <tr className="border-b border-gray-50">
+              <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Ketua & Institusi</th>
+              <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Nama Lomba</th>
+              <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Kategori</th>
+              <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Rekening</th>
+              <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Tgl. Pengajuan</th>
+              <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest text-right">Aksi</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody>
             {items.map(r => (
-              <tr key={r.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-4 py-3 text-gray-700">{r.nama_lomba ?? <span className="text-gray-400">—</span>}</td>
-                <td className="px-4 py-3 font-medium text-gray-900">{r.nama_ketua}</td>
-                <td className="px-4 py-3 font-mono text-gray-600">{r.nim}</td>
-                <td className="px-4 py-3 text-gray-600">{KATEGORI_LABEL[r.kategori_lomba] ?? r.kategori_lomba}</td>
-                <td className="px-4 py-3 text-gray-600">Periode {r.periode}</td>
-                <td className="px-4 py-3 text-gray-600">{r.bank}</td>
-                <td className="px-4 py-3 font-mono text-gray-700">{r.nomor_rekening ?? "—"}</td>
-                <td className="px-4 py-3 text-gray-400 text-xs">{r.created_at}</td>
-                <td className="px-4 py-3">
+              <tr key={r.id} className="hover:bg-gray-50/60 transition-colors border-b border-gray-50 last:border-0">
+                <td className="px-6 py-4">
+                  <p className="font-bold text-gray-900 text-[13px]">{r.nama_ketua}</p>
+                  <p className="text-[11px] font-mono text-gray-400 mt-0.5">{r.nim}</p>
+                </td>
+                <td className="px-6 py-4">
+                  <p className="text-[13px] text-gray-700 font-medium truncate max-w-xs">{r.nama_lomba ?? "—"}</p>
+                  <p className="text-[11px] text-gray-400 mt-0.5 font-medium italic">Periode {r.periode}</p>
+                </td>
+                <td className="px-6 py-4">
+                   <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-black bg-gray-50 text-gray-500 border border-gray-100 uppercase tracking-wider">
+                    {KATEGORI_LABEL[r.kategori_lomba] ?? r.kategori_lomba}
+                   </span>
+                </td>
+                <td className="px-6 py-4">
+                   <p className="text-[12px] font-black text-gray-900 uppercase">{r.bank}</p>
+                   <p className="text-[12px] font-mono text-gray-400 mt-0.5 font-bold">{r.nomor_rekening ?? "—"}</p>
+                </td>
+                <td className="px-6 py-4 text-[12px] text-gray-400 font-medium">{r.created_at}</td>
+                <td className="px-6 py-4 text-right">
                   <button
                     onClick={() => setSelectedReward(r)}
-                    className="px-3 py-1.5 rounded-md text-xs font-semibold bg-gray-800 text-white hover:bg-gray-700 transition-colors"
+                    className="px-4 py-1.5 rounded-xl text-[11px] font-black bg-gray-900 text-white hover:bg-gray-700 transition-all hover:scale-105"
                   >
-                    Detail
+                    DETAIL
                   </button>
                 </td>
               </tr>
@@ -499,39 +513,52 @@ function PengajuanReward() {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Pengajuan Reward</h2>
-          <p className="text-sm text-gray-500 mt-0.5">Data rekening mahasiswa penerima reward prestasi</p>
+          <h1 className="text-4xl font-black text-gray-900 leading-none tracking-tight">Pengajuan Reward</h1>
+          <p className="text-gray-400 mt-3 text-[14px]">Data rekening mahasiswa untuk pencairan dana penghargaan.</p>
         </div>
-        <button onClick={fetchRewards} className="text-sm text-blue-600 hover:underline">Refresh</button>
+        <button
+          onClick={fetchRewards}
+          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-500 text-[12px] font-bold rounded-xl hover:bg-gray-50 transition-colors mt-1"
+        >
+          <svg className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          REFRESH
+        </button>
       </div>
 
       {/* Statistik */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl shadow-sm p-5 border border-yellow-200">
-          <p className="text-xs text-gray-500 uppercase">Menunggu</p>
-          <p className="text-4xl font-bold text-yellow-600 mt-1">{menunggu.length}</p>
+      <div className="grid grid-cols-3 gap-6">
+        <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+          <p className="text-[10px] font-black text-orange-400 uppercase tracking-[0.2em]">Menunggu</p>
+          <p className="text-5xl font-black text-gray-900 mt-3 leading-none">{menunggu.length}</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-5 border border-blue-200">
-          <p className="text-xs text-gray-500 uppercase">Diproses</p>
-          <p className="text-4xl font-bold text-blue-600 mt-1">{diproses.length}</p>
+        <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+          <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em]">Diproses</p>
+          <p className="text-5xl font-black text-gray-900 mt-3 leading-none">{diproses.length}</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-5 border border-green-200">
-          <p className="text-xs text-gray-500 uppercase">Selesai</p>
-          <p className="text-4xl font-bold text-green-600 mt-1">{selesai.length}</p>
+        <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+          <p className="text-[10px] font-black text-green-400 uppercase tracking-[0.2em]">Selesai</p>
+          <p className="text-5xl font-black text-gray-900 mt-3 leading-none">{selesai.length}</p>
         </div>
       </div>
 
       {loading ? (
-        <p className="text-center text-gray-400 py-12">Memuat data...</p>
+         <div className="flex items-center justify-center py-24">
+            <svg className="w-8 h-8 text-gray-200 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+          </div>
       ) : (
-        <>
-          <Section title="Menunggu" color="bg-yellow-50 text-yellow-800 border-yellow-200" items={menunggu} />
-          <Section title="Diproses" color="bg-blue-50 text-blue-800 border-blue-200"       items={diproses} />
-          <Section title="Selesai"  color="bg-green-50 text-green-800 border-green-200"    items={selesai}  />
-        </>
+        <div>
+          <Section title="Antrian Menunggu Verifikasi" color="bg-orange-50/30 text-orange-600 border-orange-50" items={menunggu} />
+          <Section title="Data Dalam Proses"            color="bg-blue-50/30 text-blue-600 border-blue-50"       items={diproses} />
+          <Section title="Arsip Selesai"                color="bg-green-50/30 text-green-600 border-green-50"    items={selesai}  />
+        </div>
       )}
 
       {selectedReward && (
@@ -608,30 +635,30 @@ function KelolаOperator({ operatorId }) {
   };
 
   const ROLE_BADGE = {
-    superadmin: "bg-purple-100 text-purple-800",
-    operator:   "bg-blue-100 text-blue-800",
+    superadmin: "bg-purple-100 text-purple-700",
+    operator:   "bg-blue-100 text-blue-700",
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Kelola Operator</h2>
-          <p className="text-sm text-gray-500 mt-0.5">Manajemen akun operator dan super admin</p>
+          <h1 className="text-4xl font-black text-gray-900 leading-none tracking-tight">Kelola Operator</h1>
+          <p className="text-gray-400 mt-3 text-[14px]">Manajemen hak akses pengelola sistem.</p>
         </div>
         <button
           onClick={() => { setShowForm(v => !v); setFormError(""); }}
-          className="px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+          className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white text-[13px] font-bold rounded-xl hover:bg-gray-700 transition-all hover:scale-105 mt-1"
         >
-          {showForm ? "Batal" : "+ Tambah Operator"}
+          {showForm ? "BATALKAN" : "+ TAMBAH OPERATOR"}
         </button>
       </div>
 
       {/* Form Tambah */}
       {showForm && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h3 className="text-sm font-semibold text-gray-800 mb-4">Tambah Akun Baru</h3>
-          <form onSubmit={handleAdd} className="grid grid-cols-2 gap-4">
+        <div className="bg-white rounded-[32px] shadow-2xl shadow-gray-200/50 border border-gray-100 p-10 animate-in slide-in-from-top duration-500">
+          <h3 className="text-[16px] font-black text-gray-900 mb-8 uppercase tracking-tight">Akun Pengelola Baru</h3>
+          <form onSubmit={handleAdd} className="grid grid-cols-2 gap-6">
             {[
               { label: "Nama Lengkap", name: "nama",     type: "text",     required: true },
               { label: "Email",        name: "email",    type: "email",    required: true },
@@ -639,35 +666,35 @@ function KelolаOperator({ operatorId }) {
               { label: "Password",     name: "password", type: "password", required: true },
             ].map(f => (
               <div key={f.name}>
-                <label className="block text-xs font-medium text-gray-600 mb-1">{f.label}</label>
+                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">{f.label}</label>
                 <input
                   type={f.type}
                   required={f.required}
                   value={form[f.name]}
                   onChange={e => setForm(v => ({ ...v, [f.name]: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-[14px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all"
                 />
               </div>
             ))}
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Role</label>
+              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Peran Akun</label>
               <select
                 value={form.role}
                 onChange={e => setForm(v => ({ ...v, role: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-[14px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all"
               >
-                <option value="operator">Operator</option>
-                <option value="superadmin">Super Admin</option>
+                <option value="operator">Operator (Verifikator)</option>
+                <option value="superadmin">Super Admin (Manajer)</option>
               </select>
             </div>
-            <div className="col-span-2 flex items-center gap-3">
-              {formError && <p className="text-sm text-red-600 flex-1">{formError}</p>}
+            <div className="col-span-2 flex items-center justify-between mt-4">
+              {formError && <p className="text-[13px] font-bold text-red-600 italic">! {formError}</p>}
               <button
                 type="submit"
                 disabled={saving}
-                className="ml-auto px-5 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                className="ml-auto px-10 py-3.5 rounded-2xl text-[14px] font-black bg-gray-900 text-white hover:bg-gray-700 transition-all shadow-xl shadow-gray-200"
               >
-                {saving ? "Menyimpan..." : "Simpan"}
+                {saving ? "MENYIMPAN..." : "SIMPAN OPERATOR"}
               </button>
             </div>
           </form>
@@ -675,43 +702,48 @@ function KelolаOperator({ operatorId }) {
       )}
 
       {/* Tabel Operator */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         {loading ? (
-          <p className="text-center text-gray-400 text-sm py-8">Memuat data...</p>
+           <div className="flex items-center justify-center py-24">
+              <svg className="w-8 h-8 text-gray-200 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+            </div>
         ) : operators.length === 0 ? (
-          <p className="text-center text-gray-400 text-sm py-8">Belum ada data operator.</p>
+          <p className="text-center text-gray-400 text-[13px] py-12 font-medium">Belum ada data operator.</p>
         ) : (
           <table className="w-full text-sm text-left">
-            <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
-              <tr>
-                <th className="px-5 py-3">Nama</th>
-                <th className="px-5 py-3">Username</th>
-                <th className="px-5 py-3">Email</th>
-                <th className="px-5 py-3">Role</th>
-                <th className="px-5 py-3 text-right">Aksi</th>
+            <thead>
+              <tr className="border-b border-gray-50">
+                <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Nama Lengkap</th>
+                <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Username</th>
+                <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Email</th>
+                <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Hak Akses</th>
+                <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest text-right">Tindakan</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-50">
               {operators.map(op => (
-                <tr key={op.id} className="hover:bg-gray-50">
-                  <td className="px-5 py-3 font-medium text-gray-900">{op.nama}</td>
-                  <td className="px-5 py-3 font-mono text-gray-600">{op.username}</td>
-                  <td className="px-5 py-3 text-gray-600">{op.email}</td>
-                  <td className="px-5 py-3">
-                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${ROLE_BADGE[op.role] ?? "bg-gray-100 text-gray-600"}`}>
-                      {op.role === "superadmin" ? "Super Admin" : "Operator"}
+                <tr key={op.id} className="hover:bg-gray-50/60 transition-colors">
+                  <td className="px-6 py-4 font-bold text-gray-900 text-[13px]">{op.nama}</td>
+                  <td className="px-6 py-4 font-mono text-[12px] font-bold text-gray-400 uppercase tabular-nums">{op.username}</td>
+                  <td className="px-6 py-4 text-[13px] text-gray-500 font-medium">{op.email}</td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${ROLE_BADGE[op.role] ?? "bg-gray-100 text-gray-600"}`}>
+                      {op.role === "superadmin" ? "SUPER ADMIN" : "OPERATOR"}
                     </span>
                   </td>
-                  <td className="px-5 py-3 text-right">
+                  <td className="px-6 py-4 text-right">
                     {String(op.id) !== String(operatorId) ? (
                       <button
                         onClick={() => handleDelete(op.id, op.nama)}
-                        className="px-3 py-1 rounded-md text-xs font-semibold bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
+                        className="px-3 py-1.5 rounded-xl text-[11px] font-black bg-red-50 text-red-600 hover:bg-red-100 transition-colors border border-red-100"
                       >
-                        Hapus
+                        HAPUS
                       </button>
                     ) : (
-                      <span className="text-xs text-gray-400 italic">Akun Anda</span>
+                      <span className="text-[11px] text-gray-300 font-black italic tracking-widest uppercase px-3">AKUN ANDA</span>
                     )}
                   </td>
                 </tr>
@@ -731,6 +763,7 @@ export default function OperatorDashboard() {
   const [operatorNama,  setOperatorNama]  = useState("");
   const [operatorRole,  setOperatorRole]  = useState("");
   const [operatorId,    setOperatorId]    = useState(null);
+  const [showUserMenu,  setShowUserMenu]  = useState(false);
 
   useEffect(() => {
     if (sessionStorage.getItem("role") !== "operator") {
@@ -757,29 +790,31 @@ export default function OperatorDashboard() {
     ...(isSuperAdmin ? [{ key: "operators", label: "Kelola Operator", icon: <IconUsers /> }] : []),
   ];
 
-  const activeLabel = menus.find(m => m.key === activeMenu)?.label ?? "";
-
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-[#f7f7f8] flex" style={{ fontFamily: "var(--font-poppins, sans-serif)" }}>
 
       {/* ── Sidebar ── */}
-      <aside className="w-60 bg-white border-r border-gray-200 flex flex-col">
+      <aside className="w-[240px] bg-white flex flex-col flex-shrink-0 border-r border-gray-100">
         {/* Logo */}
-        <div className="px-6 py-5 border-b border-gray-100">
-          <h1 className="text-base font-bold text-gray-900">Anti-Double Claim</h1>
-          <p className="text-xs text-gray-400 mt-0.5">Portal Operator</p>
+        <div className="px-7 pt-9 pb-8">
+          <div>
+            <p className="text-[22px] font-black text-gray-900 leading-none tracking-tight uppercase">
+              ANTI<br />DOUBLE<br />CLAIM
+            </p>
+            <p className="text-[10px] font-semibold text-gray-400 mt-2.5 tracking-widest uppercase">Portal Pengelola</p>
+          </div>
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        <nav className="flex-1 px-4 space-y-0.5">
           {menus.map((m) => (
             <button
               key={m.key}
               onClick={() => setActiveMenu(m.key)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] text-left transition-colors
                 ${activeMenu === m.key
-                  ? "bg-gray-100 text-gray-900"
-                  : "text-gray-600 hover:bg-gray-50"
+                  ? "text-gray-900 font-bold bg-gray-50 shadow-sm"
+                  : "text-gray-400 font-normal hover:text-gray-700 hover:bg-gray-50"
                 }`}
             >
               {m.icon}
@@ -787,32 +822,65 @@ export default function OperatorDashboard() {
             </button>
           ))}
         </nav>
-
-        {/* Info User + Logout */}
-        <div className="px-5 py-4 border-t border-gray-100 space-y-2">
-          <div>
-            <p className="text-xs font-semibold text-gray-800 truncate">{operatorNama}</p>
-            <span className={`inline-block mt-0.5 px-2 py-0.5 rounded-full text-xs font-semibold
-              ${isSuperAdmin ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"}`}>
-              {isSuperAdmin ? "Super Admin" : "Operator"}
-            </span>
-          </div>
-          <button onClick={handleLogout} className="text-xs text-red-500 hover:text-red-700">
-            Keluar
-          </button>
-        </div>
       </aside>
 
       {/* ── Area Kanan ── */}
       <div className="flex-1 flex flex-col overflow-hidden">
 
         {/* Top bar */}
-        <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-8 flex-shrink-0">
-          <h2 className="text-sm font-semibold text-gray-700">{activeLabel}</h2>
+        <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-8 flex-shrink-0">
+          <div className="flex items-center gap-4">
+            <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse"></div>
+            <h2 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.3em]">{activeMenu} node active</h2>
+          </div>
+
+          {/* User Profile */}
+          <div className="relative">
+            <button
+              onClick={() => setShowUserMenu(v => !v)}
+              className="flex items-center gap-3 px-3 py-1.5 rounded-xl hover:bg-gray-50 transition-colors"
+            >
+              <div className="w-9 h-9 rounded-full bg-gray-900 flex items-center justify-center flex-shrink-0">
+                 <span className="text-xs font-bold text-white uppercase">
+                    {operatorNama.split(" ").map(w => w[0]).join("").slice(0,2)}
+                 </span>
+              </div>
+              <div className="text-left">
+                <p className="text-[13px] font-bold text-gray-900 leading-tight">{operatorNama}</p>
+                <p className="text-[10px] font-black text-gray-400 leading-tight uppercase tracking-widest mt-0.5">
+                  {isSuperAdmin ? "Super Admin" : "Operator"}
+                </p>
+              </div>
+              <svg className={`w-3.5 h-3.5 text-gray-400 transition-transform ${showUserMenu ? "rotate-180" : ""}`}
+                   fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {showUserMenu && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowUserMenu(false)} />
+                <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl border border-gray-100 shadow-2xl z-20 overflow-hidden animate-in zoom-in-95 duration-200">
+                  <div className="p-1.5">
+                    <button
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-red-600 hover:bg-red-50 transition-colors text-left"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}
+                          d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                      </svg>
+                      Keluar Sesi
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </header>
 
         {/* Konten */}
-        <main className="flex-1 px-8 py-8 overflow-y-auto">
+        <main className="flex-1 px-10 py-10 overflow-y-auto">
           {activeMenu === "claim"     && <PengajuanClaim  router={router} />}
           {activeMenu === "reward"    && <PengajuanReward />}
           {activeMenu === "operators" && isSuperAdmin && <KelolаOperator operatorId={operatorId} />}
