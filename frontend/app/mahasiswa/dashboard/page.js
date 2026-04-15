@@ -113,9 +113,12 @@ function TambahKlaimModal({ session, onClose, onSuccess }) {
       <div className="pointer-events-auto w-full max-w-md bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden">
 
         {/* Header */}
-        <div className="flex items-center justify-between bg-gray-800 px-5 py-3">
+        <div className="flex items-center justify-between bg-gray-900 px-5 py-4 flex-shrink-0">
           <span className="text-sm font-semibold text-white">Tambah Klaim Sertifikat</span>
-          <button onClick={onClose} className="text-gray-300 hover:text-white text-xl leading-none">&times;</button>
+          <button onClick={onClose}
+            className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-colors text-base leading-none">
+            ✕
+          </button>
         </div>
 
         {/* Form */}
@@ -394,7 +397,7 @@ function DetailModal({ claim, onClose }) {
 }
 
 // ── Konten: Daftar Klaim ──────────────────────────────────────────────────────
-function DaftarKlaim({ session, search, onOpenForm }) {
+function DaftarKlaim({ session, search, onOpenForm, onTambahKlaim }) {
   const [claims, setClaims]          = useState([]);
   const [rewardMap, setRewardMap]    = useState({});   // claim_id → reward object
   const [loading, setLoading]        = useState(true);
@@ -430,59 +433,120 @@ function DaftarKlaim({ session, search, onOpenForm }) {
 
   return (
     <div>
-      <h2 className="text-xl font-bold text-gray-900 mb-5">Daftar Klaim Saya</h2>
+      {/* Page header */}
+      <div className="flex items-start justify-between mb-10">
+        <div>
+          <h1 className="text-4xl font-black text-gray-900 leading-none tracking-tight">Daftar Klaim</h1>
+          <p className="text-gray-400 mt-3 text-[14px]">Riwayat klaim sertifikat prestasi yang telah diajukan.</p>
+        </div>
+        <button
+          onClick={onTambahKlaim}
+          className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white text-[13px] font-semibold rounded-xl hover:bg-gray-700 transition-colors flex-shrink-0 mt-1"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+          </svg>
+          Tambah Klaim
+        </button>
+      </div>
+
       {loading ? (
-        <p className="text-center text-gray-400 py-16">Memuat data...</p>
+        <div className="flex items-center justify-center py-20">
+          <div className="flex items-center gap-3 text-gray-400">
+            <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+            </svg>
+            <span className="text-sm">Memuat data...</span>
+          </div>
+        </div>
       ) : filtered.length === 0 ? (
-        <p className="text-center text-gray-400 py-16">
-          {claims.length === 0 ? "Belum ada klaim yang diajukan." : "Tidak ada hasil pencarian."}
-        </p>
+        <div className="flex flex-col items-center justify-center py-24 bg-white rounded-2xl border border-gray-100">
+          <div className="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center mb-4">
+            <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <p className="text-sm font-semibold text-gray-600">
+            {claims.length === 0 ? "Belum ada klaim yang diajukan" : "Tidak ada hasil pencarian"}
+          </p>
+          {claims.length === 0 && (
+            <p className="text-xs text-gray-400 mt-1.5">Klik tombol "Tambah Klaim" untuk mulai mengajukan</p>
+          )}
+        </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
-              <tr>
-                <th className="px-4 py-3">Nama Lomba</th>
-                <th className="px-4 py-3">Tingkat</th>
-                <th className="px-4 py-3">Peringkat</th>
-                <th className="px-4 py-3">Tanggal</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filtered.map((claim) => (
-                <tr key={claim.id} onClick={() => setSelected(claim)}
-                    className="hover:bg-gray-50 cursor-pointer transition-colors">
-                  <td className="px-4 py-3 font-medium text-gray-900">{claim.nama_lomba}</td>
-                  <td className="px-4 py-3 text-gray-600">{claim.tingkat}</td>
-                  <td className="px-4 py-3 text-gray-600">{claim.peringkat}</td>
-                  <td className="px-4 py-3 text-gray-600">{claim.tanggal}</td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS_STYLE(claim.status)}`}>
-                      {STATUS_LABEL(claim.status)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                    {claim.status === "sudah dicek" && (
-                      rewardMap[claim.id] ? (
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${REWARD_STYLE[rewardMap[claim.id].reward_status] ?? "bg-gray-100 text-gray-600"}`}>
-                          {REWARD_LABEL[rewardMap[claim.id].reward_status] ?? rewardMap[claim.id].reward_status}
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() => onOpenForm?.(claim.id)}
-                          className="px-3 py-1.5 rounded-md text-xs font-semibold bg-orange-500 text-white hover:bg-orange-600 transition-colors whitespace-nowrap"
-                        >
-                          Isi Data Reward
-                        </button>
-                      )
-                    )}
-                  </td>
+        <div>
+          {/* Section header */}
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-[11px] font-bold text-gray-400 tracking-widest uppercase">Riwayat Aktivitas</h2>
+            <button className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-400 hover:text-gray-600 tracking-wider uppercase">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h18M7 8h10M10 12h4" />
+              </svg>
+              Filter
+            </button>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+            <table className="w-full text-sm text-left">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest w-14">No</th>
+                  <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Nama Lomba</th>
+                  <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Tingkat</th>
+                  <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Peringkat</th>
+                  <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Tanggal</th>
+                  <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Status</th>
+                  <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Status Reward</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filtered.map((claim, idx) => (
+                  <tr key={claim.id} onClick={() => setSelected(claim)}
+                      className="border-b border-gray-50 last:border-0 hover:bg-gray-50/60 cursor-pointer transition-colors">
+                    <td className="px-5 py-4 text-gray-300 text-[12px] font-semibold tabular-nums">{String(idx + 1).padStart(2, "0")}</td>
+                    <td className="px-5 py-4">
+                      <p className="font-semibold text-gray-900 text-[13px]">{claim.nama_lomba}</p>
+                    </td>
+                    <td className="px-5 py-4 text-[13px] text-gray-500">{claim.tingkat}</td>
+                    <td className="px-5 py-4">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-gray-900 text-white">
+                        {claim.peringkat}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 text-[12px] text-gray-400">{claim.tanggal}</td>
+                    <td className="px-5 py-4">
+                      <span className="inline-flex items-center gap-1.5 text-[12px] font-medium uppercase tracking-wide">
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${claim.status === "sudah dicek" ? "bg-green-500" : "bg-gray-300"}`} />
+                        <span className={claim.status === "sudah dicek" ? "text-green-600" : "text-gray-400"}>
+                          {STATUS_LABEL(claim.status)}
+                        </span>
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 text-[13px]" onClick={(e) => e.stopPropagation()}>
+                      {claim.status === "sudah dicek" && (
+                        rewardMap[claim.id] ? (
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${REWARD_STYLE[rewardMap[claim.id].reward_status] ?? "bg-gray-100 text-gray-600"}`}>
+                            {REWARD_LABEL[rewardMap[claim.id].reward_status] ?? rewardMap[claim.id].reward_status}
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => onOpenForm?.(claim.id)}
+                            className="text-[13px] font-semibold text-gray-900 hover:text-blue-600 transition-colors underline underline-offset-2"
+                          >
+                            Isi Data Reward
+                          </button>
+                        )
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="px-5 py-3 border-t border-gray-50">
+              <p className="text-[11px] text-gray-300 font-medium">{filtered.length} klaim ditemukan</p>
+            </div>
+          </div>
         </div>
       )}
       <DetailModal claim={selectedClaim} onClose={() => setSelected(null)} />
@@ -534,52 +598,54 @@ function KonfirmasiReward({ session, initialClaimId = null, onClearInitial }) {
   const sudahDiisi      = claims.filter(c => rewardMap[c.id] && rewardMap[c.id].reward_status !== "dikembalikan");
 
   const ClaimTable = ({ items, mode }) => (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
       <table className="w-full text-sm text-left">
-        <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
-          <tr>
-            <th className="px-4 py-3">Nama Lomba</th>
-            <th className="px-4 py-3">Tingkat</th>
-            <th className="px-4 py-3">Peringkat</th>
-            <th className="px-4 py-3">Estimasi Dana</th>
-            <th className="px-4 py-3 text-right">
+        <thead>
+          <tr className="border-b border-gray-100 bg-gray-50">
+            <th className="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider w-10">No.</th>
+            <th className="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Nama Lomba</th>
+            <th className="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Tingkat</th>
+            <th className="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Peringkat</th>
+            <th className="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Estimasi Dana</th>
+            <th className="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider text-right">
               {mode === "isi" ? "Aksi" : mode === "kembali" ? "Aksi" : "Status Reward"}
             </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-100">
-          {items.map(claim => {
+        <tbody>
+          {items.map((claim, idx) => {
             const estimasi = pengajuanMap[claim.id]?.estimasi_reward;
             const reward   = rewardMap[claim.id];
             return (
-              <tr key={claim.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-4 py-3 font-medium text-gray-900">{claim.nama_lomba}</td>
-                <td className="px-4 py-3 text-gray-600">{claim.tingkat}</td>
-                <td className="px-4 py-3 text-gray-600">{claim.peringkat}</td>
-                <td className="px-4 py-3">
+              <tr key={claim.id} className="border-b border-gray-50 hover:bg-blue-50/40 transition-colors">
+                <td className="px-4 py-3.5 text-gray-400 text-xs font-medium">{idx + 1}</td>
+                <td className="px-4 py-3.5 font-semibold text-gray-900">{claim.nama_lomba}</td>
+                <td className="px-4 py-3.5 text-gray-500">{claim.tingkat}</td>
+                <td className="px-4 py-3.5 text-gray-500">{claim.peringkat}</td>
+                <td className="px-4 py-3.5">
                   {estimasi != null
-                    ? <span className="font-semibold text-blue-700">{"Rp " + Number(estimasi).toLocaleString("id-ID")}</span>
-                    : <span className="text-gray-400">—</span>}
+                    ? <span className="font-semibold text-blue-600">{"Rp " + Number(estimasi).toLocaleString("id-ID")}</span>
+                    : <span className="text-gray-300">—</span>}
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className="px-4 py-3.5 text-right">
                   {mode === "isi" && (
                     <button
                       onClick={() => setSelectedClaimId(claim.id)}
-                      className="px-3 py-1.5 rounded-md text-xs font-semibold bg-orange-500 text-white hover:bg-orange-600 transition-colors"
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-900 text-white hover:bg-gray-700 transition-colors"
                     >
-                      Isi Data Reward
+                      + Isi Data Reward
                     </button>
                   )}
                   {mode === "kembali" && (
                     <button
                       onClick={() => setSelectedClaimId(claim.id)}
-                      className="px-3 py-1.5 rounded-md text-xs font-semibold bg-orange-600 text-white hover:bg-orange-700 transition-colors"
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-orange-500 text-white hover:bg-orange-600 transition-colors"
                     >
                       Perbaiki & Kirim Ulang
                     </button>
                   )}
                   {mode === "status" && (
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${REWARD_STYLE[reward?.reward_status] ?? "bg-gray-100 text-gray-600"}`}>
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${REWARD_STYLE[reward?.reward_status] ?? "bg-gray-100 text-gray-600"}`}>
                       {REWARD_LABEL[reward?.reward_status] ?? "—"}
                     </span>
                   )}
@@ -607,8 +673,8 @@ function KonfirmasiReward({ session, initialClaimId = null, onClearInitial }) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-gray-900 mb-1">Konfirmasi Reward</h2>
-        <p className="text-sm text-gray-500">
+        <h1 className="text-4xl font-black text-gray-900 leading-none tracking-tight">Konfirmasi Reward</h1>
+        <p className="text-gray-400 mt-3 text-[14px]">
           Klaim yang telah disetujui operator memerlukan data rekening untuk pencairan reward.
         </p>
       </div>
@@ -616,8 +682,14 @@ function KonfirmasiReward({ session, initialClaimId = null, onClearInitial }) {
       {loading ? (
         <p className="text-center text-gray-400 py-16">Memuat data...</p>
       ) : claims.length === 0 ? (
-        <div className="flex items-center justify-center h-48 bg-white rounded-xl border border-dashed border-gray-300">
-          <p className="text-gray-400 text-sm">Belum ada klaim yang disetujui.</p>
+        <div className="flex flex-col items-center justify-center h-48 bg-white rounded-xl border border-dashed border-gray-200">
+          <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mb-2">
+            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+            </svg>
+          </div>
+          <p className="text-sm font-medium text-gray-500">Belum ada klaim yang disetujui</p>
+          <p className="text-xs text-gray-400 mt-0.5">Klaim perlu diverifikasi operator terlebih dahulu</p>
         </div>
       ) : (
         <>
@@ -687,10 +759,10 @@ function SKRektor() {
 
   return (
     <div>
-      <div className="mb-6 flex items-start justify-between gap-4">
+      <div className="mb-8 flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">SK Rektor No. 078/B.02/UKDW/2023</h2>
-          <p className="text-sm text-gray-500 mt-1">Aturan Pemberian Penghargaan Bidang Kemahasiswaan UKDW</p>
+          <h1 className="text-4xl font-black text-gray-900 leading-none tracking-tight">SK Rektor</h1>
+          <p className="text-gray-400 mt-3 text-[14px]">No. 078/B.02/UKDW/2023 · Aturan Pemberian Penghargaan Bidang Kemahasiswaan UKDW</p>
         </div>
         <a
           href="/sk-rektor.pdf"
@@ -935,8 +1007,8 @@ function Section({ title, children }) {
 function VisualisasiData() {
   return (
     <div>
-      <h2 className="text-xl font-bold text-gray-900 mb-4">Visualisasi Data</h2>
-      <div className="flex items-center justify-center h-64 bg-white rounded-xl border border-dashed border-gray-300">
+      <h1 className="text-4xl font-black text-gray-900 leading-none tracking-tight mb-8">Visualisasi Data</h1>
+      <div className="flex items-center justify-center h-64 bg-white rounded-2xl border border-dashed border-gray-200">
         <p className="text-gray-400 text-sm">Visualisasi data akan segera hadir.</p>
       </div>
     </div>
@@ -952,7 +1024,8 @@ export default function MahasiswaDashboard() {
   const [showTambah,       setShowTambah]       = useState(false);
   const [search,           setSearch]           = useState("");
   const [claimsRefreshKey, setClaimsRefreshKey] = useState(0);
-  const [rewardOpenId,     setRewardOpenId]     = useState(null); // buka form reward langsung
+  const [rewardOpenId,     setRewardOpenId]     = useState(null);
+  const [showUserMenu,     setShowUserMenu]     = useState(false);
 
   if (status === "loading") {
     return <p className="text-center mt-20 text-gray-400">Memuat sesi...</p>;
@@ -977,36 +1050,31 @@ export default function MahasiswaDashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-[#f7f7f8] flex" style={{ fontFamily: "var(--font-poppins, sans-serif)" }}>
 
       {/* ── Sidebar ── */}
-      <aside className="w-60 bg-white border-r border-gray-200 flex flex-col">
+      <aside className="w-[240px] bg-white flex flex-col flex-shrink-0">
+
         {/* Logo */}
-        <div className="px-6 py-5 border-b border-gray-100">
-          <h1 className="text-base font-bold text-gray-900">Anti-Double Claim</h1>
-          <p className="text-xs text-gray-400 mt-0.5">Portal Mahasiswa</p>
+        <div className="px-7 pt-9 pb-8">
+          <div>
+            <p className="text-[22px] font-black text-gray-900 leading-none tracking-tight uppercase">
+              ANTI<br />DOUBLE<br />CLAIM
+            </p>
+            <p className="text-[10px] font-semibold text-gray-400 mt-2.5 tracking-widest uppercase">Portal Mahasiswa</p>
+          </div>
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-3 py-4 space-y-1">
-          {/* Tombol Tambah Klaim (Gmail-style) */}
-          <button
-            onClick={() => setShowTambah(true)}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors text-left bg-blue-600 text-white hover:bg-blue-700 shadow-sm mb-2"
-          >
-            <IconPlus />
-            Tambah Klaim
-          </button>
-
-          {/* Menu biasa */}
+        <nav className="flex-1 px-4 space-y-0.5">
           {menus.map((m) => (
             <button
               key={m.key}
               onClick={() => setActiveMenu(m.key)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] text-left transition-colors
                 ${activeMenu === m.key
-                  ? "bg-gray-100 text-gray-900"
-                  : "text-gray-600 hover:bg-gray-50"
+                  ? "text-gray-900 font-bold"
+                  : "text-gray-400 font-normal hover:text-gray-700 hover:bg-gray-50"
                 }`}
             >
               {m.icon}
@@ -1015,52 +1083,87 @@ export default function MahasiswaDashboard() {
           ))}
         </nav>
 
-        {/* Logout */}
-        <div className="px-5 py-4 border-t border-gray-100">
-          <button
-            onClick={() => signOut({ callbackUrl: "/" })}
-            className="text-xs text-red-500 hover:text-red-700"
-          >
-            Keluar
-          </button>
-        </div>
       </aside>
 
       {/* ── Area Kanan ── */}
       <div className="flex-1 flex flex-col overflow-hidden">
 
-        {/* Top bar — selalu tampil */}
-        <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-8 flex-shrink-0">
-          {/* Search bar — hanya tampil di menu daftar */}
-          {activeMenu === "daftar" ? (
+        {/* Top bar */}
+        <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-8 flex-shrink-0">
+          {/* Search */}
+          <div className="flex items-center gap-2.5 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 w-80">
+            <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Cari nama lomba, tingkat, peringkat..."
-              className="w-72 px-4 py-1.5 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Cari aktivitas..."
+              className="flex-1 bg-transparent text-sm text-gray-700 placeholder-gray-400 focus:outline-none"
             />
-          ) : (
-            <div />
-          )}
+          </div>
 
-          {/* Akun Google */}
-          <div className="flex items-center gap-2.5">
-            <div className="text-right">
-              <p className="text-sm font-medium text-gray-800 leading-tight">{session.user.name}</p>
-              <p className="text-xs text-gray-400">{session.user.email}</p>
-            </div>
-            {session.user.image && (
-              <img src={session.user.image} alt="avatar"
-                   className="w-8 h-8 rounded-full border border-gray-200" />
+          {/* User dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setShowUserMenu(v => !v)}
+              className="flex items-center gap-3 px-3 py-1.5 rounded-xl hover:bg-gray-50 transition-colors"
+            >
+              <div className="w-9 h-9 rounded-full bg-gray-900 flex items-center justify-center flex-shrink-0">
+                {session.user.image ? (
+                  <img src={session.user.image} alt="avatar" className="w-9 h-9 rounded-full object-cover" />
+                ) : (
+                  <span className="text-xs font-bold text-white">
+                    {session.user.name?.split(" ").map(w => w[0]).join("").slice(0,2).toUpperCase()}
+                  </span>
+                )}
+              </div>
+              <div className="text-left">
+                <p className="text-[13px] font-semibold text-gray-900 leading-tight">{session.user.name}</p>
+                <p className="text-[11px] text-gray-400 leading-tight truncate max-w-[160px]">{session.user.email}</p>
+              </div>
+              <svg className={`w-3.5 h-3.5 text-gray-400 transition-transform ${showUserMenu ? "rotate-180" : ""}`}
+                   fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {showUserMenu && (
+              <>
+                {/* Backdrop */}
+                <div className="fixed inset-0 z-10" onClick={() => setShowUserMenu(false)} />
+                {/* Dropdown */}
+                <div className="absolute right-0 top-full mt-2 w-60 bg-white rounded-xl border border-gray-100 shadow-lg z-20 overflow-hidden">
+                  {/* User info header */}
+                  <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
+                    <p className="text-sm font-semibold text-gray-900 truncate">{session.user.name}</p>
+                    <p className="text-xs text-gray-400 truncate mt-0.5">{session.user.email}</p>
+                  </div>
+                  {/* Actions */}
+                  <div className="p-1.5">
+                    <button
+                      onClick={() => signOut({ callbackUrl: "/" })}
+                      className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-red-600 hover:bg-red-50 transition-colors text-left"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                          d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                      </svg>
+                      Keluar
+                    </button>
+                  </div>
+                </div>
+              </>
             )}
           </div>
         </header>
 
         {/* Konten */}
-        <main className="flex-1 px-8 py-8 overflow-y-auto">
+        <main className="flex-1 px-10 py-10 overflow-y-auto">
           {activeMenu === "daftar"      && <DaftarKlaim key={claimsRefreshKey} session={session} search={search}
-                                              onOpenForm={(id) => { setRewardOpenId(id); setActiveMenu("reward"); }} />}
+                                              onOpenForm={(id) => { setRewardOpenId(id); setActiveMenu("reward"); }}
+                                              onTambahKlaim={() => setShowTambah(true)} />}
           {activeMenu === "reward"      && <KonfirmasiReward session={session} initialClaimId={rewardOpenId} onClearInitial={() => setRewardOpenId(null)} />}
           {activeMenu === "visualisasi" && <VisualisasiData />}
           {activeMenu === "sk-rektor"   && <SKRektor />}
