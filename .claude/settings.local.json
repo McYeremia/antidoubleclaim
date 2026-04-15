@@ -16,7 +16,17 @@
       "Bash(./venv/Scripts/python ocr_sk_rektor.py)",
       "Bash(npx next:*)",
       "Bash(./venv/Scripts/python -c \"import bcrypt; print\\('bcrypt ok'\\)\")",
-      "Bash(node -e ':*)"
+      "Bash(node -e ':*)",
+      "Read(//c/Users/yerem/.claude/plugins/cache/ui-ux-pro-max-skill/ui-ux-pro-max/2.5.0/**)",
+      "Bash(python scripts/search.py \"university student portal form minimalist clean\" --design-system -p \"Anti-Double Claim\" -f markdown)",
+      "Bash(python scripts/search.py \"university student portal form minimalist clean green\" --design-system -p \"Anti-Double Claim\" -f markdown)",
+      "Bash(python scripts/search.py \"minimalist form clean whitespace green accent\" --domain style -n 3)",
+      "Bash(python scripts/search.py \"form labels validation feedback\" --domain ux -n 5)",
+      "Bash(python scripts/search.py \"university student achievement certificate submission portal modern bold\" --design-system -p \"Anti-Double Claim\" -f markdown)",
+      "Bash(python scripts/search.py \"neo brutalism bold editorial modern dark\" --domain style -n 3)",
+      "Bash(python scripts/search.py \"green emerald bold modern\" --domain color -n 3)",
+      "Bash(python scripts/search.py \"academic portal university certificate submission form\" --design-system -p \"Anti-Double Claim UKDW\" -f markdown)",
+      "Bash(netstat -ano)"
     ]
   }
 }

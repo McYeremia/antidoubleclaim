@@ -1,56 +1,43 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Konstanta
 // ─────────────────────────────────────────────────────────────────────────────
-const TAHUN_INI   = new Date().getFullYear();
-const TAHUN_OPSI  = [String(TAHUN_INI), String(TAHUN_INI - 1)];
+const TAHUN_INI  = new Date().getFullYear();
+const TAHUN_OPSI = [String(TAHUN_INI), String(TAHUN_INI - 1)];
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Kalkulasi Reward (SK Rektor No. 078/B.02/UKDW/2023)
-// ─────────────────────────────────────────────────────────────────────────────
-const PENGALI_REWARD = 225_000; // Rp per poin
+const PENGALI_REWARD = 225_000;
 
 const TABEL_NON_PUSPRESNAS = {
   "Provinsi / Wilayah": { peserta: 0.5, juara3: 1,  juara2: 2,  juara1: 4,  terbaik: 5,  terbaikPlus: 6  },
-  "Nasional":            { peserta: 0.5, juara3: 2,  juara2: 4,  juara1: 8,  terbaik: 10, terbaikPlus: 12 },
-  "Internasional":       { peserta: 0.5, juara3: 3,  juara2: 6,  juara1: 12, terbaik: 15, terbaikPlus: 18 },
+  "Nasional":           { peserta: 0.5, juara3: 2,  juara2: 4,  juara1: 8,  terbaik: 10, terbaikPlus: 12 },
+  "Internasional":      { peserta: 0.5, juara3: 3,  juara2: 6,  juara1: 12, terbaik: 15, terbaikPlus: 18 },
 };
 
 function capaianKePoin(capaian, tabel) {
   if (!capaian || !tabel) return null;
-  if (capaian.includes("Juara 1"))                                          return tabel.juara1;
-  if (capaian.includes("Juara 2"))                                          return tabel.juara2;
-  if (capaian.includes("Juara 3") || capaian.startsWith("Harapan"))        return tabel.juara3;
-  if (capaian.includes("Apresiasi") || capaian.includes("Juara umum"))     return tabel.terbaikPlus;
-  if (capaian.includes("Partisipasi") || capaian.includes("Peserta"))      return tabel.peserta;
+  if (capaian.includes("Juara 1"))                                      return tabel.juara1;
+  if (capaian.includes("Juara 2"))                                      return tabel.juara2;
+  if (capaian.includes("Juara 3") || capaian.startsWith("Harapan"))    return tabel.juara3;
+  if (capaian.includes("Apresiasi") || capaian.includes("Juara umum")) return tabel.terbaikPlus;
+  if (capaian.includes("Partisipasi") || capaian.includes("Peserta"))  return tabel.peserta;
   return null;
 }
 
 function hitungReward(data) {
   const { kategori_simkatmawa, kategori_kegiatan, capaian, jenis_kepesertaan, jumlah_anggota } = data;
-
   if (kategori_simkatmawa !== "lomba_mandiri") return null;
-
   const tabel = TABEL_NON_PUSPRESNAS[kategori_kegiatan];
   let poin = capaianKePoin(capaian, tabel);
   if (poin == null) return null;
-
   const n = Math.max(1, parseInt(jumlah_anggota) || 1);
   if (jenis_kepesertaan === "kelompok") {
-    // Bonus berdasarkan jumlah anggota tim (SK Rektor Pasal 5)
     const bonus = n <= 5 ? 1 : n <= 10 ? 1.25 : 1.5;
     poin = poin * bonus;
-    // Dana total diberikan ke ketua — pembagian antar anggota di luar sistem
   }
-
-  return {
-    poin: Math.round(poin * 100) / 100,
-    total: Math.round(poin * PENGALI_REWARD),
-    jumlah_anggota: n,
-  };
+  return { poin: Math.round(poin * 100) / 100, total: Math.round(poin * PENGALI_REWARD), jumlah_anggota: n };
 }
 
 function formatRupiah(n) {
@@ -80,88 +67,384 @@ const CAPAIAN_LOMBA = [
   "Partisipasi / Delegasi / Peserta kejuaraan",
 ];
 
+// Ukuran file maks
+const MAX_FILE_MB = 10;
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "application/pdf", "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+
+function validateFile(file) {
+  if (!file) return null;
+  if (!ALLOWED_TYPES.includes(file.type)) return "Format tidak didukung. Gunakan JPG, PNG, PDF, atau DOC.";
+  if (file.size > MAX_FILE_MB * 1024 * 1024) return `Ukuran file maksimal ${MAX_FILE_MB} MB.`;
+  return null;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
-// Helper UI
+// Validasi per-step — returns { [fieldKey]: "pesan error" }
 // ─────────────────────────────────────────────────────────────────────────────
-function Label({ children, required }) {
+function validateStep(step, data, files, showKelompok, totalSteps) {
+  const e = {};
+
+  if (step === 1) {
+    const wa = (data.nomor_wa || "").replace(/\s|-/g, "");
+    if (!wa) {
+      e.nomor_wa = "Nomor WhatsApp wajib diisi.";
+    } else if (!/^(\+62|62|0)8[0-9]{7,11}$/.test(wa)) {
+      e.nomor_wa = "Format tidak valid. Gunakan 08xxxxxxxxxx (10–13 digit, angka saja).";
+    }
+  }
+
+  if (step === 2) {
+    if (!data.ada_dospem) e.ada_dospem = "Pilih salah satu pilihan.";
+    if (data.ada_dospem === "ya") {
+      const nidn = (data.nidn_dospem || "").trim();
+      if (!nidn) {
+        e.nidn_dospem = "NIK/NIDN/NIDK wajib diisi jika menggunakan dosen pembimbing.";
+      } else if (!/^\d{8,16}$/.test(nidn)) {
+        e.nidn_dospem = "Hanya angka, 8–16 digit (NIK = 16 digit, NIDN = 10 digit, NIDK = 8 digit).";
+      }
+      if (files?.surat_tugas_dospem) {
+        const ferr = validateFile(files.surat_tugas_dospem);
+        if (ferr) e.surat_tugas_dospem = ferr;
+      }
+    }
+  }
+
+  if (step === 3) {
+    if (!data.kategori_simkatmawa) e.kategori_simkatmawa = "Pilih kategori SIMKATMAWA terlebih dahulu.";
+  }
+
+  if (step === 4) {
+    if (!data.jenis_kepesertaan) e.jenis_kepesertaan = "Pilih jenis kepesertaan.";
+    if (!data.kategori_kegiatan) e.kategori_kegiatan = "Pilih kategori kegiatan.";
+
+    const nama = (data.nama_kegiatan || "").trim();
+    if (!nama)          e.nama_kegiatan = "Nama kegiatan wajib diisi.";
+    else if (nama.length < 5)   e.nama_kegiatan = "Minimal 5 karakter.";
+    else if (nama.length > 200) e.nama_kegiatan = "Maksimal 200 karakter.";
+
+    const url = (data.url_penyelenggara || "").trim();
+    if (!url)                               e.url_penyelenggara = "URL penyelenggara wajib diisi.";
+    else if (!/^https?:\/\/.{4,}/.test(url)) e.url_penyelenggara = "Harus URL valid diawali https:// atau http://";
+
+    if (!files?.dokumen_sertifikat) {
+      e.dokumen_sertifikat = "Dokumen sertifikat wajib diunggah.";
+    } else {
+      const ferr = validateFile(files.dokumen_sertifikat);
+      if (ferr) e.dokumen_sertifikat = ferr;
+    }
+    if (!files?.foto_penyerahan) {
+      e.foto_penyerahan = "Foto penyerahan wajib diunggah.";
+    } else {
+      const ferr = validateFile(files.foto_penyerahan);
+      if (ferr) e.foto_penyerahan = ferr;
+    }
+    if (!files?.dokumen_lainnya) {
+      e.dokumen_lainnya = "Dokumen pendukung lainnya wajib diunggah.";
+    } else {
+      const ferr = validateFile(files.dokumen_lainnya);
+      if (ferr) e.dokumen_lainnya = ferr;
+    }
+
+    if (data.kategori_simkatmawa === "lomba_mandiri") {
+      if (!data.capaian)          e.capaian = "Capaian peserta wajib dipilih.";
+      if (!data.model_pelaksanaan) e.model_pelaksanaan = "Model pelaksanaan wajib dipilih.";
+
+      const jp = parseInt(data.jumlah_peserta);
+      if (!data.jumlah_peserta)           e.jumlah_peserta = "Jumlah peserta wajib diisi.";
+      else if (isNaN(jp) || jp < 2)        e.jumlah_peserta = "Minimal 2 peserta (kompetisi butuh lebih dari 1 peserta).";
+      else if (jp > 100_000)               e.jumlah_peserta = "Jumlah peserta terlalu besar, periksa kembali.";
+
+      const today = new Date(); today.setHours(23, 59, 59, 999);
+      const batasLalu = new Date(today); batasLalu.setMonth(batasLalu.getMonth() - 12);
+
+      if (!data.tanggal_mulai) {
+        e.tanggal_mulai = "Tanggal mulai wajib diisi.";
+      } else {
+        const tm = new Date(data.tanggal_mulai);
+        if (tm > today)     e.tanggal_mulai = "Tanggal mulai tidak boleh di masa depan.";
+        else if (tm < batasLalu) e.tanggal_mulai = "Melebihi batas 12 bulan pengajuan (SK Rektor Pasal 5).";
+      }
+
+      if (!data.tanggal_selesai) {
+        e.tanggal_selesai = "Tanggal selesai wajib diisi.";
+      } else {
+        const ts = new Date(data.tanggal_selesai);
+        if (ts > today) e.tanggal_selesai = "Tanggal selesai tidak boleh di masa depan.";
+        else if (data.tanggal_mulai && ts < new Date(data.tanggal_mulai))
+          e.tanggal_selesai = "Tanggal selesai harus sama atau setelah tanggal mulai.";
+      }
+    } else {
+      // rekognisi
+      if (!data.tingkatan)      e.tingkatan = "Tingkatan kegiatan wajib dipilih.";
+      if (!data.tahun_kegiatan) e.tahun_kegiatan = "Tahun kegiatan wajib dipilih.";
+
+      // Karya Mahasiswa
+      const isKarya = data.kategori_kegiatan ===
+        "Karya Mahasiswa berupa teknologi tepat guna/seni budaya/produk kreatif untuk UMKM dan Industri";
+      if (isKarya) {
+        if (!(data.nama_lembaga || "").trim())        e.nama_lembaga = "Nama lembaga/mitra wajib diisi.";
+        if (!(data.jenis_karya_teks || "").trim())    e.jenis_karya_teks = "Jenis karya wajib diisi.";
+        if (!data.jenis_karya_pilihan)                e.jenis_karya_pilihan = "Pilih jenis karya.";
+        const desk = (data.deskripsi_karya || "").trim();
+        if (!desk)            e.deskripsi_karya = "Deskripsi karya wajib diisi.";
+        else if (desk.length < 20) e.deskripsi_karya = "Deskripsi minimal 20 karakter.";
+        const manf = (data.manfaat_karya || "").trim();
+        if (!manf)            e.manfaat_karya = "Manfaat karya wajib diisi.";
+        else if (manf.length < 20) e.manfaat_karya = "Manfaat minimal 20 karakter.";
+        if (!(data.nomor_surat || "").trim()) e.nomor_surat = "Nomor surat keterangan wajib diisi.";
+        if (!data.tanggal_surat)              e.tanggal_surat = "Tanggal surat keterangan wajib diisi.";
+      }
+    }
+  }
+
+  if (showKelompok && step === 5) {
+    const ja = parseInt(data.jumlah_anggota);
+    if (!data.jumlah_anggota)        e.jumlah_anggota = "Jumlah anggota wajib diisi.";
+    else if (isNaN(ja) || ja < 2)    e.jumlah_anggota = "Minimal 2 anggota (termasuk ketua).";
+    else if (ja > 50)                e.jumlah_anggota = "Maksimal 50 anggota per tim.";
+
+    const ketua = (data.nama_ketua || "").trim();
+    if (!ketua)          e.nama_ketua = "Nama ketua wajib diisi.";
+    else if (ketua.length < 3) e.nama_ketua = "Nama ketua minimal 3 karakter.";
+
+    if (!(data.peran_pengeclaim || "").trim())
+      e.peran_pengeclaim = "Peran Anda dalam kelompok wajib diisi.";
+
+    if (!isNaN(ja) && ja > 1) {
+      (data.anggota || []).slice(0, ja - 1).forEach((a, i) => {
+        const nama = (a?.nama || "").trim();
+        if (!nama) e[`anggota_${i}_nama`] = "Nama anggota wajib diisi.";
+        else if (nama.length < 3) e[`anggota_${i}_nama`] = "Nama minimal 3 karakter.";
+        const nim = (a?.nim || "").trim();
+        if (!nim)                    e[`anggota_${i}_nim`] = "NIM wajib diisi.";
+        else if (!/^\d{8}$/.test(nim)) e[`anggota_${i}_nim`] = "NIM harus tepat 8 digit angka.";
+      });
+    }
+  }
+
+  if (step === totalSteps && !data.setuju)
+    e.setuju = "Centang persetujuan untuk menyelesaikan pengajuan.";
+
+  return e;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Design tokens (sama dengan dashboard)
+// ─────────────────────────────────────────────────────────────────────────────
+const T = {
+  border:  "#e2ddd4",
+  accent:  "#c8820f",
+  errBg:   "#fff5f5",
+  errBor:  "#f5c0c0",
+  errText: "#b72b2b",
+  hintText:"#9a9490",
+  labelCol:"#4a4540",
+  inputBg: "#fdfcfa",
+  focusRing:"0 0 0 2px rgba(200,130,15,0.25)",
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Atoms UI
+// ─────────────────────────────────────────────────────────────────────────────
+function FieldLabel({ children, required, htmlFor }) {
   return (
-    <label className="block text-sm font-medium text-gray-700 mb-1">
-      {children} {required && <span className="text-red-500">*</span>}
+    <label
+      htmlFor={htmlFor}
+      style={{ display: "block", fontSize: "12px", fontWeight: 600, color: T.labelCol, marginBottom: "5px" }}
+    >
+      {children}
+      {required && <span style={{ color: T.accent, marginLeft: "3px" }}>*</span>}
     </label>
   );
 }
 
-function Input({ className = "", ...props }) {
+function FieldHint({ children }) {
+  if (!children) return null;
+  return <p style={{ fontSize: "11px", color: T.hintText, marginTop: "4px" }}>{children}</p>;
+}
+
+function FieldError({ children }) {
+  if (!children) return null;
   return (
-    <input
-      className={`block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500 ${className}`}
-      {...props}
-    />
+    <p style={{ fontSize: "11px", color: T.errText, marginTop: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
+      <span>⚠</span> {children}
+    </p>
   );
 }
 
-function Select({ children, className = "", ...props }) {
-  return (
-    <select
-      className={`block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500 ${className}`}
-      {...props}
-    >
-      {children}
-    </select>
-  );
-}
+const baseInput = (hasError) => ({
+  display: "block",
+  width: "100%",
+  padding: "8px 12px",
+  fontSize: "13px",
+  color: "#1c1a17",
+  background: hasError ? T.errBg : T.inputBg,
+  borderWidth: "1px",
+  borderStyle: "solid",
+  borderColor: hasError ? T.errBor : T.border,
+  borderRadius: "7px",
+  outline: "none",
+  transition: "border-color 0.15s, box-shadow 0.15s",
+  fontFamily: "inherit",
+  boxSizing: "border-box",
+});
 
-function Textarea({ className = "", ...props }) {
-  return (
-    <textarea
-      rows={3}
-      className={`block w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500 ${className}`}
-      {...props}
-    />
-  );
-}
-
-function FileInput({ label, name, onChange, required, hint, currentFile }) {
+function FInput({ id, label, required, hint, error, style: extraStyle, onBlur: externalOnBlur, ...props }) {
+  const [focused, setFocused] = useState(false);
   return (
     <div>
-      <Label required={required}>{label}</Label>
-      {hint && <p className="text-xs text-gray-400 mb-1">{hint}</p>}
+      {label && <FieldLabel required={required} htmlFor={id}>{label}</FieldLabel>}
       <input
-        type="file"
-        name={name}
-        onChange={onChange}
-        accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
-        className="block w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+        id={id}
+        style={{
+          ...baseInput(!!error),
+          ...(focused ? { borderColor: error ? T.errBor : T.accent, boxShadow: T.focusRing } : {}),
+          ...extraStyle,
+        }}
+        onFocus={() => setFocused(true)}
+        onBlur={() => { setFocused(false); externalOnBlur?.(); }}
+        {...props}
       />
-      {currentFile && (
-        <p className="mt-1 text-xs text-green-600 flex items-center gap-1">
-          <span>✓</span>
-          <span className="truncate">{currentFile.name}</span>
-        </p>
-      )}
+      {!error && hint && <FieldHint>{hint}</FieldHint>}
+      <FieldError>{error}</FieldError>
     </div>
   );
 }
 
-function RadioGroup({ label, name, options, value, onChange, required }) {
+function FSelect({ id, label, required, hint, error, children, onBlur: externalOnBlur, ...props }) {
+  const [focused, setFocused] = useState(false);
   return (
     <div>
-      <Label required={required}>{label}</Label>
-      <div className="flex flex-wrap gap-3 mt-1">
+      {label && <FieldLabel required={required} htmlFor={id}>{label}</FieldLabel>}
+      <select
+        id={id}
+        style={{
+          ...baseInput(!!error),
+          cursor: "pointer",
+          appearance: "none",
+          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239a9490' stroke-width='2'%3E%3Cpath d='M19 9l-7 7-7-7'/%3E%3C/svg%3E")`,
+          backgroundRepeat: "no-repeat",
+          backgroundPosition: "right 12px center",
+          paddingRight: "32px",
+          ...(focused ? { borderColor: error ? T.errBor : T.accent, boxShadow: T.focusRing } : {}),
+        }}
+        onFocus={() => setFocused(true)}
+        onBlur={() => { setFocused(false); externalOnBlur?.(); }}
+        {...props}
+      >
+        {children}
+      </select>
+      {!error && hint && <FieldHint>{hint}</FieldHint>}
+      <FieldError>{error}</FieldError>
+    </div>
+  );
+}
+
+function FTextarea({ id, label, required, hint, error, maxLen, value, onChange, onBlur: externalOnBlur, ...props }) {
+  const [focused, setFocused] = useState(false);
+  const len = (value || "").length;
+  return (
+    <div>
+      {label && <FieldLabel required={required} htmlFor={id}>{label}</FieldLabel>}
+      <textarea
+        id={id}
+        rows={3}
+        value={value}
+        onChange={onChange}
+        style={{
+          ...baseInput(!!error),
+          resize: "vertical",
+          ...(focused ? { borderColor: error ? T.errBor : T.accent, boxShadow: T.focusRing } : {}),
+        }}
+        onFocus={() => setFocused(true)}
+        onBlur={() => { setFocused(false); externalOnBlur?.(); }}
+        {...props}
+      />
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginTop: "4px" }}>
+        {error ? <FieldError>{error}</FieldError> : (hint ? <FieldHint>{hint}</FieldHint> : <span />)}
+        {maxLen && <span style={{ fontSize: "10px", color: len > maxLen ? T.errText : T.hintText }}>{len}/{maxLen}</span>}
+      </div>
+    </div>
+  );
+}
+
+function FFile({ id, label, required, hint, error, onChange, currentFile }) {
+  const inputRef = useRef(null);
+  const [dragging, setDragging] = useState(false);
+
+  const handleDrop = (ev) => {
+    ev.preventDefault();
+    setDragging(false);
+    const f = ev.dataTransfer.files?.[0];
+    if (f) onChange({ target: { files: [f] } });
+  };
+
+  return (
+    <div>
+      {label && <FieldLabel required={required} htmlFor={id}>{label}</FieldLabel>}
+      <div
+        onClick={() => inputRef.current?.click()}
+        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={handleDrop}
+        style={{
+          border: `1.5px dashed ${error ? T.errBor : dragging ? T.accent : T.border}`,
+          borderRadius: "7px",
+          padding: "10px 14px",
+          background: dragging ? "rgba(200,130,15,0.04)" : currentFile ? "#f6fdf8" : T.inputBg,
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+          transition: "border-color 0.15s",
+        }}
+      >
+        <svg width="16" height="16" fill="none" stroke={currentFile ? "#1a7a4a" : T.hintText} viewBox="0 0 24 24">
+          {currentFile
+            ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+          }
+        </svg>
+        <div style={{ minWidth: 0 }}>
+          <p style={{ fontSize: "12px", fontWeight: 500, color: currentFile ? "#1a7a4a" : "#7a756e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {currentFile ? currentFile.name : "Klik atau seret file ke sini"}
+          </p>
+          <p style={{ fontSize: "10px", color: T.hintText, marginTop: "1px" }}>
+            {currentFile ? `${(currentFile.size / 1024).toFixed(0)} KB` : "JPG, PNG, PDF, DOC — maks. 10 MB"}
+          </p>
+        </div>
+        {currentFile && (
+          <span style={{ marginLeft: "auto", fontSize: "10px", color: T.accent, fontWeight: 600, flexShrink: 0 }}>Ganti</span>
+        )}
+        <input ref={inputRef} id={id} type="file" accept=".jpg,.jpeg,.png,.pdf,.doc,.docx" onChange={onChange} className="sr-only" />
+      </div>
+      {!error && hint && <FieldHint>{hint}</FieldHint>}
+      <FieldError>{error}</FieldError>
+    </div>
+  );
+}
+
+function FRadio({ label, name, options, value, onChange, required, error }) {
+  return (
+    <div>
+      <FieldLabel required={required}>{label}</FieldLabel>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "4px" }}>
         {options.map((opt) => (
-          <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
+          <label key={opt.value} style={{ display: "flex", alignItems: "center", gap: "7px", cursor: "pointer" }}>
             <input
               type="radio"
               name={name}
               value={opt.value}
               checked={value === opt.value}
               onChange={() => onChange(opt.value)}
-              className="accent-blue-600"
+              style={{ accentColor: T.accent, width: "14px", height: "14px" }}
             />
-            <span className="text-sm text-gray-700">{opt.label}</span>
+            <span style={{ fontSize: "13px", color: "#1c1a17" }}>{opt.label}</span>
           </label>
         ))}
       </div>
+      <FieldError>{error}</FieldError>
     </div>
   );
 }
@@ -171,25 +454,44 @@ function RadioGroup({ label, name, options, value, onChange, required }) {
 // ─────────────────────────────────────────────────────────────────────────────
 function ProgressBar({ steps, current }) {
   return (
-    <div className="flex items-center gap-0 mb-8">
+    <div style={{ display: "flex", alignItems: "center", marginBottom: "24px" }}>
       {steps.map((s, i) => {
-        const idx   = i + 1;
-        const done  = idx < current;
+        const idx    = i + 1;
+        const done   = idx < current;
         const active = idx === current;
         return (
-          <div key={s} className="flex items-center flex-1 last:flex-none">
-            <div className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold border-2 flex-shrink-0 transition-colors
-              ${done  ? "bg-blue-600 border-blue-600 text-white"
-               : active ? "bg-white border-blue-600 text-blue-600"
-               : "bg-white border-gray-300 text-gray-400"}`}>
+          <div key={s} style={{ display: "flex", alignItems: "center", flex: i < steps.length - 1 ? 1 : "none" }}>
+            <div style={{
+              width: "26px", height: "26px", borderRadius: "50%", flexShrink: 0,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: "11px", fontWeight: 700,
+              background: done ? T.accent : active ? "#1c1a17" : "#f2efe8",
+              color: done || active ? "#fff" : T.hintText,
+              border: `2px solid ${done ? T.accent : active ? "#1c1a17" : T.border}`,
+              transition: "all 0.2s",
+            }}>
               {done ? "✓" : idx}
             </div>
-            <span className={`ml-1.5 text-xs font-medium whitespace-nowrap hidden sm:block
-              ${active ? "text-blue-600" : done ? "text-blue-400" : "text-gray-400"}`}>
+            <span style={{
+              marginLeft: "6px",
+              fontSize: "11px",
+              fontWeight: active ? 600 : 400,
+              color: active ? "#1c1a17" : done ? T.accent : T.hintText,
+              whiteSpace: "nowrap",
+              display: "none",
+            }}
+              className="sm:inline"
+            >
               {s}
             </span>
             {i < steps.length - 1 && (
-              <div className={`flex-1 h-0.5 mx-2 ${done ? "bg-blue-400" : "bg-gray-200"}`} />
+              <div style={{
+                flex: 1,
+                height: "2px",
+                margin: "0 8px",
+                background: done ? T.accent : T.border,
+                transition: "background 0.3s",
+              }} />
             )}
           </div>
         );
@@ -201,39 +503,51 @@ function ProgressBar({ steps, current }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Step 1 — Data Diri
 // ─────────────────────────────────────────────────────────────────────────────
-function Step1({ data, onChange, nimInfo }) {
+function Step1({ data, onChange, onBlur, nimInfo, errors }) {
   return (
-    <div className="space-y-5">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <Label>Nama Lengkap</Label>
-          <Input value={data.nama_lengkap} disabled />
-          <p className="text-xs text-gray-400 mt-1">Diambil dari akun Google</p>
-        </div>
-        <div>
-          <Label>NIM</Label>
-          <Input value={nimInfo?.nim ?? "Memuat..."} disabled />
-          {nimInfo?.valid && (
-            <p className="text-xs text-gray-400 mt-1">{nimInfo.prodi} · Angkatan {nimInfo.angkatan}</p>
-          )}
-        </div>
-        <div>
-          <Label>Email</Label>
-          <Input value={data.email} disabled />
-        </div>
-        <div>
-          <Label required>Nomor WhatsApp</Label>
-          <Input
-            type="tel"
-            placeholder="Contoh: 08123456789"
-            value={data.nomor_wa}
-            onChange={(e) => onChange("nomor_wa", e.target.value)}
-          />
-        </div>
+    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+        <FInput
+          id="nama_lengkap"
+          label="Nama Lengkap"
+          value={data.nama_lengkap}
+          disabled
+          hint="Diambil otomatis dari akun Google"
+        />
+        <FInput
+          id="nim"
+          label="NIM"
+          value={nimInfo?.nim ?? "Memuat..."}
+          disabled
+          hint={nimInfo?.valid ? `${nimInfo.prodi} · Angkatan ${nimInfo.angkatan}` : undefined}
+        />
+        <FInput
+          id="email"
+          label="Email"
+          value={data.email}
+          disabled
+          style={{ gridColumn: "1 / -1" }}
+        />
+        <FInput
+          id="nomor_wa"
+          label="Nomor WhatsApp"
+          required
+          type="tel"
+          placeholder="08123456789"
+          value={data.nomor_wa}
+          onChange={(e) => {
+            const val = e.target.value.replace(/[^\d+\s-]/g, "");
+            onChange("nomor_wa", val);
+          }}
+          onBlur={() => onBlur("nomor_wa")}
+          hint="Format: 08xxxxxxxxxx — 10 hingga 13 digit angka, diawali 08 atau +62"
+          error={errors?.nomor_wa}
+          maxLength={16}
+        />
       </div>
       {nimInfo?.valid && (
-        <div className="bg-blue-50 rounded-lg px-4 py-3 text-sm text-blue-700">
-          <span className="font-medium">{nimInfo.fakultas}</span> · {nimInfo.prodi}
+        <div style={{ background: "#f6fdf8", border: "1px solid #c2e8d0", borderRadius: "8px", padding: "10px 14px", fontSize: "13px", color: "#1a7a4a" }}>
+          <strong>{nimInfo.fakultas}</strong> · {nimInfo.prodi}
         </div>
       )}
     </div>
@@ -243,33 +557,41 @@ function Step1({ data, onChange, nimInfo }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Step 2 — Dosen Pembimbing
 // ─────────────────────────────────────────────────────────────────────────────
-function Step2({ data, onChange, onFileChange }) {
+function Step2({ data, onChange, onBlur, onFileChange, files, errors }) {
   return (
-    <div className="space-y-5">
-      <RadioGroup
+    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+      <FRadio
         label="Apakah menggunakan dosen pembimbing?"
         name="ada_dospem"
         required
         options={[{ value: "ya", label: "Ya" }, { value: "tidak", label: "Tidak" }]}
         value={data.ada_dospem}
         onChange={(v) => onChange("ada_dospem", v)}
+        error={errors?.ada_dospem}
       />
 
       {data.ada_dospem === "ya" && (
-        <div className="space-y-4 pl-4 border-l-2 border-blue-200">
-          <div>
-            <Label required>NIK / NIDN / NIDK Dosen Pembimbing</Label>
-            <Input
-              placeholder="Masukkan NIK/NIDN/NIDK dospem"
-              value={data.nidn_dospem}
-              onChange={(e) => onChange("nidn_dospem", e.target.value)}
-            />
-          </div>
-          <FileInput
+        <div style={{ paddingLeft: "14px", borderLeft: `2px solid ${T.border}`, display: "flex", flexDirection: "column", gap: "14px" }}>
+          <FInput
+            id="nidn_dospem"
+            label="NIK / NIDN / NIDK Dosen Pembimbing"
+            required
+            placeholder="Contoh: 0512078801"
+            value={data.nidn_dospem}
+            onChange={(e) => onChange("nidn_dospem", e.target.value.replace(/\D/g, ""))}
+            onBlur={() => onBlur("nidn_dospem")}
+            hint="Hanya angka — NIK: 16 digit, NIDN: 10 digit, NIDK: 8 digit"
+            error={errors?.nidn_dospem}
+            maxLength={16}
+            inputMode="numeric"
+          />
+          <FFile
+            id="surat_tugas_dospem"
             label="Surat Tugas Dosen Pembimbing (opsional)"
-            name="surat_tugas_dospem"
             onChange={(e) => onFileChange("surat_tugas_dospem", e.target.files[0])}
-            hint="Format: PDF, JPG, PNG, DOC"
+            currentFile={files?.surat_tugas_dospem}
+            hint="PDF, JPG, PNG, atau DOC"
+            error={errors?.surat_tugas_dospem}
           />
         </div>
       )}
@@ -280,7 +602,7 @@ function Step2({ data, onChange, onFileChange }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Step 3 — Pilih Kategori SIMKATMAWA
 // ─────────────────────────────────────────────────────────────────────────────
-function Step3({ data, onChange }) {
+function Step3({ data, onChange, errors }) {
   const cards = [
     {
       value: "lomba_mandiri",
@@ -297,27 +619,34 @@ function Step3({ data, onChange }) {
   ];
 
   return (
-    <div className="space-y-4">
-      <p className="text-sm text-gray-500">Pilih kategori kegiatan yang sesuai dengan prestasi yang ingin diklaim.</p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {cards.map((c) => (
-          <button
-            key={c.value}
-            type="button"
-            onClick={() => onChange("kategori_simkatmawa", c.value)}
-            className={`text-left p-5 rounded-xl border-2 transition-colors
-              ${data.kategori_simkatmawa === c.value
-                ? "border-blue-600 bg-blue-50"
-                : "border-gray-200 hover:border-gray-300 bg-white"}`}
-          >
-            <div className="text-2xl mb-2">{c.icon}</div>
-            <p className={`font-semibold text-sm mb-1 ${data.kategori_simkatmawa === c.value ? "text-blue-700" : "text-gray-900"}`}>
-              {c.title}
-            </p>
-            <p className="text-xs text-gray-500 leading-relaxed">{c.desc}</p>
-          </button>
-        ))}
+    <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+      <p style={{ fontSize: "13px", color: "#7a756e" }}>Pilih kategori kegiatan yang sesuai dengan prestasi yang ingin diklaim.</p>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+        {cards.map((c) => {
+          const active = data.kategori_simkatmawa === c.value;
+          return (
+            <button
+              key={c.value}
+              type="button"
+              onClick={() => onChange("kategori_simkatmawa", c.value)}
+              style={{
+                textAlign: "left",
+                padding: "16px",
+                borderRadius: "10px",
+                border: `2px solid ${active ? T.accent : T.border}`,
+                background: active ? "rgba(200,130,15,0.05)" : "#fff",
+                cursor: "pointer",
+                transition: "border-color 0.15s, background 0.15s",
+              }}
+            >
+              <div style={{ fontSize: "22px", marginBottom: "8px" }}>{c.icon}</div>
+              <p style={{ fontWeight: 600, fontSize: "13px", color: active ? T.accent : "#1c1a17", marginBottom: "4px" }}>{c.title}</p>
+              <p style={{ fontSize: "11px", color: "#7a756e", lineHeight: 1.5 }}>{c.desc}</p>
+            </button>
+          );
+        })}
       </div>
+      <FieldError>{errors?.kategori_simkatmawa}</FieldError>
     </div>
   );
 }
@@ -325,162 +654,130 @@ function Step3({ data, onChange }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Step 4A — Detail Rekognisi
 // ─────────────────────────────────────────────────────────────────────────────
-function Step4Rekognisi({ data, onChange, onFileChange, files }) {
+function Step4Rekognisi({ data, onChange, onBlur, onFileChange, files, errors }) {
   const isKarya = data.kategori_kegiatan ===
     "Karya Mahasiswa berupa teknologi tepat guna/seni budaya/produk kreatif untuk UMKM dan Industri";
 
   return (
-    <div className="space-y-5">
-      <RadioGroup
+    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+      <FRadio
         label="Jenis Kepesertaan"
         name="jenis_kepesertaan"
         required
         options={[{ value: "individu", label: "Individu" }, { value: "kelompok", label: "Kelompok" }]}
         value={data.jenis_kepesertaan}
         onChange={(v) => onChange("jenis_kepesertaan", v)}
+        error={errors?.jenis_kepesertaan}
       />
 
-      <div>
-        <Label required>Kategori Kegiatan</Label>
-        <Select value={data.kategori_kegiatan} onChange={(e) => onChange("kategori_kegiatan", e.target.value)}>
-          <option value="">Pilih kategori kegiatan</option>
-          {KATEGORI_REKOGNISI.map((k) => <option key={k}>{k}</option>)}
-        </Select>
+      <FSelect id="kategori_kegiatan" label="Kategori Kegiatan" required
+        value={data.kategori_kegiatan} onChange={(e) => onChange("kategori_kegiatan", e.target.value)}
+        onBlur={() => onBlur("kategori_kegiatan")}
+        error={errors?.kategori_kegiatan}>
+        <option value="">Pilih kategori kegiatan</option>
+        {KATEGORI_REKOGNISI.map((k) => <option key={k}>{k}</option>)}
+      </FSelect>
+
+      <FInput id="nama_kegiatan" label="Nama Kegiatan / Rekognisi / Karya" required
+        placeholder="Masukkan nama kegiatan atau karya"
+        value={data.nama_kegiatan} onChange={(e) => onChange("nama_kegiatan", e.target.value)}
+        onBlur={() => onBlur("nama_kegiatan")}
+        hint="5–200 karakter" error={errors?.nama_kegiatan} maxLength={200} />
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+        <FSelect id="tingkatan" label="Tingkatan Kegiatan" required
+          value={data.tingkatan} onChange={(e) => onChange("tingkatan", e.target.value)}
+          onBlur={() => onBlur("tingkatan")}
+          error={errors?.tingkatan}>
+          <option value="">Pilih tingkatan</option>
+          <option>Internasional</option>
+          <option>Nasional</option>
+          <option>Provinsi</option>
+        </FSelect>
+
+        <FSelect id="tahun_kegiatan" label="Tahun Kegiatan" required
+          value={data.tahun_kegiatan} onChange={(e) => onChange("tahun_kegiatan", e.target.value)}
+          onBlur={() => onBlur("tahun_kegiatan")}
+          error={errors?.tahun_kegiatan} hint={`Pengajuan maks. ${TAHUN_INI}`}>
+          <option value="">Pilih tahun</option>
+          {TAHUN_OPSI.map((t) => <option key={t}>{t}</option>)}
+        </FSelect>
       </div>
 
-      <div>
-        <Label required>Nama Kegiatan / Rekognisi / Karya</Label>
-        <Input
-          placeholder="Masukkan nama kegiatan atau karya"
-          value={data.nama_kegiatan}
-          onChange={(e) => onChange("nama_kegiatan", e.target.value)}
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label required>Tingkatan Kegiatan</Label>
-          <Select value={data.tingkatan} onChange={(e) => onChange("tingkatan", e.target.value)}>
-            <option value="">Pilih tingkatan</option>
-            <option>Internasional</option>
-            <option>Nasional</option>
-            <option>Provinsi</option>
-          </Select>
-        </div>
-        <div>
-          <Label required>Tahun Kegiatan</Label>
-          <Select value={data.tahun_kegiatan} onChange={(e) => onChange("tahun_kegiatan", e.target.value)}>
-            <option value="">Pilih tahun</option>
-            {TAHUN_OPSI.map((t) => <option key={t}>{t}</option>)}
-          </Select>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <FileInput
-          label="Dokumen Pendukung (Sertifikat/Karya)"
-          name="dokumen_sertifikat"
-          required
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+        <FFile id="dokumen_sertifikat" label="Dokumen Sertifikat / Karya" required
           onChange={(e) => onFileChange("dokumen_sertifikat", e.target.files[0])}
-          hint="Sertifikat apresiasi atau karya"
-          currentFile={files?.dokumen_sertifikat}
-        />
-        <FileInput
-          label="Bukti Foto Penyerahan Sertifikat"
-          name="foto_penyerahan"
-          required
+          currentFile={files?.dokumen_sertifikat} error={errors?.dokumen_sertifikat} />
+        <FFile id="foto_penyerahan" label="Bukti Foto Penyerahan Sertifikat" required
           onChange={(e) => onFileChange("foto_penyerahan", e.target.files[0])}
-          currentFile={files?.foto_penyerahan}
-        />
+          currentFile={files?.foto_penyerahan} error={errors?.foto_penyerahan} />
       </div>
 
-      <div>
-        <Label required>URL Website Penyelenggara</Label>
-        <Input
-          type="url"
-          placeholder="https://..."
-          value={data.url_penyelenggara}
-          onChange={(e) => onChange("url_penyelenggara", e.target.value)}
-        />
-      </div>
+      <FInput id="url_penyelenggara" label="URL Website Penyelenggara" required
+        type="url" placeholder="https://contoh.ac.id/kegiatan"
+        value={data.url_penyelenggara} onChange={(e) => onChange("url_penyelenggara", e.target.value)}
+        onBlur={() => onBlur("url_penyelenggara")}
+        hint="Harus diawali https:// atau http://" error={errors?.url_penyelenggara} />
 
-      <FileInput
-        label="Dokumen Pendukung Lainnya"
-        name="dokumen_lainnya"
-        required
+      <FFile id="dokumen_lainnya" label="Dokumen Pendukung Lainnya" required
         onChange={(e) => onFileChange("dokumen_lainnya", e.target.files[0])}
         currentFile={files?.dokumen_lainnya}
-      />
+        hint="Surat tugas, LoA, atau dokumen relevan lainnya"
+        error={errors?.dokumen_lainnya} />
 
-      {/* Sub-section khusus Karya Mahasiswa */}
       {isKarya && (
-        <div className="mt-2 p-4 bg-yellow-50 border border-yellow-200 rounded-xl space-y-4">
-          <p className="text-sm font-semibold text-yellow-800">Data Tambahan — Karya Mahasiswa</p>
+        <div style={{ padding: "16px", background: "#fdf8ed", border: "1px solid #f0d99a", borderRadius: "10px", display: "flex", flexDirection: "column", gap: "14px" }}>
+          <p style={{ fontSize: "12px", fontWeight: 700, color: "#8c6200" }}>Data Tambahan — Karya Mahasiswa</p>
 
-          <div>
-            <Label required>Nama Lembaga / Mitra</Label>
-            <Input
-              placeholder="Nama lembaga atau mitra"
-              value={data.nama_lembaga}
-              onChange={(e) => onChange("nama_lembaga", e.target.value)}
-            />
+          <FInput id="nama_lembaga" label="Nama Lembaga / Mitra" required
+            placeholder="Nama lembaga atau mitra UMKM/Industri"
+            value={data.nama_lembaga} onChange={(e) => onChange("nama_lembaga", e.target.value)}
+            onBlur={() => onBlur("nama_lembaga")}
+            error={errors?.nama_lembaga} />
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+            <FInput id="jenis_karya_teks" label="Jenis Karya (deskripsi)" required
+              placeholder="Contoh: Alat pengolah limbah plastik"
+              value={data.jenis_karya_teks} onChange={(e) => onChange("jenis_karya_teks", e.target.value)}
+              onBlur={() => onBlur("jenis_karya_teks")}
+              error={errors?.jenis_karya_teks} />
+            <FSelect id="jenis_karya_pilihan" label="Pilihan Jenis Karya" required
+              value={data.jenis_karya_pilihan} onChange={(e) => onChange("jenis_karya_pilihan", e.target.value)}
+              onBlur={() => onBlur("jenis_karya_pilihan")}
+              error={errors?.jenis_karya_pilihan}>
+              <option value="">Pilih jenis</option>
+              <option>Teknologi Tepat Guna</option>
+              <option>Seni Budaya</option>
+              <option>Produk Kreatif</option>
+            </FSelect>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label required>Jenis Karya</Label>
-              <Input
-                placeholder="Deskripsikan jenis karya"
-                value={data.jenis_karya_teks}
-                onChange={(e) => onChange("jenis_karya_teks", e.target.value)}
-              />
-            </div>
-            <div>
-              <Label required>Pilihan Jenis Karya</Label>
-              <Select value={data.jenis_karya_pilihan} onChange={(e) => onChange("jenis_karya_pilihan", e.target.value)}>
-                <option value="">Pilih jenis</option>
-                <option>Teknologi Tepat Guna</option>
-                <option>Seni Budaya</option>
-                <option>Produk Kreatif</option>
-              </Select>
-            </div>
-          </div>
+          <FTextarea id="deskripsi_karya" label="Deskripsi Karya" required
+            placeholder="Jelaskan deskripsi karya secara singkat..."
+            value={data.deskripsi_karya} onChange={(e) => onChange("deskripsi_karya", e.target.value)}
+            onBlur={() => onBlur("deskripsi_karya")}
+            hint="Minimal 20 karakter, maksimal 1000 karakter"
+            error={errors?.deskripsi_karya} maxLen={1000} />
 
-          <div>
-            <Label required>Deskripsi Karya</Label>
-            <Textarea
-              placeholder="Jelaskan deskripsi karya..."
-              value={data.deskripsi_karya}
-              onChange={(e) => onChange("deskripsi_karya", e.target.value)}
-            />
-          </div>
+          <FTextarea id="manfaat_karya" label="Manfaat Karya" required
+            placeholder="Jelaskan manfaat karya bagi UMKM/Industri..."
+            value={data.manfaat_karya} onChange={(e) => onChange("manfaat_karya", e.target.value)}
+            onBlur={() => onBlur("manfaat_karya")}
+            hint="Minimal 20 karakter, maksimal 1000 karakter"
+            error={errors?.manfaat_karya} maxLen={1000} />
 
-          <div>
-            <Label required>Manfaat Karya</Label>
-            <Textarea
-              placeholder="Jelaskan manfaat karya..."
-              value={data.manfaat_karya}
-              onChange={(e) => onChange("manfaat_karya", e.target.value)}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label required>Nomor Surat Keterangan Pengakuan</Label>
-              <Input
-                placeholder="Nomor surat"
-                value={data.nomor_surat}
-                onChange={(e) => onChange("nomor_surat", e.target.value)}
-              />
-            </div>
-            <div>
-              <Label required>Tanggal Surat Keterangan</Label>
-              <Input
-                type="datetime-local"
-                value={data.tanggal_surat}
-                onChange={(e) => onChange("tanggal_surat", e.target.value)}
-              />
-            </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+            <FInput id="nomor_surat" label="Nomor Surat Keterangan" required
+              placeholder="Contoh: 001/UKDW/2024"
+              value={data.nomor_surat} onChange={(e) => onChange("nomor_surat", e.target.value)}
+              onBlur={() => onBlur("nomor_surat")}
+              hint="Sesuai nomor pada surat keterangan resmi"
+              error={errors?.nomor_surat} />
+            <FInput id="tanggal_surat" label="Tanggal Surat Keterangan" required
+              type="datetime-local"
+              value={data.tanggal_surat} onChange={(e) => onChange("tanggal_surat", e.target.value)}
+              onBlur={() => onBlur("tanggal_surat")}
+              error={errors?.tanggal_surat} />
           </div>
         </div>
       )}
@@ -491,137 +788,115 @@ function Step4Rekognisi({ data, onChange, onFileChange, files }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Step 4B — Detail Lomba Mandiri
 // ─────────────────────────────────────────────────────────────────────────────
-function Step4Lomba({ data, onChange, onFileChange, files }) {
+function Step4Lomba({ data, onChange, onBlur, onFileChange, files, errors }) {
   return (
-    <div className="space-y-5">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <Label required>Kategori Kegiatan</Label>
-          <Select value={data.kategori_kegiatan} onChange={(e) => onChange("kategori_kegiatan", e.target.value)}>
-            <option value="">Pilih kategori</option>
-            <option>Provinsi / Wilayah</option>
-            <option>Nasional</option>
-            <option>Internasional</option>
-          </Select>
-        </div>
-        <div>
-          <Label required>Model Pelaksanaan</Label>
-          <Select value={data.model_pelaksanaan} onChange={(e) => onChange("model_pelaksanaan", e.target.value)}>
-            <option value="">Pilih model</option>
-            <option>Online</option>
-            <option>Offline</option>
-          </Select>
-        </div>
+    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+        <FSelect id="kategori_kegiatan" label="Kategori Kegiatan" required
+          value={data.kategori_kegiatan} onChange={(e) => onChange("kategori_kegiatan", e.target.value)}
+          onBlur={() => onBlur("kategori_kegiatan")}
+          error={errors?.kategori_kegiatan}>
+          <option value="">Pilih kategori</option>
+          <option>Provinsi / Wilayah</option>
+          <option>Nasional</option>
+          <option>Internasional</option>
+        </FSelect>
+
+        <FSelect id="model_pelaksanaan" label="Model Pelaksanaan" required
+          value={data.model_pelaksanaan} onChange={(e) => onChange("model_pelaksanaan", e.target.value)}
+          onBlur={() => onBlur("model_pelaksanaan")}
+          error={errors?.model_pelaksanaan}>
+          <option value="">Pilih model</option>
+          <option>Online</option>
+          <option>Offline</option>
+        </FSelect>
       </div>
 
-      <RadioGroup
+      <FRadio
         label="Jenis Kepesertaan"
         name="jenis_kepesertaan"
         required
         options={[{ value: "individu", label: "Individu" }, { value: "kelompok", label: "Kelompok" }]}
         value={data.jenis_kepesertaan}
         onChange={(v) => onChange("jenis_kepesertaan", v)}
+        error={errors?.jenis_kepesertaan}
       />
 
-      <div>
-        <Label required>Nama Kegiatan / Lomba</Label>
-        <Input
-          placeholder="Nama lomba atau kompetisi"
-          value={data.nama_kegiatan}
-          onChange={(e) => onChange("nama_kegiatan", e.target.value)}
-        />
+      <FInput id="nama_kegiatan" label="Nama Kegiatan / Lomba" required
+        placeholder="Nama lomba atau kompetisi"
+        value={data.nama_kegiatan} onChange={(e) => onChange("nama_kegiatan", e.target.value)}
+        onBlur={() => onBlur("nama_kegiatan")}
+        hint="5–200 karakter" error={errors?.nama_kegiatan} maxLength={200} />
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+        <FInput id="jumlah_peserta" label="Jumlah Peserta Keseluruhan" required
+          type="number" min="2" placeholder="Contoh: 50"
+          value={data.jumlah_peserta} onChange={(e) => onChange("jumlah_peserta", e.target.value)}
+          onBlur={() => onBlur("jumlah_peserta")}
+          hint="Minimal 2 peserta (kompetisi minimal 2 orang)"
+          error={errors?.jumlah_peserta} />
+
+        <FSelect id="tahun_kegiatan" label="Tahun Kegiatan" required
+          value={data.tahun_kegiatan} onChange={(e) => onChange("tahun_kegiatan", e.target.value)}
+          onBlur={() => onBlur("tahun_kegiatan")}
+          error={errors?.tahun_kegiatan}>
+          <option value="">Pilih tahun</option>
+          {TAHUN_OPSI.map((t) => <option key={t}>{t}</option>)}
+        </FSelect>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label required>Jumlah Peserta</Label>
-          <Input
-            type="number"
-            min="1"
-            placeholder="Jumlah peserta (angka)"
-            value={data.jumlah_peserta}
-            onChange={(e) => onChange("jumlah_peserta", e.target.value)}
-          />
-        </div>
-        <div>
-          <Label required>Tahun Kegiatan</Label>
-          <Select value={data.tahun_kegiatan} onChange={(e) => onChange("tahun_kegiatan", e.target.value)}>
-            <option value="">Pilih tahun</option>
-            {TAHUN_OPSI.map((t) => <option key={t}>{t}</option>)}
-          </Select>
-        </div>
+      <FSelect id="capaian" label="Capaian Peserta" required
+        value={data.capaian} onChange={(e) => onChange("capaian", e.target.value)}
+        onBlur={() => onBlur("capaian")}
+        error={errors?.capaian}>
+        <option value="">Pilih capaian</option>
+        {CAPAIAN_LOMBA.map((c) => <option key={c}>{c}</option>)}
+      </FSelect>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+        <FInput id="tanggal_mulai" label="Tanggal Mulai" required
+          type="date"
+          max={new Date().toISOString().split("T")[0]}
+          value={data.tanggal_mulai} onChange={(e) => onChange("tanggal_mulai", e.target.value)}
+          onBlur={() => onBlur("tanggal_mulai")}
+          hint="Tidak boleh di masa depan, maks. 12 bulan yang lalu (SK Rektor)"
+          error={errors?.tanggal_mulai} />
+
+        <FInput id="tanggal_selesai" label="Tanggal Selesai" required
+          type="date"
+          min={data.tanggal_mulai || undefined}
+          max={new Date().toISOString().split("T")[0]}
+          value={data.tanggal_selesai} onChange={(e) => onChange("tanggal_selesai", e.target.value)}
+          onBlur={() => onBlur("tanggal_selesai")}
+          hint="Harus sama atau setelah tanggal mulai"
+          error={errors?.tanggal_selesai} />
       </div>
 
-      <div>
-        <Label required>Capaian Peserta</Label>
-        <Select value={data.capaian} onChange={(e) => onChange("capaian", e.target.value)}>
-          <option value="">Pilih capaian</option>
-          {CAPAIAN_LOMBA.map((c) => <option key={c}>{c}</option>)}
-        </Select>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label required>Tanggal Mulai</Label>
-          <Input
-            type="date"
-            value={data.tanggal_mulai}
-            onChange={(e) => onChange("tanggal_mulai", e.target.value)}
-          />
-        </div>
-        <div>
-          <Label required>Tanggal Selesai</Label>
-          <Input
-            type="date"
-            value={data.tanggal_selesai}
-            onChange={(e) => onChange("tanggal_selesai", e.target.value)}
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <FileInput
-          label="Dokumen Pendukung (Sertifikat/Karya)"
-          name="dokumen_sertifikat"
-          required
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+        <FFile id="dokumen_sertifikat" label="Dokumen Sertifikat" required
           onChange={(e) => onFileChange("dokumen_sertifikat", e.target.files[0])}
-          currentFile={files?.dokumen_sertifikat}
-        />
-        <FileInput
-          label="Bukti Foto Penyerahan Sertifikat"
-          name="foto_penyerahan"
-          required
+          currentFile={files?.dokumen_sertifikat} error={errors?.dokumen_sertifikat} />
+        <FFile id="foto_penyerahan" label="Foto Penyerahan Sertifikat" required
           onChange={(e) => onFileChange("foto_penyerahan", e.target.files[0])}
-          currentFile={files?.foto_penyerahan}
-        />
+          currentFile={files?.foto_penyerahan} error={errors?.foto_penyerahan} />
       </div>
 
-      <div>
-        <Label required>URL Website Penyelenggara</Label>
-        <Input
-          type="url"
-          placeholder="https://..."
-          value={data.url_penyelenggara}
-          onChange={(e) => onChange("url_penyelenggara", e.target.value)}
-        />
-      </div>
+      <FInput id="url_penyelenggara" label="URL Website Penyelenggara" required
+        type="url" placeholder="https://contoh.ac.id/lomba"
+        value={data.url_penyelenggara} onChange={(e) => onChange("url_penyelenggara", e.target.value)}
+        onBlur={() => onBlur("url_penyelenggara")}
+        hint="Harus diawali https:// atau http://" error={errors?.url_penyelenggara} />
 
-      <FileInput
-        label="Dokumen Pendukung Lainnya"
-        name="dokumen_lainnya"
-        required
+      <FFile id="dokumen_lainnya" label="Dokumen Pendukung Lainnya" required
         onChange={(e) => onFileChange("dokumen_lainnya", e.target.files[0])}
         currentFile={files?.dokumen_lainnya}
-      />
+        hint="Surat tugas, LoA, atau bukti partisipasi"
+        error={errors?.dokumen_lainnya} />
 
-      <div>
-        <Label>Keterangan</Label>
-        <Textarea
-          placeholder="Contoh: Lomba nasional muay thai"
-          value={data.keterangan}
-          onChange={(e) => onChange("keterangan", e.target.value)}
-        />
-      </div>
+      <FTextarea id="keterangan" label="Keterangan (opsional)"
+        placeholder="Informasi tambahan jika diperlukan..."
+        value={data.keterangan} onChange={(e) => onChange("keterangan", e.target.value)}
+        maxLen={500} />
     </div>
   );
 }
@@ -629,10 +904,9 @@ function Step4Lomba({ data, onChange, onFileChange, files }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Step 5 — Data Kelompok
 // ─────────────────────────────────────────────────────────────────────────────
-function Step5({ data, onChange }) {
+function Step5({ data, onChange, onBlur, errors }) {
   const jumlah = parseInt(data.jumlah_anggota) || 0;
 
-  // Pastikan array anggota sesuai panjang jumlah_anggota - 1 (ketua sudah terpisah)
   const updateAnggota = (idx, field, value) => {
     const arr = [...(data.anggota || [])];
     if (!arr[idx]) arr[idx] = { nama: "", nim: "" };
@@ -640,81 +914,66 @@ function Step5({ data, onChange }) {
     onChange("anggota", arr);
   };
 
-  const anggotaFields = jumlah > 1
-    ? Array.from({ length: jumlah - 1 }, (_, i) => i)
-    : [];
+  const anggotaFields = jumlah > 1 ? Array.from({ length: jumlah - 1 }, (_, i) => i) : [];
 
   return (
-    <div className="space-y-5">
-      <div className="bg-blue-50 rounded-lg px-4 py-3 text-sm text-blue-700">
-        Mohon isi NIM dan Nama anggota kelompok. Pastikan sesuai dengan data di PDDikti — akan diverifikasi saat proses pengecekan.
+    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+      <div style={{ background: "#f6fdf8", border: "1px solid #c2e8d0", borderRadius: "8px", padding: "10px 14px", fontSize: "12px", color: "#1a7a4a" }}>
+        Isi NIM dan nama seluruh anggota kelompok. Pastikan sesuai data PDDikti — akan diverifikasi saat pengecekan.
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label required>Jumlah Anggota (termasuk ketua)</Label>
-          <Input
-            type="number"
-            min="2"
-            placeholder="Jumlah total anggota"
-            value={data.jumlah_anggota}
-            onChange={(e) => onChange("jumlah_anggota", e.target.value)}
-          />
-        </div>
-        <div>
-          <Label required>Nama Ketua</Label>
-          <Input
-            placeholder="Nama lengkap ketua"
-            value={data.nama_ketua}
-            onChange={(e) => onChange("nama_ketua", e.target.value)}
-          />
-        </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+        <FInput id="jumlah_anggota" label="Jumlah Anggota (termasuk ketua)" required
+          type="number" min="2" max="50" placeholder="Minimal 2"
+          value={data.jumlah_anggota} onChange={(e) => onChange("jumlah_anggota", e.target.value)}
+          onBlur={() => onBlur("jumlah_anggota")}
+          hint="Angka bulat, minimal 2, maksimal 50"
+          error={errors?.jumlah_anggota} />
+
+        <FInput id="nama_ketua" label="Nama Ketua" required
+          placeholder="Nama lengkap ketua tim"
+          value={data.nama_ketua} onChange={(e) => onChange("nama_ketua", e.target.value)}
+          onBlur={() => onBlur("nama_ketua")}
+          hint="Minimal 3 karakter" error={errors?.nama_ketua} maxLength={100} />
       </div>
 
-      <div>
-        <Label required>Peran Anda dalam Kelompok</Label>
-        <Input
-          placeholder="Contoh: Ketua, Anggota, Developer, dll."
-          value={data.peran_pengeclaim}
-          onChange={(e) => onChange("peran_pengeclaim", e.target.value)}
-        />
-      </div>
+      <FInput id="peran_pengeclaim" label="Peran Anda dalam Kelompok" required
+        placeholder="Contoh: Ketua, Anggota, Lead Developer, Designer"
+        value={data.peran_pengeclaim} onChange={(e) => onChange("peran_pengeclaim", e.target.value)}
+        onBlur={() => onBlur("peran_pengeclaim")}
+        hint="Deskripsikan kontribusi Anda"
+        error={errors?.peran_pengeclaim} maxLength={50} />
 
       {anggotaFields.length > 0 && (
-        <div className="space-y-3">
-          <p className="text-sm font-medium text-gray-700">Data Anggota Lainnya</p>
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          <p style={{ fontSize: "12px", fontWeight: 600, color: T.labelCol }}>Data Anggota Lainnya</p>
           {anggotaFields.map((i) => (
-            <div key={i} className="grid grid-cols-2 gap-3 p-3 bg-gray-50 rounded-lg">
-              <div>
-                <Label required>Nama Lengkap Anggota {i + 2}</Label>
-                <Input
-                  placeholder="Nama lengkap"
-                  value={data.anggota?.[i]?.nama ?? ""}
-                  onChange={(e) => updateAnggota(i, "nama", e.target.value)}
-                />
-              </div>
-              <div>
-                <Label required>NIM Anggota {i + 2}</Label>
-                <Input
-                  placeholder="8 digit NIM"
-                  maxLength={8}
-                  value={data.anggota?.[i]?.nim ?? ""}
-                  onChange={(e) => updateAnggota(i, "nim", e.target.value)}
-                />
-              </div>
+            <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", padding: "12px", background: "#f8f6f1", borderRadius: "8px", border: `1px solid ${T.border}` }}>
+              <FInput id={`anggota_${i}_nama`} label={`Nama Lengkap Anggota ${i + 2}`} required
+                placeholder="Nama lengkap"
+                value={data.anggota?.[i]?.nama ?? ""}
+                onChange={(e) => updateAnggota(i, "nama", e.target.value)}
+                onBlur={() => onBlur(`anggota_${i}_nama`)}
+                hint="Minimal 3 karakter"
+                error={errors?.[`anggota_${i}_nama`]}
+                maxLength={100} />
+              <FInput id={`anggota_${i}_nim`} label={`NIM Anggota ${i + 2}`} required
+                placeholder="12345678"
+                value={data.anggota?.[i]?.nim ?? ""}
+                onChange={(e) => updateAnggota(i, "nim", e.target.value.replace(/\D/g, ""))}
+                onBlur={() => onBlur(`anggota_${i}_nim`)}
+                hint="Tepat 8 digit angka (format NIM UKDW)"
+                error={errors?.[`anggota_${i}_nim`]}
+                maxLength={8} inputMode="numeric" />
             </div>
           ))}
         </div>
       )}
 
-      <div>
-        <Label>Keterangan Tambahan (opsional)</Label>
-        <Textarea
-          placeholder="Informasi tambahan tentang kelompok jika diperlukan"
-          value={data.keterangan_kelompok}
-          onChange={(e) => onChange("keterangan_kelompok", e.target.value)}
-        />
-      </div>
+      <FTextarea id="keterangan_kelompok" label="Keterangan Tambahan (opsional)"
+        placeholder="Informasi tambahan tentang kelompok jika diperlukan..."
+        value={data.keterangan_kelompok} onChange={(e) => onChange("keterangan_kelompok", e.target.value)}
+        maxLen={300} />
     </div>
   );
 }
@@ -722,7 +981,7 @@ function Step5({ data, onChange }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Step 6 — Konfirmasi & Persetujuan
 // ─────────────────────────────────────────────────────────────────────────────
-function Step6({ data, onChange, nimInfo }) {
+function Step6({ data, onChange, nimInfo, errors }) {
   const rows = [
     ["Nama",        data.nama_lengkap],
     ["NIM",         nimInfo?.nim ?? "-"],
@@ -737,75 +996,54 @@ function Step6({ data, onChange, nimInfo }) {
       : ["Tahun",   data.tahun_kegiatan],
   ].filter(([, v]) => v);
 
+  const hasil = hitungReward(data);
+
   return (
-    <div className="space-y-6">
-      {/* Ringkasan */}
+    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
       <div>
-        <p className="text-sm font-semibold text-gray-700 mb-3">Ringkasan Pengajuan</p>
-        <div className="bg-gray-50 rounded-xl border border-gray-200 divide-y divide-gray-200 text-sm">
+        <p style={{ fontSize: "12px", fontWeight: 700, color: T.labelCol, marginBottom: "8px" }}>Ringkasan Pengajuan</p>
+        <div style={{ background: "#f8f6f1", border: `1px solid ${T.border}`, borderRadius: "8px", overflow: "hidden" }}>
           {rows.map(([k, v]) => (
-            <div key={k} className="flex px-4 py-2.5 gap-4">
-              <span className="text-gray-500 w-40 flex-shrink-0">{k}</span>
-              <span className="text-gray-900 font-medium">{v}</span>
+            <div key={k} style={{ display: "flex", padding: "9px 14px", borderBottom: `1px solid ${T.border}`, gap: "12px" }}>
+              <span style={{ fontSize: "12px", color: T.hintText, width: "140px", flexShrink: 0 }}>{k}</span>
+              <span style={{ fontSize: "12px", color: "#1c1a17", fontWeight: 500 }}>{v}</span>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Estimasi Reward */}
-      {(() => {
-        const hasil = hitungReward(data);
-        if (!hasil) {
-          return (
-            <div className="bg-gray-50 rounded-xl p-4 flex items-center justify-between border border-gray-200">
-              <div>
-                <span className="text-sm font-medium text-gray-600">Estimasi Dana Penghargaan</span>
-                <p className="text-xs text-gray-400 mt-0.5">Tidak dapat dihitung otomatis untuk kategori ini</p>
-              </div>
-              <span className="text-sm text-gray-400 font-medium">—</span>
-            </div>
-          );
-        }
-        return (
-          <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-sm font-medium text-blue-700">Estimasi Dana Penghargaan</span>
-                <p className="text-xs text-blue-500 mt-0.5">{hasil.poin} poin × Rp 225.000 (SK Rektor 078/2023)</p>
-              </div>
-              <span className="text-2xl font-bold text-blue-700">{formatRupiah(hasil.total)}</span>
-            </div>
-            <p className="text-xs text-blue-400 mt-2">
-              * Estimasi untuk Non PUSPRESNAS. Perhitungan akhir ditentukan oleh operator.
-              {data.jenis_kepesertaan === "kelompok" && ` Dana total diberikan ke ketua tim (${hasil.jumlah_anggota} anggota) — pembagian ke anggota diatur oleh tim.`}
-            </p>
+      {hasil ? (
+        <div style={{ background: "#fdf8ed", border: "1px solid #f0d99a", borderRadius: "10px", padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <p style={{ fontSize: "13px", fontWeight: 600, color: "#8c6200" }}>Estimasi Dana Penghargaan</p>
+            <p style={{ fontSize: "11px", color: "#b5900a", marginTop: "2px" }}>{hasil.poin} poin × Rp 225.000 · SK Rektor 078/2023 · Non PUSPRESNAS</p>
           </div>
-        );
-      })()}
+          <p style={{ fontSize: "22px", fontWeight: 800, color: "#8c6200", fontFamily: "'Syne', sans-serif" }}>{formatRupiah(hasil.total)}</p>
+        </div>
+      ) : (
+        <div style={{ background: "#f8f6f1", border: `1px solid ${T.border}`, borderRadius: "10px", padding: "12px 16px", display: "flex", justifyContent: "space-between" }}>
+          <p style={{ fontSize: "12px", color: T.hintText }}>Estimasi dana tidak dapat dihitung otomatis untuk kategori ini</p>
+          <p style={{ fontSize: "12px", color: T.hintText }}>—</p>
+        </div>
+      )}
 
-      {/* Persetujuan */}
-      <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 space-y-3">
-        <p className="text-sm font-semibold text-yellow-800">Persetujuan Pengajuan</p>
-        <p className="text-xs text-yellow-700 leading-relaxed">
-          Link Pengiriman data rekening akan dibuka setelah Perhitungan Penghargaan selesai dan akan menerima
-          Surat Pemberitahuan Hasil Perhitungan.
+      <div style={{ background: "#fdf8ed", border: "1px solid #f0d99a", borderRadius: "10px", padding: "14px 16px" }}>
+        <p style={{ fontSize: "12px", fontWeight: 700, color: "#8c6200", marginBottom: "8px" }}>Persetujuan Pengajuan</p>
+        <p style={{ fontSize: "11px", color: "#8c6200", lineHeight: 1.6, marginBottom: "8px" }}>
+          Link pengiriman data rekening akan dibuka setelah perhitungan penghargaan selesai. Jika tidak mengirimkan data rekening hingga batas waktu, pengajuan dinyatakan gugur pada periode tersebut.
         </p>
-        <p className="text-xs text-yellow-700 leading-relaxed">
-          <strong>Catatan:</strong> Jika Penerima sudah mendapatkan pemberitahuan, namun tidak mengirimkan
-          data rekening hingga batas waktu yang ditentukan, maka akan dinyatakan gugur pada periode
-          pengumpulan. Namun kamu masih bisa melakukan pengajuan di periode berikutnya.
-        </p>
-        <label className="flex items-start gap-3 cursor-pointer">
+        <label style={{ display: "flex", alignItems: "flex-start", gap: "10px", cursor: "pointer" }}>
           <input
             type="checkbox"
             checked={data.setuju}
             onChange={(e) => onChange("setuju", e.target.checked)}
-            className="mt-0.5 accent-blue-600"
+            style={{ marginTop: "2px", accentColor: T.accent, width: "15px", height: "15px", flexShrink: 0 }}
           />
-          <span className="text-sm text-gray-700">
+          <span style={{ fontSize: "12px", color: "#1c1a17" }}>
             Saya menyatakan bahwa data yang diisi adalah benar dan saya menyetujui ketentuan di atas.
           </span>
         </label>
+        <FieldError>{errors?.setuju}</FieldError>
       </div>
     </div>
   );
@@ -815,36 +1053,28 @@ function Step6({ data, onChange, nimInfo }) {
 // Wizard Utama
 // ─────────────────────────────────────────────────────────────────────────────
 const INITIAL_DATA = {
-  // Step 1
   nama_lengkap: "", email: "", nomor_wa: "",
-  // Step 2
   ada_dospem: "tidak", nidn_dospem: "",
-  // Step 3
   kategori_simkatmawa: "",
-  // Step 4 (shared)
   jenis_kepesertaan: "", kategori_kegiatan: "", nama_kegiatan: "",
   tingkatan: "", tahun_kegiatan: "", url_penyelenggara: "",
   capaian: "", tanggal_mulai: "", tanggal_selesai: "",
   jumlah_peserta: "", model_pelaksanaan: "", keterangan: "",
-  // Step 4A extras (Karya)
   nama_lembaga: "", jenis_karya_teks: "", jenis_karya_pilihan: "",
   deskripsi_karya: "", manfaat_karya: "", nomor_surat: "", tanggal_surat: "",
-  // Step 5
   jumlah_anggota: "", nama_ketua: "", peran_pengeclaim: "",
   anggota: [], keterangan_kelompok: "",
-  // Step 6
   setuju: false,
 };
 
 export default function TambahKlaimWizard({ session, onClose, onSuccess }) {
-  const [step,    setStep]    = useState(1);
-  const [data,    setData]    = useState({ ...INITIAL_DATA, nama_lengkap: session.user.name ?? "", email: session.user.email ?? "" });
-  const [files,   setFiles]   = useState({});
-  const [nimInfo, setNimInfo] = useState(null);
-  const [error,   setError]   = useState("");
-  const [loading, setLoading] = useState(false);
+  const [step,       setStep]       = useState(1);
+  const [data,       setData]       = useState({ ...INITIAL_DATA, nama_lengkap: session.user.name ?? "", email: session.user.email ?? "" });
+  const [files,      setFiles]      = useState({});
+  const [nimInfo,    setNimInfo]    = useState(null);
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [loading,    setLoading]    = useState(false);
 
-  // Ambil info NIM saat mount
   useEffect(() => {
     fetch(`http://127.0.0.1:8000/nim-info?email=${encodeURIComponent(session.user.email)}`)
       .then((r) => r.json())
@@ -853,17 +1083,10 @@ export default function TambahKlaimWizard({ session, onClose, onSuccess }) {
   }, []);
 
   const onChange = (key, value) => {
-    // Saat kategori berubah, reset semua field & file step 4 agar tidak ada "ghost data"
     if (key === "kategori_simkatmawa") {
-      setFiles((prev) => ({
-        ...prev,
-        dokumen_sertifikat: undefined,
-        foto_penyerahan:    undefined,
-        dokumen_lainnya:    undefined,
-      }));
+      setFiles((prev) => ({ ...prev, dokumen_sertifikat: undefined, foto_penyerahan: undefined, dokumen_lainnya: undefined }));
       setData((prev) => ({
-        ...prev,
-        kategori_simkatmawa: value,
+        ...prev, kategori_simkatmawa: value,
         jenis_kepesertaan: "", kategori_kegiatan: "", nama_kegiatan: "",
         tingkatan: "", tahun_kegiatan: "", url_penyelenggara: "",
         capaian: "", tanggal_mulai: "", tanggal_selesai: "",
@@ -871,87 +1094,56 @@ export default function TambahKlaimWizard({ session, onClose, onSuccess }) {
         nama_lembaga: "", jenis_karya_teks: "", jenis_karya_pilihan: "",
         deskripsi_karya: "", manfaat_karya: "", nomor_surat: "", tanggal_surat: "",
       }));
-      setError("");
+      setFieldErrors({});
       return;
     }
     setData((prev) => ({ ...prev, [key]: value }));
-    setError("");
+    // clear error for this field on change
+    if (fieldErrors[key]) setFieldErrors((prev) => { const n = { ...prev }; delete n[key]; return n; });
   };
 
   const onFileChange = (key, file) => {
     setFiles((prev) => ({ ...prev, [key]: file }));
+    if (fieldErrors[key]) setFieldErrors((prev) => { const n = { ...prev }; delete n[key]; return n; });
   };
 
-  // Hitung step labels & apakah step kelompok ditampilkan
   const showKelompok = data.jenis_kepesertaan === "kelompok";
-  const stepLabels = ["Data Diri", "Dosen Pembimbing", "Kategori", "Detail", ...(showKelompok ? ["Kelompok"] : []), "Konfirmasi"];
-  const totalSteps = stepLabels.length;
-
-  // Mapping step number → logical step
-  // 1=DataDiri, 2=Dospem, 3=Kategori, 4=Detail, 5=Kelompok(opsional), 6=Konfirmasi
-  // Jika tidak ada kelompok: 1,2,3,4,5(konfirmasi)
+  const stepLabels   = ["Data Diri", "Dosen Pembimbing", "Kategori", "Detail", ...(showKelompok ? ["Kelompok"] : []), "Konfirmasi"];
+  const totalSteps   = stepLabels.length;
   const getStepLabel = () => stepLabels[step - 1] ?? "";
-
-  const validateStep = () => {
-    if (step === 1) {
-      if (!data.nomor_wa) return "Nomor WhatsApp wajib diisi.";
-    }
-    if (step === 2) {
-      if (!data.ada_dospem) return "Pilih apakah menggunakan dosen pembimbing.";
-      if (data.ada_dospem === "ya" && !data.nidn_dospem) return "NIK/NIDN/NIDK dosen pembimbing wajib diisi.";
-    }
-    if (step === 3) {
-      if (!data.kategori_simkatmawa) return "Pilih kategori SIMKATMAWA terlebih dahulu.";
-    }
-    if (step === 4) {
-      if (!data.jenis_kepesertaan) return "Pilih jenis kepesertaan.";
-      if (!data.kategori_kegiatan) return "Pilih kategori kegiatan.";
-      if (!data.nama_kegiatan)     return "Nama kegiatan wajib diisi.";
-      if (!data.url_penyelenggara) return "URL penyelenggara wajib diisi.";
-      if (!files.dokumen_sertifikat) return "Dokumen sertifikat wajib diunggah.";
-      if (!files.foto_penyerahan)    return "Foto penyerahan wajib diunggah.";
-      if (!files.dokumen_lainnya) return "Dokumen pendukung wajib diunggah.";
-      if (data.kategori_simkatmawa === "lomba_mandiri") {
-        if (!data.capaian)         return "Capaian peserta wajib dipilih.";
-        if (!data.tanggal_mulai)   return "Tanggal mulai wajib diisi.";
-        if (!data.tanggal_selesai) return "Tanggal selesai wajib diisi.";
-      } else {
-        if (!data.tingkatan)       return "Tingkatan kegiatan wajib dipilih.";
-        if (!data.tahun_kegiatan)  return "Tahun kegiatan wajib dipilih.";
-      }
-    }
-    if (showKelompok && step === 5) {
-      if (!data.jumlah_anggota || parseInt(data.jumlah_anggota) < 2) return "Jumlah anggota minimal 2.";
-      if (!data.nama_ketua)      return "Nama ketua wajib diisi.";
-      if (!data.peran_pengeclaim) return "Peran Anda dalam kelompok wajib diisi.";
-    }
-    const isLastStep = step === totalSteps;
-    if (isLastStep && !data.setuju) return "Centang persetujuan untuk menyelesaikan pengajuan.";
-    return "";
-  };
+  const isLastStep   = step === totalSteps;
 
   const handleNext = () => {
-    const err = validateStep();
-    if (err) { setError(err); return; }
-    setError("");
+    const errs = validateStep(step, data, files, showKelompok, totalSteps);
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs);
+      return;
+    }
+    setFieldErrors({});
     if (step < totalSteps) setStep((s) => s + 1);
   };
 
   const handleBack = () => {
-    setError("");
+    setFieldErrors({});
     if (step > 1) setStep((s) => s - 1);
   };
 
+  const handleBlur = (fieldKey) => {
+    const errs = validateStep(step, data, files, showKelompok, totalSteps);
+    if (errs[fieldKey] !== undefined) {
+      setFieldErrors((prev) => ({ ...prev, [fieldKey]: errs[fieldKey] }));
+    }
+  };
+
   const handleSubmit = async () => {
-    const err = validateStep();
-    if (err) { setError(err); return; }
-    if (!files.dokumen_sertifikat) { setError("Dokumen sertifikat belum diunggah."); return; }
+    const errs = validateStep(step, data, files, showKelompok, totalSteps);
+    if (Object.keys(errs).length > 0) { setFieldErrors(errs); return; }
+    if (!files.dokumen_sertifikat) { setFieldErrors({ dokumen_sertifikat: "Dokumen sertifikat belum diunggah." }); return; }
 
     setLoading(true);
     const isLomba = data.kategori_simkatmawa === "lomba_mandiri";
 
     try {
-      // ── Step A: anti-double claim (endpoint lama) ───────────────────────
       const uploadPayload = new FormData();
       uploadPayload.append("nama_lomba",      data.nama_kegiatan);
       uploadPayload.append("tingkat",         isLomba ? data.kategori_kegiatan : data.tingkatan);
@@ -961,58 +1153,50 @@ export default function TambahKlaimWizard({ session, onClose, onSuccess }) {
       uploadPayload.append("nama_display",    session.user.name ?? session.user.email);
       uploadPayload.append("file",            files.dokumen_sertifikat);
 
-      const uploadRes = await fetch("http://127.0.0.1:8000/upload", { method: "POST", body: uploadPayload });
+      const uploadRes  = await fetch("http://127.0.0.1:8000/upload", { method: "POST", body: uploadPayload });
       if (!uploadRes.ok) throw new Error("Upload sertifikat gagal");
       const uploadData = await uploadRes.json();
-      const claimId = uploadData.id ?? null;
+      const claimId    = uploadData.id ?? null;
 
-      // ── Step B: simpan semua data pengajuan ─────────────────────────────
       const pengajuanPayload = new FormData();
-      const appendIfValue = (key, val) => { if (val !== undefined && val !== null && val !== "") pengajuanPayload.append(key, val); };
-
-      appendIfValue("mahasiswa_email",     session.user.email);
-      appendIfValue("nama_display",        session.user.name ?? session.user.email);
-      appendIfValue("nomor_wa",            data.nomor_wa);
-      appendIfValue("ada_dospem",          data.ada_dospem);
-      appendIfValue("nidn_dospem",         data.nidn_dospem);
-      appendIfValue("kategori_simkatmawa", data.kategori_simkatmawa);
-      appendIfValue("jenis_kepesertaan",   data.jenis_kepesertaan);
-      appendIfValue("nama_kegiatan",       data.nama_kegiatan);
-      appendIfValue("kategori_kegiatan",   data.kategori_kegiatan);
-      appendIfValue("tingkatan",           data.tingkatan);
-      appendIfValue("tahun_kegiatan",      data.tahun_kegiatan);
-      appendIfValue("model_pelaksanaan",   data.model_pelaksanaan);
-      appendIfValue("jumlah_peserta",      data.jumlah_peserta);
-      appendIfValue("capaian",             data.capaian);
-      appendIfValue("tanggal_mulai",       data.tanggal_mulai);
-      appendIfValue("tanggal_selesai",     data.tanggal_selesai);
-      appendIfValue("url_penyelenggara",   data.url_penyelenggara);
-      appendIfValue("keterangan",          data.keterangan);
-      appendIfValue("nama_lembaga",        data.nama_lembaga);
-      appendIfValue("jenis_karya_teks",    data.jenis_karya_teks);
-      appendIfValue("jenis_karya_pilihan", data.jenis_karya_pilihan);
-      appendIfValue("deskripsi_karya",     data.deskripsi_karya);
-      appendIfValue("manfaat_karya",       data.manfaat_karya);
-      appendIfValue("nomor_surat",         data.nomor_surat);
-      appendIfValue("tanggal_surat",       data.tanggal_surat);
-      appendIfValue("nama_ketua",          data.nama_ketua);
-      appendIfValue("peran_pengeclaim",    data.peran_pengeclaim);
-      appendIfValue("keterangan_kelompok", data.keterangan_kelompok);
-      pengajuanPayload.append("setuju",    String(data.setuju));
+      const ap = (k, v) => { if (v !== undefined && v !== null && v !== "") pengajuanPayload.append(k, v); };
+      ap("mahasiswa_email",     session.user.email);
+      ap("nama_display",        session.user.name ?? session.user.email);
+      ap("nomor_wa",            data.nomor_wa);
+      ap("ada_dospem",          data.ada_dospem);
+      ap("nidn_dospem",         data.nidn_dospem);
+      ap("kategori_simkatmawa", data.kategori_simkatmawa);
+      ap("jenis_kepesertaan",   data.jenis_kepesertaan);
+      ap("nama_kegiatan",       data.nama_kegiatan);
+      ap("kategori_kegiatan",   data.kategori_kegiatan);
+      ap("tingkatan",           data.tingkatan);
+      ap("tahun_kegiatan",      data.tahun_kegiatan);
+      ap("model_pelaksanaan",   data.model_pelaksanaan);
+      ap("jumlah_peserta",      data.jumlah_peserta);
+      ap("capaian",             data.capaian);
+      ap("tanggal_mulai",       data.tanggal_mulai);
+      ap("tanggal_selesai",     data.tanggal_selesai);
+      ap("url_penyelenggara",   data.url_penyelenggara);
+      ap("keterangan",          data.keterangan);
+      ap("nama_lembaga",        data.nama_lembaga);
+      ap("jenis_karya_teks",    data.jenis_karya_teks);
+      ap("jenis_karya_pilihan", data.jenis_karya_pilihan);
+      ap("deskripsi_karya",     data.deskripsi_karya);
+      ap("manfaat_karya",       data.manfaat_karya);
+      ap("nomor_surat",         data.nomor_surat);
+      ap("tanggal_surat",       data.tanggal_surat);
+      ap("nama_ketua",          data.nama_ketua);
+      ap("peran_pengeclaim",    data.peran_pengeclaim);
+      ap("keterangan_kelompok", data.keterangan_kelompok);
+      pengajuanPayload.append("setuju", String(data.setuju));
       if (claimId) pengajuanPayload.append("claim_id", String(claimId));
       const rewardHasil = hitungReward(data);
       if (rewardHasil) pengajuanPayload.append("estimasi_reward", String(rewardHasil.total));
-
-      // Anggota kelompok (JSON string)
-      if (data.jenis_kepesertaan === "kelompok" && data.anggota?.length > 0) {
+      if (data.jenis_kepesertaan === "kelompok" && data.anggota?.length > 0)
         pengajuanPayload.append("anggota_json", JSON.stringify(data.anggota));
-      }
-
-      // File-file tambahan
-      if (files.surat_tugas_dospem) pengajuanPayload.append("surat_tugas",        files.surat_tugas_dospem);
-      if (files.foto_penyerahan)    pengajuanPayload.append("foto_penyerahan",    files.foto_penyerahan);
-      if (files.dokumen_lainnya)    pengajuanPayload.append("dokumen_lainnya",    files.dokumen_lainnya);
-      // dokumen_sertifikat juga dikirim agar path tersimpan di PENGAJUAN
+      if (files.surat_tugas_dospem) pengajuanPayload.append("surat_tugas",       files.surat_tugas_dospem);
+      if (files.foto_penyerahan)    pengajuanPayload.append("foto_penyerahan",   files.foto_penyerahan);
+      if (files.dokumen_lainnya)    pengajuanPayload.append("dokumen_lainnya",   files.dokumen_lainnya);
       pengajuanPayload.append("dokumen_sertifikat", files.dokumen_sertifikat);
 
       const pengajuanRes = await fetch("http://127.0.0.1:8000/pengajuan", { method: "POST", body: pengajuanPayload });
@@ -1020,59 +1204,64 @@ export default function TambahKlaimWizard({ session, onClose, onSuccess }) {
 
       onSuccess?.();
       onClose();
-
-    } catch (e) {
-      setError(`Gagal mengirim pengajuan: ${e.message}`);
+    } catch (err) {
+      setFieldErrors({ _submit: `Gagal mengirim pengajuan: ${err.message}` });
     } finally {
       setLoading(false);
     }
   };
 
-  const isLastStep = step === totalSteps;
+  const firstError = Object.values(fieldErrors)[0];
 
   return (
-    /* Full-screen modal */
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden">
+    <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.45)", padding: "16px" }}>
+      <div style={{ background: "#fff", borderRadius: "14px", width: "100%", maxWidth: "640px", maxHeight: "92vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 24px 48px rgba(0,0,0,0.18)", fontFamily: "'Plus Jakarta Sans', var(--font-poppins, sans-serif)" }}>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 24px", borderBottom: `1px solid ${T.border}`, flexShrink: 0 }}>
           <div>
-            <h2 className="text-base font-bold text-gray-900">Pengajuan Klaim Prestasi</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Langkah {step} dari {totalSteps} — {getStepLabel()}</p>
+            <h2 style={{ fontSize: "15px", fontWeight: 700, color: "#1c1a17" }}>Pengajuan Klaim Prestasi</h2>
+            <p style={{ fontSize: "11px", color: T.hintText, marginTop: "2px" }}>Langkah {step} dari {totalSteps} — {getStepLabel()}</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+          <button onClick={onClose} style={{ width: "28px", height: "28px", borderRadius: "6px", background: "#f8f6f1", border: "none", cursor: "pointer", fontSize: "16px", color: T.hintText, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
         </div>
 
         {/* Progress */}
-        <div className="px-6 pt-5 flex-shrink-0">
+        <div style={{ padding: "20px 24px 0", flexShrink: 0 }}>
           <ProgressBar steps={stepLabels} current={step} />
         </div>
 
-        {/* Konten step */}
-        <div className="flex-1 overflow-y-auto px-6 pb-4">
-          {step === 1 && <Step1 data={data} onChange={onChange} nimInfo={nimInfo} />}
-          {step === 2 && <Step2 data={data} onChange={onChange} onFileChange={onFileChange} />}
-          {step === 3 && <Step3 data={data} onChange={onChange} />}
-          {step === 4 && data.kategori_simkatmawa === "rekognisi"    && <Step4Rekognisi data={data} onChange={onChange} onFileChange={onFileChange} files={files} />}
-          {step === 4 && data.kategori_simkatmawa === "lomba_mandiri" && <Step4Lomba    data={data} onChange={onChange} onFileChange={onFileChange} files={files} />}
-          {step === 5 && showKelompok && <Step5 data={data} onChange={onChange} />}
-          {isLastStep && <Step6 data={data} onChange={onChange} nimInfo={nimInfo} />}
+        {/* Content */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "0 24px 16px" }}>
+          {step === 1 && <Step1 data={data} onChange={onChange} onBlur={handleBlur} nimInfo={nimInfo} errors={fieldErrors} />}
+          {step === 2 && <Step2 data={data} onChange={onChange} onBlur={handleBlur} onFileChange={onFileChange} files={files} errors={fieldErrors} />}
+          {step === 3 && <Step3 data={data} onChange={onChange} errors={fieldErrors} />}
+          {step === 4 && data.kategori_simkatmawa === "rekognisi"     && <Step4Rekognisi data={data} onChange={onChange} onBlur={handleBlur} onFileChange={onFileChange} files={files} errors={fieldErrors} />}
+          {step === 4 && data.kategori_simkatmawa === "lomba_mandiri" && <Step4Lomba     data={data} onChange={onChange} onBlur={handleBlur} onFileChange={onFileChange} files={files} errors={fieldErrors} />}
+          {step === 5 && showKelompok && <Step5 data={data} onChange={onChange} onBlur={handleBlur} errors={fieldErrors} />}
+          {isLastStep && <Step6 data={data} onChange={onChange} nimInfo={nimInfo} errors={fieldErrors} />}
         </div>
 
-        {/* Error */}
-        {error && (
-          <div className="mx-6 mb-2 px-4 py-2.5 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex-shrink-0">
-            {error}
+        {/* Error banner */}
+        {firstError && firstError !== fieldErrors._submit && (
+          <div style={{ margin: "0 24px 8px", padding: "10px 14px", background: T.errBg, border: `1px solid ${T.errBor}`, borderRadius: "8px", fontSize: "12px", color: T.errText, flexShrink: 0 }}>
+            ⚠ Mohon perbaiki field yang ditandai sebelum melanjutkan.
+          </div>
+        )}
+        {fieldErrors._submit && (
+          <div style={{ margin: "0 24px 8px", padding: "10px 14px", background: T.errBg, border: `1px solid ${T.errBor}`, borderRadius: "8px", fontSize: "12px", color: T.errText, flexShrink: 0 }}>
+            {fieldErrors._submit}
           </div>
         )}
 
-        {/* Footer navigasi */}
-        <div className="px-6 py-4 border-t border-gray-200 flex justify-between flex-shrink-0">
+        {/* Footer */}
+        <div style={{ padding: "14px 24px", borderTop: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", flexShrink: 0 }}>
           <button
             type="button"
             onClick={step === 1 ? onClose : handleBack}
-            className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            style={{ padding: "9px 18px", fontSize: "13px", color: "#7a756e", background: "#f8f6f1", border: `1px solid ${T.border}`, borderRadius: "8px", cursor: "pointer", fontFamily: "inherit", transition: "background 0.15s" }}
+            onMouseEnter={e => e.currentTarget.style.background = "#f0ece4"}
+            onMouseLeave={e => e.currentTarget.style.background = "#f8f6f1"}
           >
             {step === 1 ? "Batal" : "← Sebelumnya"}
           </button>
@@ -1082,7 +1271,9 @@ export default function TambahKlaimWizard({ session, onClose, onSuccess }) {
               type="button"
               onClick={handleSubmit}
               disabled={loading}
-              className="px-6 py-2 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60 transition-colors"
+              style={{ padding: "9px 24px", fontSize: "13px", fontWeight: 600, color: "#fff", background: loading ? "#c8c3bc" : "#1c1a17", border: "none", borderRadius: "8px", cursor: loading ? "not-allowed" : "pointer", fontFamily: "inherit", transition: "background 0.15s" }}
+              onMouseEnter={e => { if (!loading) e.currentTarget.style.background = T.accent; }}
+              onMouseLeave={e => { if (!loading) e.currentTarget.style.background = "#1c1a17"; }}
             >
               {loading ? "Mengirim..." : "Kirim Pengajuan"}
             </button>
@@ -1090,7 +1281,9 @@ export default function TambahKlaimWizard({ session, onClose, onSuccess }) {
             <button
               type="button"
               onClick={handleNext}
-              className="px-6 py-2 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              style={{ padding: "9px 24px", fontSize: "13px", fontWeight: 600, color: "#fff", background: "#1c1a17", border: "none", borderRadius: "8px", cursor: "pointer", fontFamily: "inherit", transition: "background 0.15s" }}
+              onMouseEnter={e => e.currentTarget.style.background = T.accent}
+              onMouseLeave={e => e.currentTarget.style.background = "#1c1a17"}
             >
               Selanjutnya →
             </button>
