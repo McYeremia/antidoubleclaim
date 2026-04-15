@@ -434,27 +434,25 @@ function PengajuanDetail({ p, onSaved }) {
 
       {/* Estimasi Reward */}
       {d.estimasi_reward != null && (
-        <div className="bg-gray-900 rounded-[28px] p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl shadow-gray-200">
+        <div className="bg-gray-50 border border-gray-200 rounded-2xl px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <p className="text-[12px] font-black text-blue-400 uppercase tracking-[0.2em]">Estimasi Dana Penghargaan</p>
-            <p className="text-[12px] text-gray-400 mt-1 font-medium italic opacity-60">
-              Validasi berdasarkan SK Rektor 078/2023 · Non PUSPRESNAS
-            </p>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.18em]">Estimasi Dana Penghargaan</p>
+            <p className="text-[11px] text-gray-400 mt-0.5">SK Rektor 078/2023 · Non PUSPRESNAS</p>
           </div>
           {editing ? (
-            <div className="relative group">
-               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl font-black text-blue-500">Rp</span>
-               <input type="number" value={d.estimasi_reward ?? ""}
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] font-semibold text-gray-500">Rp</span>
+              <input
+                type="number"
+                value={d.estimasi_reward ?? ""}
                 onChange={e => set("estimasi_reward", e.target.value ? Number(e.target.value) : null)}
-                className="w-56 pl-12 pr-6 py-4 border-2 border-blue-500/20 rounded-2xl text-[24px] font-black text-blue-500 bg-white/5 focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition-all text-right"
+                className="w-48 pl-9 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-[15px] font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all text-right"
               />
             </div>
           ) : (
-            <div className="text-right">
-              <p className="text-4xl font-black text-blue-500 tracking-tight">
-                {"Rp " + Number(d.estimasi_reward).toLocaleString("id-ID")}
-              </p>
-            </div>
+            <p className="text-[18px] font-bold text-gray-900 tabular-nums">
+              {"Rp " + Number(d.estimasi_reward).toLocaleString("id-ID")}
+            </p>
           )}
         </div>
       )}
