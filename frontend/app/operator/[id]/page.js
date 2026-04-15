@@ -5,9 +5,9 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
 const STATUS_STYLE = {
-  "belum dicek":    "bg-blue-100 text-blue-800",
-  "perlu ditinjau": "bg-yellow-100 text-yellow-800",
-  "sudah dicek":    "bg-green-100 text-green-800",
+  "belum dicek":    "bg-blue-100 text-blue-700",
+  "perlu ditinjau": "bg-orange-100 text-orange-700",
+  "sudah dicek":    "bg-green-100 text-green-700",
 };
 
 // ── Konstanta pilihan (sinkron dengan TambahKlaimWizard) ──────────────────────
@@ -53,22 +53,28 @@ function InfoRow({ label, value }) {
   if (!value && value !== 0) return null;
   return (
     <div>
-      <p className="text-xs text-gray-400 uppercase tracking-wide">{label}</p>
-      <p className="text-gray-900 mt-0.5 text-sm">{value}</p>
+      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{label}</p>
+      <p className="text-gray-900 mt-1 text-[13px] font-medium">{value}</p>
     </div>
   );
 }
 
 function SectionTitle({ children }) {
-  return <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100 pb-1.5 mb-3">{children}</h3>;
+  return <h3 className="text-[11px] font-black text-gray-300 uppercase tracking-[0.3em] border-b border-gray-50 pb-2 mb-4 mt-6 first:mt-0">{children}</h3>;
 }
 
 function CertPreview({ url, filename }) {
   if (!url || !filename) return null;
   const isPdf = filename.toLowerCase().endsWith(".pdf");
-  return isPdf
-    ? <iframe src={url} className="w-full h-64 rounded border border-gray-200" title="Preview" />
-    : <img src={url} alt="Preview" className="w-full rounded border border-gray-200 object-contain max-h-64" />;
+  return (
+    <div className="relative group overflow-hidden rounded-2xl border border-gray-100 bg-gray-50 shadow-inner">
+      {isPdf
+        ? <iframe src={url} className="w-full h-80 rounded-2xl" title="Preview" />
+        : <img src={url} alt="Preview" className="w-full rounded-2xl object-contain max-h-[400px]" />
+      }
+      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors pointer-events-none"></div>
+    </div>
+  );
 }
 
 function FileLink({ label, path }) {
@@ -77,9 +83,9 @@ function FileLink({ label, path }) {
   const url = `http://127.0.0.1:8000/uploads/${filename}`;
   return (
     <div>
-      <p className="text-xs text-gray-400 uppercase tracking-wide">{label}</p>
+      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{label}</p>
       <a href={url} target="_blank" rel="noopener noreferrer"
-         className="text-sm text-blue-600 hover:underline mt-0.5 inline-block">
+         className="text-[13px] font-bold text-gray-900 underline underline-offset-4 hover:text-blue-600 mt-1 inline-block transition-colors">
         {filename} ↗
       </a>
     </div>
@@ -90,26 +96,25 @@ function FileLink({ label, path }) {
 function EditInput({ label, name, value, onChange, type = "text", span2 = false }) {
   return (
     <div className={span2 ? "col-span-2" : ""}>
-      <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">{label}</p>
+      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-2 ml-1">{label}</p>
       <input
         type={type}
         value={value ?? ""}
         onChange={e => onChange(name, e.target.value)}
-        className="block w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="block w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-[13px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all"
       />
     </div>
   );
 }
 
 function EditSelect({ label, name, value, onChange, options, span2 = false }) {
-  // options bisa berupa string[] atau {value, label}[]
   return (
     <div className={span2 ? "col-span-2" : ""}>
-      <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">{label}</p>
+      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-2 ml-1">{label}</p>
       <select
         value={value ?? ""}
         onChange={e => onChange(name, e.target.value)}
-        className="block w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="block w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-[13px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all"
       >
         <option value="">— pilih —</option>
         {options.map(o => {
@@ -178,246 +183,286 @@ function PengajuanDetail({ p, onSaved }) {
   const d = editing ? form : p;
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold text-gray-700">Data Pengajuan Lengkap</h2>
-        <div className="flex items-center gap-2">
-          {saved && <span className="text-xs text-green-600 font-medium">Tersimpan</span>}
+    <div className="bg-white rounded-[32px] shadow-sm border border-gray-100 p-10 space-y-10">
+      <div className="flex items-center justify-between border-b border-gray-50 pb-6">
+        <div>
+          <h2 className="text-[18px] font-black text-gray-900 tracking-tight">Data Pengajuan Lengkap</h2>
+          <p className="text-[12px] text-gray-400 mt-1 font-medium">Informasi mendetail dari wizard mahasiswa.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          {saved && <span className="text-[12px] text-green-600 font-bold uppercase tracking-widest mr-2 animate-pulse">✓ TERSIMPAN</span>}
           {editing ? (
             <>
               <button onClick={cancelEdit}
-                className="px-3 py-1.5 text-xs font-semibold rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50">
-                Batal
+                className="px-4 py-2 text-[12px] font-bold rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors">
+                BATAL
               </button>
               <button onClick={handleSave} disabled={saving}
-                className="px-3 py-1.5 text-xs font-semibold rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
-                {saving ? "Menyimpan..." : "Simpan Perubahan"}
+                className="px-6 py-2 text-[12px] font-black rounded-xl bg-gray-900 text-white hover:bg-gray-700 disabled:opacity-50 transition-all shadow-lg shadow-gray-200">
+                {saving ? "MENYIMPAN..." : "SIMPAN PERUBAHAN"}
               </button>
             </>
           ) : (
             <button onClick={startEdit}
-              className="px-3 py-1.5 text-xs font-semibold rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 flex items-center gap-1.5">
+              className="px-4 py-2 text-[12px] font-black rounded-xl border border-gray-900 text-gray-900 hover:bg-gray-50 transition-all flex items-center gap-2">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}
                   d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg>
-              Edit Data
+              EDIT DATA
             </button>
           )}
         </div>
       </div>
 
-      {/* Data Mahasiswa */}
-      <div>
-        <SectionTitle>Data Mahasiswa</SectionTitle>
-        <div className="grid grid-cols-2 gap-4">
-          {editing ? (
-            <>
-              <EditInput label="Nama"     name="nama_display" value={d.nama_display} onChange={set} />
-              <InfoRow   label="Email"    value={p.mahasiswa_email} />
-              <EditInput label="Nomor WA" name="nomor_wa"     value={d.nomor_wa}     onChange={set} />
-            </>
-          ) : (
-            <>
-              <InfoRow label="Nama"     value={p.nama_display} />
-              <InfoRow label="Email"    value={p.mahasiswa_email} />
-              <InfoRow label="Nomor WA" value={p.nomor_wa} />
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Dosen Pembimbing */}
-      <div>
-        <SectionTitle>Dosen Pembimbing</SectionTitle>
-        <div className="grid grid-cols-2 gap-4">
-          {editing ? (
-            <>
-              <EditSelect label="Menggunakan Dospem" name="ada_dospem" value={d.ada_dospem}
-                options={OPT_ADA_DOSPEM} onChange={set} />
-              {d.ada_dospem === "ya" &&
-                <EditInput label="NIK/NIDN/NIDK" name="nidn_dospem" value={d.nidn_dospem} onChange={set} />}
-            </>
-          ) : (
-            <>
-              <InfoRow label="Menggunakan Dospem" value={p.ada_dospem === "ya" ? "Ya" : "Tidak"} />
-              {p.ada_dospem === "ya" && <InfoRow label="NIK/NIDN/NIDK" value={p.nidn_dospem} />}
-            </>
-          )}
-        </div>
-        <div className="mt-3">
-          <FileLink label="Surat Tugas Dospem" path={p.surat_tugas_path} />
-        </div>
-      </div>
-
-      {/* Detail Kegiatan */}
-      <div>
-        <SectionTitle>Detail Kegiatan</SectionTitle>
-        <div className="grid grid-cols-2 gap-4">
-          {editing ? (
-            <>
-              <EditSelect label="Kategori SIMKATMAWA" name="kategori_simkatmawa"
-                value={d.kategori_simkatmawa} options={OPT_KATEGORI_SIMKATMAWA} onChange={set} />
-              <EditSelect label="Jenis Kepesertaan" name="jenis_kepesertaan"
-                value={d.jenis_kepesertaan} options={OPT_JENIS_KEPESERTAAN} onChange={set} />
-              <EditInput label="Nama Kegiatan" name="nama_kegiatan" value={d.nama_kegiatan} onChange={set} span2 />
-              <EditSelect label="Kategori Kegiatan" name="kategori_kegiatan"
-                value={d.kategori_kegiatan}
-                options={isLomba ? OPT_KATEGORI_LOMBA : OPT_KATEGORI_REKOGNISI}
-                onChange={set} span2 />
-              {!isLomba && <EditSelect label="Tingkatan" name="tingkatan"
-                value={d.tingkatan} options={OPT_TINGKATAN} onChange={set} />}
-              <EditSelect label="Tahun Kegiatan" name="tahun_kegiatan"
-                value={d.tahun_kegiatan} options={OPT_TAHUN} onChange={set} />
-              {isLomba && <>
-                <EditSelect label="Model Pelaksanaan" name="model_pelaksanaan"
-                  value={d.model_pelaksanaan} options={OPT_MODEL_PELAKSANAAN} onChange={set} />
-                <EditInput label="Jumlah Peserta" name="jumlah_peserta"
-                  value={d.jumlah_peserta} onChange={set} type="number" />
-                <EditSelect label="Capaian" name="capaian"
-                  value={d.capaian} options={OPT_CAPAIAN} onChange={set} />
-                <EditInput label="Tanggal Mulai"   name="tanggal_mulai"
-                  value={d.tanggal_mulai}   onChange={set} type="date" />
-                <EditInput label="Tanggal Selesai" name="tanggal_selesai"
-                  value={d.tanggal_selesai} onChange={set} type="date" />
-              </>}
-              <EditInput label="URL Penyelenggara" name="url_penyelenggara"
-                value={d.url_penyelenggara} onChange={set} span2 />
-              <EditInput label="Keterangan" name="keterangan"
-                value={d.keterangan} onChange={set} span2 />
-            </>
-          ) : (
-            <>
-              <InfoRow label="Kategori SIMKATMAWA"
-                value={isLomba ? "Lomba Mandiri" : "Rekognisi Non-Lomba"} />
-              <InfoRow label="Jenis Kepesertaan"  value={p.jenis_kepesertaan} />
-              <InfoRow label="Nama Kegiatan"      value={p.nama_kegiatan} />
-              <InfoRow label="Kategori Kegiatan"  value={p.kategori_kegiatan} />
-              {!isLomba && <InfoRow label="Tingkatan" value={p.tingkatan} />}
-              <InfoRow label="Tahun Kegiatan"     value={p.tahun_kegiatan} />
-              {isLomba && <>
-                <InfoRow label="Model Pelaksanaan" value={p.model_pelaksanaan} />
-                <InfoRow label="Jumlah Peserta"    value={p.jumlah_peserta} />
-                <InfoRow label="Capaian"           value={p.capaian} />
-                <InfoRow label="Tanggal Mulai"     value={p.tanggal_mulai} />
-                <InfoRow label="Tanggal Selesai"   value={p.tanggal_selesai} />
-              </>}
-              <div className="col-span-2">
-                <InfoRow label="URL Penyelenggara" value={
-                  p.url_penyelenggara
-                    ? <a href={p.url_penyelenggara} target="_blank" rel="noopener noreferrer"
-                         className="text-blue-600 hover:underline">{p.url_penyelenggara}</a>
-                    : null
-                } />
-              </div>
-              {p.keterangan && <div className="col-span-2"><InfoRow label="Keterangan" value={p.keterangan} /></div>}
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Karya Mahasiswa */}
-      {isKarya && (
-        <div>
-          <SectionTitle>Data Karya Mahasiswa</SectionTitle>
-          <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
+        {/* Data Mahasiswa */}
+        <div className="space-y-6">
+          <SectionTitle>Profil Mahasiswa</SectionTitle>
+          <div className="grid grid-cols-1 gap-6">
             {editing ? (
               <>
-                <EditInput label="Nama Lembaga/Mitra"  name="nama_lembaga"        value={d.nama_lembaga}        onChange={set} />
-                <EditInput label="Jenis Karya"         name="jenis_karya_teks"    value={d.jenis_karya_teks}    onChange={set} />
-                <EditSelect label="Pilihan Jenis Karya" name="jenis_karya_pilihan"
-                  value={d.jenis_karya_pilihan} options={OPT_JENIS_KARYA} onChange={set} />
-                <EditInput label="Nomor Surat"         name="nomor_surat"         value={d.nomor_surat}         onChange={set} />
-                <EditInput label="Tanggal Surat"       name="tanggal_surat"       value={d.tanggal_surat}       onChange={set} />
-                <EditInput label="Deskripsi Karya"     name="deskripsi_karya"     value={d.deskripsi_karya}     onChange={set} span2 />
-                <EditInput label="Manfaat Karya"       name="manfaat_karya"       value={d.manfaat_karya}       onChange={set} span2 />
+                <EditInput label="Nama Lengkap"     name="nama_display" value={d.nama_display} onChange={set} />
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                   <InfoRow label="Email Institusi" value={p.mahasiswa_email} />
+                </div>
+                <EditInput label="Nomor WhatsApp" name="nomor_wa"     value={d.nomor_wa}     onChange={set} />
               </>
             ) : (
               <>
-                <InfoRow label="Nama Lembaga/Mitra"  value={p.nama_lembaga} />
-                <InfoRow label="Jenis Karya"         value={p.jenis_karya_teks} />
-                <InfoRow label="Pilihan Jenis Karya" value={p.jenis_karya_pilihan} />
-                <InfoRow label="Nomor Surat"         value={p.nomor_surat} />
-                <InfoRow label="Tanggal Surat"       value={p.tanggal_surat} />
-                <div className="col-span-2"><InfoRow label="Deskripsi Karya" value={p.deskripsi_karya} /></div>
-                <div className="col-span-2"><InfoRow label="Manfaat Karya"   value={p.manfaat_karya} /></div>
+                <InfoRow label="Nama Lengkap"     value={p.nama_display} />
+                <InfoRow label="Email Institusi" value={p.mahasiswa_email} />
+                <InfoRow label="Nomor WhatsApp" value={p.nomor_wa} />
               </>
             )}
           </div>
         </div>
-      )}
 
-      {/* Data Kelompok */}
-      {isKelompok && (
-        <div>
-          <SectionTitle>Data Kelompok</SectionTitle>
-          <div className="grid grid-cols-2 gap-4 mb-3">
+        {/* Dosen Pembimbing */}
+        <div className="space-y-6">
+          <SectionTitle>Dosen Pembimbing</SectionTitle>
+          <div className="grid grid-cols-1 gap-6">
             {editing ? (
               <>
-                <EditInput label="Nama Ketua"           name="nama_ketua"           value={d.nama_ketua}           onChange={set} />
-                <EditInput label="Peran Pengeclaim"     name="peran_pengeclaim"     value={d.peran_pengeclaim}     onChange={set} />
-                <EditInput label="Keterangan Kelompok"  name="keterangan_kelompok"  value={d.keterangan_kelompok}  onChange={set} span2 />
+                <EditSelect label="Menggunakan Dospem" name="ada_dospem" value={d.ada_dospem}
+                  options={OPT_ADA_DOSPEM} onChange={set} />
+                {d.ada_dospem === "ya" &&
+                  <EditInput label="NIK/NIDN/NIDK" name="nidn_dospem" value={d.nidn_dospem} onChange={set} />}
               </>
             ) : (
               <>
-                <InfoRow label="Nama Ketua"           value={p.nama_ketua} />
-                <InfoRow label="Peran Pengeclaim"     value={p.peran_pengeclaim} />
-                {p.keterangan_kelompok &&
-                  <div className="col-span-2"><InfoRow label="Keterangan Kelompok" value={p.keterangan_kelompok} /></div>}
+                <InfoRow label="Menggunakan Dospem" value={p.ada_dospem === "ya" ? "Ya" : "Tidak"} />
+                {p.ada_dospem === "ya" && <InfoRow label="NIK/NIDN/NIDK" value={p.nidn_dospem} />}
               </>
             )}
-          </div>
-          {anggota.length > 0 && (
-            <div>
-              <p className="text-xs text-gray-400 uppercase mb-2">Anggota Lainnya</p>
-              <div className="space-y-1.5">
-                {anggota.map((a, i) => (
-                  <div key={i} className="flex gap-6 text-sm bg-gray-50 rounded-lg px-3 py-2">
-                    <span className="text-gray-500 w-4">{i + 2}.</span>
-                    <span className="text-gray-900 font-medium">{a.nama}</span>
-                    <span className="text-gray-500 font-mono">{a.nim}</span>
-                  </div>
-                ))}
-              </div>
+            <div className="pt-2">
+              <FileLink label="Surat Tugas Dospem" path={p.surat_tugas_path} />
             </div>
-          )}
+          </div>
         </div>
-      )}
 
-      {/* Dokumen */}
-      <div>
-        <SectionTitle>Dokumen & File</SectionTitle>
-        <div className="grid grid-cols-2 gap-4">
-          <FileLink label="Foto Penyerahan Sertifikat" path={p.foto_penyerahan_path} />
-          <FileLink label="Dokumen Lainnya"            path={p.dokumen_lainnya_path} />
+        {/* Detail Kegiatan */}
+        <div className="col-span-1 md:col-span-2 space-y-6">
+          <SectionTitle>Rincian Kegiatan</SectionTitle>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {editing ? (
+              <>
+                <EditSelect label="Kategori SIMKATMAWA" name="kategori_simkatmawa"
+                  value={d.kategori_simkatmawa} options={OPT_KATEGORI_SIMKATMAWA} onChange={set} />
+                <EditSelect label="Jenis Kepesertaan" name="jenis_kepesertaan"
+                  value={d.jenis_kepesertaan} options={OPT_JENIS_KEPESERTAAN} onChange={set} />
+                <EditSelect label="Tahun Kegiatan" name="tahun_kegiatan"
+                  value={d.tahun_kegiatan} options={OPT_TAHUN} onChange={set} />
+
+                <div className="col-span-1 md:col-span-3">
+                   <EditInput label="Nama Lengkap Kegiatan" name="nama_kegiatan" value={d.nama_kegiatan} onChange={set} />
+                </div>
+
+                <div className="col-span-1 md:col-span-2">
+                  <EditSelect label="Kategori Kegiatan" name="kategori_kegiatan"
+                    value={d.kategori_kegiatan}
+                    options={isLomba ? OPT_KATEGORI_LOMBA : OPT_KATEGORI_REKOGNISI}
+                    onChange={set} />
+                </div>
+                {!isLomba && <EditSelect label="Tingkatan" name="tingkatan"
+                  value={d.tingkatan} options={OPT_TINGKATAN} onChange={set} />}
+
+                {isLomba && <>
+                  <EditSelect label="Model Pelaksanaan" name="model_pelaksanaan"
+                    value={d.model_pelaksanaan} options={OPT_MODEL_PELAKSANAAN} onChange={set} />
+                  <EditInput label="Jumlah Peserta" name="jumlah_peserta"
+                    value={d.jumlah_peserta} onChange={set} type="number" />
+                  <EditSelect label="Capaian / Peringkat" name="capaian"
+                    value={d.capaian} options={OPT_CAPAIAN} onChange={set} />
+                  <EditInput label="Tanggal Mulai"   name="tanggal_mulai"
+                    value={d.tanggal_mulai}   onChange={set} type="date" />
+                  <EditInput label="Tanggal Selesai" name="tanggal_selesai"
+                    value={d.tanggal_selesai} onChange={set} type="date" />
+                </>}
+                <div className="col-span-1 md:col-span-3">
+                  <EditInput label="URL Website Penyelenggara" name="url_penyelenggara"
+                    value={d.url_penyelenggara} onChange={set} />
+                </div>
+                <div className="col-span-1 md:col-span-3">
+                  <EditInput label="Keterangan Tambahan" name="keterangan"
+                    value={d.keterangan} onChange={set} />
+                </div>
+              </>
+            ) : (
+              <>
+                <InfoRow label="Kategori SIMKATMAWA"
+                  value={isLomba ? "Lomba Mandiri" : "Rekognisi Non-Lomba"} />
+                <InfoRow label="Jenis Kepesertaan"  value={p.jenis_kepesertaan} />
+                <InfoRow label="Tahun Kegiatan"     value={p.tahun_kegiatan} />
+
+                <div className="col-span-1 md:col-span-3">
+                   <InfoRow label="Nama Lengkap Kegiatan" value={p.nama_kegiatan} />
+                </div>
+
+                <div className="col-span-1 md:col-span-2">
+                  <InfoRow label="Kategori Kegiatan"  value={p.kategori_kegiatan} />
+                </div>
+                {!isLomba && <InfoRow label="Tingkatan" value={p.tingkatan} />}
+
+                {isLomba && <>
+                  <InfoRow label="Model Pelaksanaan" value={p.model_pelaksanaan} />
+                  <InfoRow label="Jumlah Peserta"    value={p.jumlah_peserta} />
+                  <InfoRow label="Capaian / Peringkat" value={p.capaian} />
+                  <InfoRow label="Tanggal Mulai"     value={p.tanggal_mulai} />
+                  <InfoRow label="Tanggal Selesai"   value={p.tanggal_selesai} />
+                </>}
+                <div className="col-span-1 md:col-span-3">
+                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">URL Website Penyelenggara</p>
+                  <a href={p.url_penyelenggara} target="_blank" rel="noopener noreferrer"
+                     className="text-[13px] font-bold text-gray-900 underline underline-offset-4 hover:text-blue-600 transition-colors break-all">
+                    {p.url_penyelenggara || "—"}
+                  </a>
+                </div>
+                {p.keterangan && <div className="col-span-1 md:col-span-3"><InfoRow label="Keterangan Tambahan" value={p.keterangan} /></div>}
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Karya Mahasiswa */}
+        {isKarya && (
+          <div className="col-span-1 md:col-span-2 space-y-6">
+            <SectionTitle>Eksistensi Karya Mahasiswa</SectionTitle>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {editing ? (
+                <>
+                  <EditInput label="Nama Lembaga/Mitra"  name="nama_lembaga"        value={d.nama_lembaga}        onChange={set} />
+                  <EditInput label="Judul/Jenis Karya"   name="jenis_karya_teks"    value={d.jenis_karya_teks}    onChange={set} />
+                  <EditSelect label="Pilihan Kategori Karya" name="jenis_karya_pilihan"
+                    value={d.jenis_karya_pilihan} options={OPT_JENIS_KARYA} onChange={set} />
+                  <EditInput label="Nomor Surat Keterangan" name="nomor_surat"         value={d.nomor_surat}         onChange={set} />
+                  <EditInput label="Tanggal Surat"       name="tanggal_surat"       value={d.tanggal_surat}       onChange={set} type="date" />
+                  <div className="col-span-1 md:col-span-2">
+                    <EditInput label="Deskripsi Karya"     name="deskripsi_karya"     value={d.deskripsi_karya}     onChange={set} />
+                  </div>
+                  <div className="col-span-1 md:col-span-2">
+                    <EditInput label="Manfaat Karya"       name="manfaat_karya"       value={d.manfaat_karya}       onChange={set} />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <InfoRow label="Nama Lembaga/Mitra"  value={p.nama_lembaga} />
+                  <InfoRow label="Judul/Jenis Karya"   value={p.jenis_karya_teks} />
+                  <InfoRow label="Pilihan Kategori Karya" value={p.jenis_karya_pilihan} />
+                  <InfoRow label="Nomor Surat Keterangan" value={p.nomor_surat} />
+                  <InfoRow label="Tanggal Surat"       value={p.tanggal_surat} />
+                  <div className="col-span-1 md:col-span-2"><InfoRow label="Deskripsi Karya" value={p.deskripsi_karya} /></div>
+                  <div className="col-span-1 md:col-span-2"><InfoRow label="Manfaat Karya"   value={p.manfaat_karya} /></div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Data Kelompok */}
+        {isKelompok && (
+          <div className="col-span-1 md:col-span-2 space-y-6">
+            <SectionTitle>Kolaborasi Kelompok</SectionTitle>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
+              {editing ? (
+                <>
+                  <EditInput label="Nama Lengkap Ketua"     name="nama_ketua"           value={d.nama_ketua}           onChange={set} />
+                  <EditInput label="Peran Pengeclaim"       name="peran_pengeclaim"     value={d.peran_pengeclaim}     onChange={set} />
+                  <div className="col-span-1 md:col-span-2">
+                    <EditInput label="Keterangan Kelompok"  name="keterangan_kelompok"  value={d.keterangan_kelompok}  onChange={set} />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <InfoRow label="Nama Lengkap Ketua"     value={p.nama_ketua} />
+                  <InfoRow label="Peran Pengeclaim"       value={p.peran_pengeclaim} />
+                  {p.keterangan_kelompok &&
+                    <div className="col-span-1 md:col-span-2"><InfoRow label="Keterangan Kelompok" value={p.keterangan_kelompok} /></div>}
+                </>
+              )}
+            </div>
+            {anggota.length > 0 && (
+              <div className="bg-gray-50/50 p-6 rounded-2xl border border-gray-100">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Anggota Kelompok Lainnya</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {anggota.map((a, i) => (
+                    <div key={i} className="flex items-center gap-4 bg-white rounded-xl p-3 shadow-sm border border-gray-100">
+                      <div className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center text-[11px] font-black text-white shrink-0">
+                        {i + 2}
+                      </div>
+                      <div className="truncate">
+                        <p className="text-[13px] font-bold text-gray-900 truncate">{a.nama}</p>
+                        <p className="text-[11px] font-mono font-bold text-gray-400 tabular-nums">{a.nim}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Dokumen */}
+        <div className="col-span-1 md:col-span-2 space-y-6">
+          <SectionTitle>Dokumen Pendukung Tambahan</SectionTitle>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <FileLink label="Foto Penyerahan Sertifikat" path={p.foto_penyerahan_path} />
+            <FileLink label="Dokumen Pendukung Lainnya" path={p.dokumen_lainnya_path} />
+          </div>
         </div>
       </div>
 
       {/* Estimasi Reward */}
       {d.estimasi_reward != null && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center justify-between">
+        <div className="bg-gray-900 rounded-[28px] p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl shadow-gray-200">
           <div>
-            <p className="text-sm font-semibold text-blue-700">Estimasi Dana Penghargaan</p>
-            <p className="text-xs text-blue-400 mt-0.5">
-              Berdasarkan SK Rektor No. 078/B.02/UKDW/2023 · Non PUSPRESNAS
+            <p className="text-[12px] font-black text-blue-400 uppercase tracking-[0.2em]">Estimasi Dana Penghargaan</p>
+            <p className="text-[12px] text-gray-400 mt-1 font-medium italic opacity-60">
+              Validasi berdasarkan SK Rektor 078/2023 · Non PUSPRESNAS
             </p>
           </div>
           {editing ? (
-            <input type="number" value={d.estimasi_reward ?? ""}
-              onChange={e => set("estimasi_reward", e.target.value ? Number(e.target.value) : null)}
-              className="w-44 text-right px-2.5 py-1.5 border border-blue-300 rounded-lg text-lg font-bold text-blue-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <div className="relative group">
+               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl font-black text-blue-500">Rp</span>
+               <input type="number" value={d.estimasi_reward ?? ""}
+                onChange={e => set("estimasi_reward", e.target.value ? Number(e.target.value) : null)}
+                className="w-56 pl-12 pr-6 py-4 border-2 border-blue-500/20 rounded-2xl text-[24px] font-black text-blue-500 bg-white/5 focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition-all text-right"
+              />
+            </div>
           ) : (
-            <p className="text-2xl font-bold text-blue-700">
-              {"Rp " + Number(d.estimasi_reward).toLocaleString("id-ID")}
-            </p>
+            <div className="text-right">
+              <p className="text-4xl font-black text-blue-500 tracking-tight">
+                {"Rp " + Number(d.estimasi_reward).toLocaleString("id-ID")}
+              </p>
+            </div>
           )}
         </div>
       )}
 
       {/* Timestamp */}
-      <div>
+      <div className="pt-6 border-t border-gray-50 flex justify-between items-center">
         <InfoRow label="Tanggal Pengajuan" value={p.created_at} />
+        <p className="text-[10px] font-black text-gray-200 uppercase tracking-widest">Antidoubleclaim Verification Engine</p>
       </div>
     </div>
   );
@@ -472,11 +517,21 @@ export default function DetailKlaim() {
     router.push("/operator");
   };
 
-  if (loading)  return <p className="text-center mt-20 text-gray-400">Memuat data...</p>;
+  if (loading)  return (
+    <div className="flex items-center justify-center min-h-screen bg-[#f7f7f8]">
+       <svg className="w-10 h-10 text-gray-200 animate-spin" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        </svg>
+    </div>
+  );
   if (notFound) return (
-    <div className="text-center mt-20">
-      <p className="text-gray-500">Klaim tidak ditemukan.</p>
-      <Link href="/operator" className="text-blue-600 hover:underline text-sm mt-2 inline-block">← Kembali</Link>
+    <div className="min-h-screen bg-[#f7f7f8] flex flex-col items-center justify-center p-4">
+      <div className="bg-white p-12 rounded-[32px] shadow-xl text-center border border-gray-100 max-w-sm">
+        <p className="text-[16px] font-black text-gray-900 mb-2 uppercase">Klaim Tidak Ditemukan</p>
+        <p className="text-[13px] text-gray-400 font-medium mb-8">Data yang Anda cari mungkin telah dihapus atau ID salah.</p>
+        <Link href="/operator" className="inline-block px-8 py-3 bg-gray-900 text-white rounded-xl text-[12px] font-black hover:bg-gray-700 transition-all">← KEMBALI</Link>
+      </div>
     </div>
   );
 
@@ -484,94 +539,124 @@ export default function DetailKlaim() {
   const canAct  = claim.status !== "sudah dicek";
 
   return (
-    <main className="min-h-screen bg-gray-50 py-10 px-4 sm:px-8">
-      <div className="max-w-5xl mx-auto space-y-6">
+    <main className="min-h-screen bg-[#f7f7f8] py-12 px-4 sm:px-10" style={{ fontFamily: "var(--font-poppins, sans-serif)" }}>
+      <div className="max-w-6xl mx-auto space-y-10 animate-in fade-in duration-500">
 
-        {/* Header */}
-        <div className="flex items-center justify-between flex-wrap gap-3">
+        {/* Header Navigation */}
+        <div className="flex items-center justify-between flex-wrap gap-6">
           <div>
-            <Link href="/operator" className="text-sm text-blue-600 hover:underline">← Kembali ke Dashboard</Link>
-            <h1 className="text-2xl font-bold text-gray-900 mt-1">Detail Klaim #{claim.id}</h1>
+            <Link href="/operator" className="text-[11px] font-black text-gray-400 uppercase tracking-widest hover:text-gray-900 transition-colors flex items-center gap-2">
+               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" />
+               </svg>
+               Kembali ke Dashboard
+            </Link>
+            <h1 className="text-4xl font-black text-gray-900 mt-3 tracking-tight">Klaim Sertifikat #{claim.id}</h1>
           </div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <span className={`px-3 py-1 rounded-full text-sm font-semibold ${STATUS_STYLE[claim.status] ?? "bg-gray-100 text-gray-700"}`}>
+          <div className="flex items-center gap-4 flex-wrap">
+            <span className={`px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-widest ${STATUS_STYLE[claim.status] ?? "bg-gray-100 text-gray-700"}`}>
               {claim.status}
             </span>
             {canAct && (
-              <>
+              <div className="flex gap-2">
                 <button onClick={handleApprove} disabled={actionLoading}
-                  className="px-4 py-1.5 rounded-md text-sm font-semibold bg-green-600 text-white hover:bg-green-700 disabled:opacity-50">
-                  Approve
+                  className="px-6 py-2.5 rounded-xl text-[12px] font-black bg-gray-900 text-white hover:bg-gray-700 disabled:opacity-50 transition-all shadow-lg shadow-gray-200">
+                  {actionLoading ? "PROCESSING..." : "APPROVE"}
                 </button>
                 <button onClick={handleDiscard} disabled={actionLoading}
-                  className="px-4 py-1.5 rounded-md text-sm font-semibold bg-red-100 text-red-700 hover:bg-red-200 disabled:opacity-50">
-                  Discard
+                  className="px-6 py-2.5 rounded-xl text-[12px] font-black bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 disabled:opacity-50 transition-all">
+                  DISCARD
                 </button>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Sertifikat + Preview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-4">
-            <SectionTitle>Informasi Klaim (Anti-Double Claim)</SectionTitle>
-            <InfoRow label="Nama Lomba" value={claim.nama_lomba} />
-            <div className="grid grid-cols-2 gap-4">
-              <InfoRow label="Tingkat"   value={claim.tingkat} />
-              <InfoRow label="Peringkat" value={claim.peringkat} />
-            </div>
-            <InfoRow label="Tanggal" value={claim.tanggal} />
-            <InfoRow label="Mahasiswa"   value={claim.nama_display} />
-            <InfoRow label="Email"       value={claim.mahasiswa_email} />
-            {claim.verified_by_nama && (
-              <div className="col-span-2 mt-1 rounded-lg bg-green-50 border border-green-200 px-4 py-3 flex items-center gap-3">
-                <svg className="w-4 h-4 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <div>
-                  <p className="text-xs font-semibold text-green-700">Diverifikasi oleh {claim.verified_by_nama}</p>
-                  <p className="text-xs text-green-500 mt-0.5">{claim.verified_at ?? "—"}</p>
-                </div>
               </div>
             )}
           </div>
+        </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <SectionTitle>Preview Sertifikat</SectionTitle>
-            <CertPreview url={fileUrl} filename={claim.sertifikat_filename} />
-            <a href={fileUrl} target="_blank" rel="noopener noreferrer"
-               className="mt-3 inline-block text-sm text-blue-600 hover:underline">
-              Buka di tab baru ↗
-            </a>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+          {/* Main Info Column */}
+          <div className="lg:col-span-5 space-y-10">
+            <div className="bg-white rounded-[32px] shadow-sm border border-gray-100 p-8 space-y-8">
+              <SectionTitle>Identitas Klaim Dasar</SectionTitle>
+              <div className="space-y-6">
+                <InfoRow label="Nama Lomba / Capaian" value={claim.nama_lomba} />
+                <div className="grid grid-cols-2 gap-6">
+                  <InfoRow label="Tingkat"   value={claim.tingkat} />
+                  <InfoRow label="Peringkat" value={claim.peringkat} />
+                </div>
+                <InfoRow label="Tanggal Sertifikat" value={claim.tanggal} />
+                <div className="pt-4 border-t border-gray-50">
+                  <InfoRow label="Mahasiswa Pengunggah"   value={claim.nama_display} />
+                  <p className="text-[12px] font-mono text-gray-400 mt-1">{claim.mahasiswa_email}</p>
+                </div>
+              </div>
+
+              {claim.verified_by_nama && (
+                <div className="rounded-2xl bg-green-50 border border-green-100 px-5 py-4 flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center shrink-0">
+                     <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                     </svg>
+                  </div>
+                  <div>
+                    <p className="text-[12px] font-black text-green-700 uppercase tracking-widest">Diverifikasi Sistem</p>
+                    <p className="text-[11px] text-green-600 font-bold mt-0.5">{claim.verified_by_nama} · {claim.verified_at ?? "—"}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-white rounded-[32px] shadow-sm border border-gray-100 p-8">
+              <SectionTitle>Preview Sertifikat Digital</SectionTitle>
+              <CertPreview url={fileUrl} filename={claim.sertifikat_filename} />
+              <a href={fileUrl} target="_blank" rel="noopener noreferrer"
+                 className="mt-6 inline-flex items-center gap-2 text-[12px] font-black text-gray-900 underline underline-offset-4 hover:text-blue-600 transition-colors uppercase tracking-widest">
+                BUKA DALAM TAB BARU
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
+            </div>
+          </div>
+
+          {/* Detailed Form Column */}
+          <div className="lg:col-span-7 space-y-10">
+             <PengajuanDetail p={pengajuan} onSaved={fetchAll} />
           </div>
         </div>
 
-        {/* Data pengajuan lengkap */}
-        <PengajuanDetail p={pengajuan} onSaved={fetchAll} />
-
-        {/* Klaim yang mirip */}
+        {/* Similar Claims / Alerts */}
         {claim.status === "perlu ditinjau" && miripClaim && (
-          <div className="bg-yellow-50 border border-yellow-300 rounded-xl p-6">
-            <h2 className="text-base font-semibold text-yellow-800 mb-4">
-              Terdeteksi Mirip Dengan Klaim #{miripClaim.id}
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-3 text-sm">
+          <div className="bg-orange-50/50 border border-orange-200 rounded-[32px] p-10 animate-pulse-slow shadow-xl shadow-orange-100/20">
+            <div className="flex items-center gap-3 mb-8">
+               <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center shrink-0">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+               </div>
+               <h2 className="text-[18px] font-black text-orange-900 tracking-tight">
+                Peringatan Sistem: Terdeteksi Kemiripan Sangat Tinggi
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+              <div className="bg-white/60 rounded-2xl p-6 space-y-4">
+                <p className="text-[11px] font-black text-orange-400 uppercase tracking-widest mb-4">Data Klaim Pembanding (#{miripClaim.id})</p>
                 <InfoRow label="Nama Lomba" value={miripClaim.nama_lomba} />
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-4">
                   <InfoRow label="Tingkat"   value={miripClaim.tingkat} />
                   <InfoRow label="Peringkat" value={miripClaim.peringkat} />
                 </div>
-                <InfoRow label="Tanggal"    value={miripClaim.tanggal} />
                 <InfoRow label="Mahasiswa"  value={miripClaim.nama_display} />
                 <Link href={`/operator/${miripClaim.id}`}
-                      className="inline-block text-sm text-blue-600 hover:underline mt-1">
-                  Lihat detail klaim #{miripClaim.id} ↗
+                      className="inline-flex items-center gap-2 text-[12px] font-black text-orange-700 underline underline-offset-4 hover:text-orange-900 mt-2 uppercase tracking-widest">
+                  Analisis Klaim Terkait
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
                 </Link>
               </div>
-              <div>
-                <p className="text-xs text-yellow-600 uppercase mb-2">Preview Sertifikat</p>
+              <div className="space-y-4">
+                <p className="text-[11px] font-black text-orange-400 uppercase tracking-widest mb-2">Visual Perbandingan</p>
                 <CertPreview
                   url={`http://127.0.0.1:8000/uploads/${miripClaim.sertifikat_filename}`}
                   filename={miripClaim.sertifikat_filename}
