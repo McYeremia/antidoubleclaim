@@ -220,6 +220,21 @@ def create_database():
     )
     """)
 
+    # ── Tabel PERIODE_KLAIM ───────────────────────────────────────────────────
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS PERIODE_KLAIM (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        nama            TEXT    NOT NULL,
+        semester        INTEGER NOT NULL,
+        tahun           INTEGER NOT NULL,
+        tanggal_mulai   TEXT    NOT NULL,
+        tanggal_selesai TEXT    NOT NULL,
+        status          TEXT    NOT NULL DEFAULT 'tutup',
+        dibuat_oleh     TEXT,
+        dibuat_at       TEXT    NOT NULL DEFAULT (DATETIME('now', 'localtime'))
+    )
+    """)
+
     # Seed akun superadmin default jika belum ada
     cursor.execute("SELECT id FROM USERS WHERE username = 'admin'")
     if not cursor.fetchone():
@@ -832,6 +847,86 @@ def get_stats_visualisasi() -> dict:
         "by_jenis":     to_list(jenis_count),
         "by_tahun":     to_list_sorted_key(tahun_count),
     }
+
+
+# ---------------------------------------------------------------------------
+# Periode Klaim
+# ---------------------------------------------------------------------------
+def get_periode_aktif():
+    """Kembalikan periode yang sedang aktif (status='aktif' dan hari ini dalam rentang tanggal)."""
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT * FROM PERIODE_KLAIM
+        WHERE status = 'aktif'
+          AND DATE('now', 'localtime') BETWEEN tanggal_mulai AND tanggal_selesai
+        ORDER BY id DESC
+        LIMIT 1
+    """)
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        return None
+    cols = [d[0] for d in cursor.description]
+    return dict(zip(cols, row))
+
+
+def get_all_periode():
+    """Kembalikan semua periode, terbaru di atas."""
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM PERIODE_KLAIM ORDER BY id DESC")
+    rows = cursor.fetchall()
+    cols = [d[0] for d in cursor.description]
+    conn.close()
+    return [dict(zip(cols, row)) for row in rows]
+
+
+def create_periode(data: dict) -> int:
+    """Buat periode baru dengan status 'tutup' (harus diaktifkan manual)."""
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO PERIODE_KLAIM (nama, semester, tahun, tanggal_mulai, tanggal_selesai, status, dibuat_oleh)
+        VALUES (?, ?, ?, ?, ?, 'tutup', ?)
+    """, (
+        data.get("nama"),
+        data.get("semester"),
+        data.get("tahun"),
+        data.get("tanggal_mulai"),
+        data.get("tanggal_selesai"),
+        data.get("dibuat_oleh"),
+    ))
+    periode_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return periode_id
+
+
+def update_periode_status(periode_id: int, status: str) -> bool:
+    """Buka ('aktif') atau tutup ('tutup') periode. Hanya 1 periode aktif sekaligus."""
+    if status not in ("aktif", "tutup"):
+        return False
+    conn = _get_conn()
+    if status == "aktif":
+        # Tutup semua periode lain terlebih dahulu
+        conn.execute("UPDATE PERIODE_KLAIM SET status = 'tutup' WHERE status = 'aktif'")
+    conn.execute("UPDATE PERIODE_KLAIM SET status = ? WHERE id = ?", (status, periode_id))
+    conn.commit()
+    conn.close()
+    return True
+
+
+def update_periode_data(periode_id: int, data: dict) -> bool:
+    """Edit nama, tanggal_mulai, tanggal_selesai periode."""
+    conn = _get_conn()
+    conn.execute(
+        "UPDATE PERIODE_KLAIM SET nama = ?, tanggal_mulai = ?, tanggal_selesai = ? WHERE id = ?",
+        (data.get("nama"), data.get("tanggal_mulai"), data.get("tanggal_selesai"), periode_id)
+    )
+    conn.commit()
+    conn.close()
+    return True
 
 
 def delete_operator(operator_id: int) -> bool:

@@ -1413,6 +1413,26 @@ export default function MahasiswaDashboard() {
   const [rewardOpenId,     setRewardOpenId]     = useState(null);
   const [showUserMenu,     setShowUserMenu]     = useState(false);
 
+  // ── Sinkronisasi menu dengan URL query param ──────────────────────────────
+  useEffect(() => {
+    const getMenuFromUrl = () =>
+      new URLSearchParams(window.location.search).get("menu") || "daftar";
+
+    setActiveMenu(getMenuFromUrl());
+
+    const handlePop = () => setActiveMenu(getMenuFromUrl());
+    window.addEventListener("popstate", handlePop);
+    return () => window.removeEventListener("popstate", handlePop);
+  }, []);
+
+  const navigateTo = (key) => {
+    setActiveMenu(key);
+    const url = key === "daftar"
+      ? window.location.pathname
+      : `${window.location.pathname}?menu=${key}`;
+    window.history.pushState({ menu: key }, "", url);
+  };
+
   if (status === "loading") {
     return <p className="text-center mt-20 text-gray-400">Memuat sesi...</p>;
   }
@@ -1456,7 +1476,7 @@ export default function MahasiswaDashboard() {
           {menus.map((m) => (
             <button
               key={m.key}
-              onClick={() => setActiveMenu(m.key)}
+              onClick={() => navigateTo(m.key)}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] text-left transition-colors
                 ${activeMenu === m.key
                   ? "text-gray-900 font-bold"
@@ -1529,7 +1549,7 @@ export default function MahasiswaDashboard() {
                   {/* Actions */}
                   <div className="p-1.5">
                     <button
-                      onClick={() => { setActiveMenu("profil"); setShowUserMenu(false); }}
+                      onClick={() => { navigateTo("profil"); setShowUserMenu(false); }}
                       className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors text-left"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1558,12 +1578,12 @@ export default function MahasiswaDashboard() {
         {/* Konten */}
         <main className="flex-1 px-10 py-10 overflow-y-auto">
           {activeMenu === "daftar"      && <DaftarKlaim key={claimsRefreshKey} session={session} search={search}
-                                              onOpenForm={(id) => { setRewardOpenId(id); setActiveMenu("reward"); }}
+                                              onOpenForm={(id) => { setRewardOpenId(id); navigateTo("reward"); }}
                                               onTambahKlaim={() => setShowTambah(true)} />}
           {activeMenu === "reward"      && <KonfirmasiReward session={session} initialClaimId={rewardOpenId} onClearInitial={() => setRewardOpenId(null)} />}
           {activeMenu === "visualisasi" && <VisualisasiData />}
           {activeMenu === "sk-rektor"   && <SKRektor />}
-          {activeMenu === "profil"      && <ProfilPanel session={session} onBack={() => setActiveMenu("daftar")} />}
+          {activeMenu === "profil"      && <ProfilPanel session={session} onBack={() => navigateTo("daftar")} />}
         </main>
       </div>
 

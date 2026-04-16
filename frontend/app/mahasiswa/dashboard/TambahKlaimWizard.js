@@ -1068,18 +1068,23 @@ const INITIAL_DATA = {
 };
 
 export default function TambahKlaimWizard({ session, onClose, onSuccess }) {
-  const [step,       setStep]       = useState(1);
-  const [data,       setData]       = useState({ ...INITIAL_DATA, nama_lengkap: session.user.name ?? "", email: session.user.email ?? "" });
-  const [files,      setFiles]      = useState({});
-  const [nimInfo,    setNimInfo]    = useState(null);
-  const [fieldErrors, setFieldErrors] = useState({});
-  const [loading,    setLoading]    = useState(false);
+  const [step,         setStep]         = useState(1);
+  const [data,         setData]         = useState({ ...INITIAL_DATA, nama_lengkap: session.user.name ?? "", email: session.user.email ?? "" });
+  const [files,        setFiles]        = useState({});
+  const [nimInfo,      setNimInfo]      = useState(null);
+  const [fieldErrors,  setFieldErrors]  = useState({});
+  const [loading,      setLoading]      = useState(false);
+  const [periodeCheck, setPeriodeCheck] = useState("loading"); // "loading" | "aktif" | "tutup"
 
   useEffect(() => {
-    fetch(`http://127.0.0.1:8000/nim-info?email=${encodeURIComponent(session.user.email)}`)
-      .then((r) => r.json())
-      .then(setNimInfo)
-      .catch(() => {});
+    Promise.all([
+      fetch(`http://127.0.0.1:8000/nim-info?email=${encodeURIComponent(session.user.email)}`),
+      fetch(`http://127.0.0.1:8000/periode/aktif`),
+    ]).then(async ([nimRes, periodeRes]) => {
+      nimRes.ok && setNimInfo(await nimRes.json());
+      const p = periodeRes.ok ? await periodeRes.json() : { aktif: false };
+      setPeriodeCheck(p.aktif ? "aktif" : "tutup");
+    }).catch(() => setPeriodeCheck("tutup"));
   }, []);
 
   const onChange = (key, value) => {
@@ -1212,6 +1217,36 @@ export default function TambahKlaimWizard({ session, onClose, onSuccess }) {
   };
 
   const firstError = Object.values(fieldErrors)[0];
+
+  // ── Guard: periode belum dimuat atau ditutup ──────────────────────────────
+  if (periodeCheck === "loading") return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.45)", padding: "16px" }}>
+      <div style={{ background: "#fff", borderRadius: "14px", width: "100%", maxWidth: "480px", padding: "48px 32px", textAlign: "center", boxShadow: "0 24px 48px rgba(0,0,0,0.18)" }}>
+        <p style={{ fontSize: "13px", color: "#9ca3af" }}>Memeriksa periode klaim...</p>
+      </div>
+    </div>
+  );
+
+  if (periodeCheck === "tutup") return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.45)", padding: "16px" }}>
+      <div style={{ background: "#fff", borderRadius: "14px", width: "100%", maxWidth: "440px", padding: "48px 32px", textAlign: "center", boxShadow: "0 24px 48px rgba(0,0,0,0.18)", fontFamily: "'Plus Jakarta Sans', var(--font-poppins, sans-serif)" }}>
+        <div style={{ width: "56px", height: "56px", background: "#f3f4f6", borderRadius: "16px", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+          <svg width="26" height="26" fill="none" stroke="#9ca3af" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75}
+              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+        </div>
+        <h2 style={{ fontSize: "17px", fontWeight: 700, color: "#111827", marginBottom: "8px" }}>Periode Klaim Ditutup</h2>
+        <p style={{ fontSize: "13px", color: "#6b7280", lineHeight: 1.6, marginBottom: "28px" }}>
+          Saat ini tidak ada periode klaim yang sedang dibuka.<br />
+          Silakan hubungi pengelola atau coba lagi nanti.
+        </p>
+        <button onClick={onClose} style={{ padding: "10px 24px", background: "#111827", color: "#fff", border: "none", borderRadius: "10px", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
+          Tutup
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.45)", padding: "16px" }}>
