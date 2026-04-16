@@ -195,6 +195,7 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
       fetch(`${API}/profil?email=${encodeURIComponent(session.user.email)}`),
     ]).then(async ([claimRes, rewardRes, pengajuanRes, profilRes]) => {
       if (claimRes.status === 404) { setNotFound(true); return; }
+
       const claimData  = await claimRes.json();
       const profilData = profilRes.ok ? await profilRes.json() : {};
       setClaim(claimData);
@@ -387,6 +388,7 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
       <button onClick={onBack} className="mt-2 text-sm text-blue-600 hover:underline">← Kembali</button>
     </div>
   );
+
 
   // ── Sukses ────────────────────────────────────────────────────────────────
   if (submitted) return (

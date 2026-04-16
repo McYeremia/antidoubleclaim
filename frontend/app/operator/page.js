@@ -21,6 +21,11 @@ const IconUsers = () => (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
   </svg>
 );
+const IconCalendar = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+  </svg>
+);
 
 // ── Badge status claim ────────────────────────────────────────────────────────
 const STATUS_BADGE = {
@@ -756,6 +761,243 @@ function KelolаOperator({ operatorId }) {
   );
 }
 
+// ── Pengaturan Periode ────────────────────────────────────────────────────────
+function PengaturanPeriode({ operatorNama }) {
+  const [periodeList,    setPeriodeList]    = useState([]);
+  const [loading,        setLoading]        = useState(true);
+  const [showForm,       setShowForm]       = useState(false);
+  const [editingPeriode, setEditingPeriode] = useState(null); // null = mode buat, object = mode edit
+  const [saving,         setSaving]         = useState(false);
+  const [form, setForm] = useState({
+    nama: "", tanggal_mulai: "", tanggal_selesai: "",
+  });
+
+  const openCreate = () => {
+    setEditingPeriode(null);
+    setForm({ nama: "", tanggal_mulai: "", tanggal_selesai: "" });
+    setShowForm(true);
+  };
+
+  const openEdit = (p) => {
+    setEditingPeriode(p);
+    setForm({ nama: p.nama, tanggal_mulai: p.tanggal_mulai, tanggal_selesai: p.tanggal_selesai });
+    setShowForm(true);
+  };
+
+  const closeForm = () => {
+    setShowForm(false);
+    setEditingPeriode(null);
+    setForm({ nama: "", tanggal_mulai: "", tanggal_selesai: "" });
+  };
+
+  const fetchPeriode = async () => {
+    setLoading(true);
+    try {
+      const res  = await fetch(`${API}/periode`);
+      const data = await res.json();
+      setPeriodeList(data);
+    } catch { setPeriodeList([]); }
+    finally  { setLoading(false); }
+  };
+
+  useEffect(() => { fetchPeriode(); }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.nama.trim() || !form.tanggal_mulai || !form.tanggal_selesai) {
+      alert("Nama, tanggal mulai, dan tanggal selesai wajib diisi.");
+      return;
+    }
+    setSaving(true);
+    try {
+      if (editingPeriode) {
+        await fetch(`${API}/periode/${editingPeriode.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        });
+      } else {
+        await fetch(`${API}/periode`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...form, dibuat_oleh: operatorNama }),
+        });
+      }
+      closeForm();
+      fetchPeriode();
+    } catch { alert(editingPeriode ? "Gagal menyimpan perubahan." : "Gagal membuat periode."); }
+    finally  { setSaving(false); }
+  };
+
+  const handleToggle = async (p) => {
+    const newStatus = p.status === "aktif" ? "tutup" : "aktif";
+    const label     = newStatus === "aktif" ? "membuka" : "menutup";
+    if (!confirm(`Yakin ingin ${label} periode "${p.nama}"?`)) return;
+    await fetch(`${API}/periode/${p.id}?status=${newStatus}`, { method: "PUT" });
+    fetchPeriode();
+  };
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  const getPeriodeState = (p) => {
+    if (p.status !== "aktif") return "tutup";
+    if (today < p.tanggal_mulai) return "belum_mulai";
+    if (today > p.tanggal_selesai) return "kadaluarsa";
+    return "aktif";
+  };
+
+  const STATE_STYLE = {
+    aktif:        { badge: "bg-green-100 text-green-700",  label: "Aktif" },
+    tutup:        { badge: "bg-gray-100 text-gray-500",    label: "Tutup" },
+    belum_mulai:  { badge: "bg-blue-100 text-blue-600",    label: "Belum Dimulai" },
+    kadaluarsa:   { badge: "bg-red-100 text-red-600",      label: "Kadaluarsa" },
+  };
+
+  return (
+    <div className="max-w-4xl">
+      {/* Header */}
+      <div className="flex items-start justify-between mb-10">
+        <div>
+          <h1 className="text-4xl font-black text-gray-900 leading-none tracking-tight">Pengaturan Periode</h1>
+          <p className="text-gray-400 mt-2 text-[14px]">Kelola periode klaim yang dapat diakses mahasiswa.</p>
+        </div>
+        <button
+          onClick={openCreate}
+          className="flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white text-[13px] font-semibold rounded-xl hover:bg-gray-700 transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Buat Periode Baru
+        </button>
+      </div>
+
+      {/* Form buat periode */}
+      {showForm && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6">
+          <h2 className="text-[13px] font-bold text-gray-700 mb-5 uppercase tracking-widest">
+            {editingPeriode ? `Edit Periode — ${editingPeriode.nama}` : "Periode Baru"}
+          </h2>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">
+                  Nama Periode <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text" value={form.nama}
+                  onChange={e => setForm(f => ({ ...f, nama: e.target.value }))}
+                  placeholder="Contoh: Periode 1 2025"
+                  className="block w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">
+                  Tanggal Mulai <span className="text-red-400">*</span>
+                </label>
+                <input type="date" value={form.tanggal_mulai}
+                  onChange={e => setForm(f => ({ ...f, tanggal_mulai: e.target.value }))}
+                  className="block w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">
+                  Tanggal Selesai <span className="text-red-400">*</span>
+                </label>
+                <input type="date" value={form.tanggal_selesai}
+                  onChange={e => setForm(f => ({ ...f, tanggal_selesai: e.target.value }))}
+                  className="block w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-3 pt-1">
+              <button type="submit" disabled={saving}
+                className="px-5 py-2.5 bg-gray-900 text-white text-[13px] font-semibold rounded-xl hover:bg-gray-700 disabled:opacity-50 transition-colors">
+                {saving ? "Menyimpan..." : (editingPeriode ? "Simpan Perubahan" : "Simpan Periode")}
+              </button>
+              <button type="button" onClick={closeForm}
+                className="px-5 py-2.5 text-[13px] font-semibold text-gray-500 hover:text-gray-900 transition-colors">
+                Batal
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Tabel periode */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        {loading ? (
+          <div className="flex items-center justify-center gap-3 py-16 text-gray-400">
+            <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+            </svg>
+            <span className="text-sm">Memuat data...</span>
+          </div>
+        ) : periodeList.length === 0 ? (
+          <div className="text-center py-16">
+            <p className="text-[13px] text-gray-400">Belum ada periode yang dibuat.</p>
+            <p className="text-[12px] text-gray-300 mt-1">Klik "Buat Periode Baru" untuk memulai.</p>
+          </div>
+        ) : (
+          <table className="w-full text-[13px]">
+            <thead>
+              <tr className="border-b border-gray-50 text-left">
+                <th className="px-6 py-4 text-[10px] font-black text-gray-300 uppercase tracking-widest">Nama Periode</th>
+                <th className="px-4 py-4 text-[10px] font-black text-gray-300 uppercase tracking-widest">Rentang Tanggal</th>
+                <th className="px-4 py-4 text-[10px] font-black text-gray-300 uppercase tracking-widest">Status</th>
+                <th className="px-6 py-4 text-[10px] font-black text-gray-300 uppercase tracking-widest">Aksi</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {periodeList.map(p => {
+                const state = getPeriodeState(p);
+                const style = STATE_STYLE[state];
+                return (
+                  <tr key={p.id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-6 py-4">
+                      <p className="font-semibold text-gray-900">{p.nama}</p>
+                      <p className="text-[11px] text-gray-400 mt-0.5">Dibuat oleh {p.dibuat_oleh || "—"}</p>
+                    </td>
+                    <td className="px-4 py-4 text-gray-600">
+                      {p.tanggal_mulai} <span className="text-gray-300 mx-1">→</span> {p.tanggal_selesai}
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className={`inline-block px-2.5 py-1 rounded-lg text-[11px] font-bold ${style.badge}`}>
+                        {style.label}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => openEdit(p)}
+                          className="px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleToggle(p)}
+                          className={`px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-colors ${
+                            p.status === "aktif"
+                              ? "bg-red-50 text-red-600 hover:bg-red-100"
+                              : "bg-green-50 text-green-700 hover:bg-green-100"
+                          }`}
+                        >
+                          {p.status === "aktif" ? "Tutup" : "Aktifkan"}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Halaman Utama ─────────────────────────────────────────────────────────────
 export default function OperatorDashboard() {
   const router = useRouter();
@@ -773,7 +1015,24 @@ export default function OperatorDashboard() {
     setOperatorNama(sessionStorage.getItem("operator_nama") || "Operator");
     setOperatorRole(sessionStorage.getItem("operator_role") || "operator");
     setOperatorId(sessionStorage.getItem("operator_id"));
+
+    // Sinkronisasi menu dengan URL query param
+    const getMenuFromUrl = () =>
+      new URLSearchParams(window.location.search).get("menu") || "claim";
+    setActiveMenu(getMenuFromUrl());
+
+    const handlePop = () => setActiveMenu(getMenuFromUrl());
+    window.addEventListener("popstate", handlePop);
+    return () => window.removeEventListener("popstate", handlePop);
   }, [router]);
+
+  const navigateTo = (key) => {
+    setActiveMenu(key);
+    const url = key === "claim"
+      ? window.location.pathname
+      : `${window.location.pathname}?menu=${key}`;
+    window.history.pushState({ menu: key }, "", url);
+  };
 
   const handleLogout = () => {
     ["role","operator_id","operator_nama","operator_username","operator_role"].forEach(k =>
@@ -787,7 +1046,10 @@ export default function OperatorDashboard() {
   const menus = [
     { key: "claim",  label: "Pengajuan Claim",  icon: <IconClaim />  },
     { key: "reward", label: "Pengajuan Reward",  icon: <IconReward /> },
-    ...(isSuperAdmin ? [{ key: "operators", label: "Kelola Operator", icon: <IconUsers /> }] : []),
+    ...(isSuperAdmin ? [
+      { key: "operators", label: "Kelola Operator",    icon: <IconUsers />    },
+      { key: "periode",   label: "Pengaturan Periode", icon: <IconCalendar /> },
+    ] : []),
   ];
 
   return (
@@ -810,7 +1072,7 @@ export default function OperatorDashboard() {
           {menus.map((m) => (
             <button
               key={m.key}
-              onClick={() => setActiveMenu(m.key)}
+              onClick={() => navigateTo(m.key)}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] text-left transition-colors
                 ${activeMenu === m.key
                   ? "text-gray-900 font-bold bg-gray-50 shadow-sm"
@@ -884,6 +1146,7 @@ export default function OperatorDashboard() {
           {activeMenu === "claim"     && <PengajuanClaim  router={router} />}
           {activeMenu === "reward"    && <PengajuanReward />}
           {activeMenu === "operators" && isSuperAdmin && <KelolаOperator operatorId={operatorId} />}
+          {activeMenu === "periode"   && isSuperAdmin && <PengaturanPeriode operatorNama={operatorNama} />}
         </main>
       </div>
 

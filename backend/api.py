@@ -20,6 +20,7 @@ from backend.database import (
     create_operator, delete_operator,
     get_stats_visualisasi,
     get_profil_mahasiswa, upsert_profil_mahasiswa,
+    get_periode_aktif, get_all_periode, create_periode, update_periode_status, update_periode_data,
 )
 from backend.nim_parser import parse_nim
 
@@ -66,6 +67,48 @@ async def get_profil(email: str):
 @app.put("/profil")
 async def update_profil(email: str, body: ProfilUpdate):
     upsert_profil_mahasiswa(email, body.model_dump())
+    return {"success": True}
+
+# ── Periode Klaim ─────────────────────────────────────────────────────────────
+class PeriodeCreate(BaseModel):
+    nama:            str
+    tanggal_mulai:   str
+    tanggal_selesai: str
+    dibuat_oleh:     Optional[str] = None
+    semester:        Optional[int] = 0
+    tahun:           Optional[int] = 0
+
+@app.get("/periode/aktif")
+async def periode_aktif():
+    result = get_periode_aktif()
+    if not result:
+        return {"aktif": False, "periode": None}
+    return {"aktif": True, "periode": result}
+
+@app.get("/periode")
+async def list_periode():
+    return get_all_periode()
+
+@app.post("/periode")
+async def buat_periode(body: PeriodeCreate):
+    periode_id = create_periode(body.model_dump())
+    return {"success": True, "id": periode_id}
+
+@app.put("/periode/{periode_id}")
+async def ubah_status_periode(periode_id: int, status: str):
+    ok = update_periode_status(periode_id, status)
+    if not ok:
+        raise HTTPException(status_code=400, detail="Status tidak valid. Gunakan 'aktif' atau 'tutup'.")
+    return {"success": True}
+
+class PeriodeEdit(BaseModel):
+    nama:            str
+    tanggal_mulai:   str
+    tanggal_selesai: str
+
+@app.patch("/periode/{periode_id}")
+async def edit_periode(periode_id: int, body: PeriodeEdit):
+    update_periode_data(periode_id, body.model_dump())
     return {"success": True}
 
 # ── NIM Info ─────────────────────────────────────────────────────────────────

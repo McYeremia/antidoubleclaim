@@ -33,7 +33,14 @@
       "Bash(python src/ui-ux-pro-max/scripts/search.py \"macos desktop app dashboard productivity clean vibrancy\" --design-system -p \"Antidoubleclaim Dashboard\" -f markdown)",
       "Bash(python src/ui-ux-pro-max/scripts/search.py \"glassmorphism frosted glass sidebar macos\" --domain style -n 3)",
       "Bash(python src/ui-ux-pro-max/scripts/search.py \"macos system ui clean minimal\" --domain prompt -n 2)",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(sqlite3 claims.db \".schema USERS\")",
+      "Bash(sqlite3 claims.db \"SELECT * FROM USERS LIMIT 10;\")",
+      "Bash(python3 -c ' *)",
+      "Bash(python -c ' *)",
+      "Bash(python -m uvicorn backend.api:app --host 127.0.0.1 --port 8000 --reload)",
+      "Bash(curl -s \"http://127.0.0.1:8000/periode/aktif\")",
+      "Bash(curl -s \"http://127.0.0.1:8000/periode\")"
     ]
   }
 }
