@@ -6,7 +6,8 @@ from backend.text_similarity import token_sort_ratio
 import imagehash
 import json
 
-PHASH_THRESHOLD = 10  # Maximum Hamming distance agar dianggap mirip secara visual
+PHASH_THRESHOLD  = 10   # Maximum Hamming distance agar dianggap mirip secara visual
+FUZZY_THRESHOLD  = 85   # Minimum skor fuzzy nama lomba (0–100) agar dianggap mirip
 
 # ---------------------------------------------------------------------------
 # Helper koneksi
@@ -141,12 +142,24 @@ def create_database():
     for migration in [
         "ALTER TABLE PENGAJUAN ADD COLUMN estimasi_reward INTEGER",
         "ALTER TABLE USERS ADD COLUMN role TEXT NOT NULL DEFAULT 'operator'",
+        "ALTER TABLE CLAIMS ADD COLUMN flag_alasan TEXT",
     ]:
         try:
             cursor.execute(migration)
             conn.commit()
         except Exception:
             pass  # kolom sudah ada
+
+    # Isi flag_alasan untuk klaim lama yang di-flag sebelum fitur ini ada
+    # (klaim lama hanya terdeteksi via pHash, bukan fuzzy)
+    try:
+        cursor.execute("""
+            UPDATE CLAIMS SET flag_alasan = 'gambar'
+            WHERE mirip_dengan_id IS NOT NULL AND flag_alasan IS NULL
+        """)
+        conn.commit()
+    except Exception:
+        pass
 
     # ── Tabel PENGAJUAN_ANGGOTA ───────────────────────────────────────────────
     cursor.execute("""
@@ -234,14 +247,24 @@ def insert_claim(nama_lomba, tingkat, tanggal, peringkat, sertifikat_path,
     for row in rows:
         old_id, old_nama, old_peringkat, old_phash_str = row
 
-        sim_nama = token_sort_ratio(nama_lomba, old_nama)
-        print(f"[Tahap 1] vs ID {old_id}: similarity nama={sim_nama}%")
+        # Tahap 1 — Fuzzy nama lomba
+        sim_nama   = token_sort_ratio(nama_lomba, old_nama)
+        nama_mirip = sim_nama >= FUZZY_THRESHOLD
+        print(f"[Tahap 1] vs ID {old_id}: similarity nama={sim_nama}% (threshold={FUZZY_THRESHOLD}) → {'MIRIP' if nama_mirip else 'aman'}")
 
-        old_hash = imagehash.hex_to_hash(old_phash_str)
-        distance = int(hamming_distance(new_hash, old_hash))
-        print(f"[Tahap 2] vs ID {old_id}: Hamming distance={distance}")
+        # Tahap 2 — pHash gambar sertifikat
+        old_hash   = imagehash.hex_to_hash(old_phash_str)
+        distance   = int(hamming_distance(new_hash, old_hash))
+        phash_mirip = distance <= PHASH_THRESHOLD
+        print(f"[Tahap 2] vs ID {old_id}: Hamming distance={distance} (threshold={PHASH_THRESHOLD}) → {'MIRIP' if phash_mirip else 'aman'}")
 
-        if distance <= PHASH_THRESHOLD:
+        # Tahap 3 — Jika salah satu atau keduanya mirip, cek peringkat
+        if phash_mirip or nama_mirip:
+            alasan = []
+            if phash_mirip: alasan.append("gambar")
+            if nama_mirip:  alasan.append("nama lomba")
+            print(f"[Tahap 3] vs ID {old_id}: kemiripan terdeteksi ({', '.join(alasan)}) — cek peringkat...")
+
             if peringkat == old_peringkat:
                 flagged         = True
                 mirip_dengan_id = old_id
@@ -249,22 +272,25 @@ def insert_claim(nama_lomba, tingkat, tanggal, peringkat, sertifikat_path,
                     "duplikat_dengan_id": old_id,
                     "similarity_nama":    sim_nama,
                     "distance_phash":     distance,
+                    "flag_alasan":        ", ".join(alasan),
                 }
-                print(f"[FLAGGED] Mirip dengan ID {old_id}")
+                print(f"[FLAGGED] Mirip dengan ID {old_id} — alasan: {', '.join(alasan)}, peringkat sama ({peringkat})")
                 break
             else:
-                print(f"[Info] Mirip ID {old_id} tapi peringkat beda — tidak di-flag")
+                print(f"[Info] vs ID {old_id}: kemiripan terdeteksi tapi peringkat berbeda ({peringkat} vs {old_peringkat}) — tidak di-flag")
 
     status = "perlu ditinjau" if flagged else "belum dicek"
+
+    flag_alasan = detail.get("flag_alasan") if flagged else None
 
     cursor.execute("""
         INSERT INTO CLAIMS
             (nama_lomba, tingkat, tanggal, peringkat, sertifikat_path,
-             phash, status, mahasiswa_email, nama_display, mirip_dengan_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             phash, status, mahasiswa_email, nama_display, mirip_dengan_id, flag_alasan)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         nama_lomba, tingkat, tanggal, peringkat, sertifikat_path,
-        str(new_hash), status, mahasiswa_email, nama_display, mirip_dengan_id,
+        str(new_hash), status, mahasiswa_email, nama_display, mirip_dengan_id, flag_alasan,
     ))
 
     claim_id = cursor.lastrowid
@@ -324,6 +350,7 @@ def _row_to_dict(row):
         "verified_by":         row[10],
         "verified_at":         row[11],
         "verified_by_nama":    row[12] if len(row) > 12 else None,
+        "flag_alasan":         row[13] if len(row) > 13 else None,
     }
 
 # ---------------------------------------------------------------------------
@@ -336,7 +363,7 @@ def get_all_claims():
         SELECT c.id, c.nama_lomba, c.tingkat, c.tanggal, c.peringkat,
                c.sertifikat_path, c.status, c.mahasiswa_email, c.nama_display,
                c.mirip_dengan_id, c.verified_by, c.verified_at,
-               u.nama AS verified_by_nama
+               u.nama AS verified_by_nama, c.flag_alasan
         FROM CLAIMS c
         LEFT JOIN USERS u ON u.id = c.verified_by
         ORDER BY c.id DESC
@@ -464,7 +491,7 @@ def get_claims_by_email(email):
         SELECT c.id, c.nama_lomba, c.tingkat, c.tanggal, c.peringkat,
                c.sertifikat_path, c.status, c.mahasiswa_email, c.nama_display,
                c.mirip_dengan_id, c.verified_by, c.verified_at,
-               u.nama AS verified_by_nama
+               u.nama AS verified_by_nama, c.flag_alasan
         FROM CLAIMS c
         LEFT JOIN USERS u ON u.id = c.verified_by
         WHERE c.mahasiswa_email = ? ORDER BY c.id DESC
@@ -480,7 +507,7 @@ def get_claim_by_id(claim_id):
         SELECT c.id, c.nama_lomba, c.tingkat, c.tanggal, c.peringkat,
                c.sertifikat_path, c.status, c.mahasiswa_email, c.nama_display,
                c.mirip_dengan_id, c.verified_by, c.verified_at,
-               u.nama AS verified_by_nama
+               u.nama AS verified_by_nama, c.flag_alasan
         FROM CLAIMS c
         LEFT JOIN USERS u ON u.id = c.verified_by
         WHERE c.id = ?

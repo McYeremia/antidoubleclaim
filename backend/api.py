@@ -117,6 +117,7 @@ async def upload_certificate(
             "duplikat_dengan_id": result.get("duplikat_dengan_id"),
             "similarity_nama":    result.get("similarity_nama"),
             "distance_phash":     result.get("distance_phash"),
+            "flag_alasan":        result.get("flag_alasan"),
             "pesan":              result.get("pesan"),
         }
 
