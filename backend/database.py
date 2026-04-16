@@ -209,6 +209,13 @@ def create_database():
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_reward_claim  ON REWARD_KONFIRMASI (claim_id)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_reward_status ON REWARD_KONFIRMASI (reward_status)")
 
+    # Migrasi REWARD_KONFIRMASI: tambah periode_id (FK ke PERIODE_KLAIM) jika belum ada
+    try:
+        cursor.execute("ALTER TABLE REWARD_KONFIRMASI ADD COLUMN periode_id INTEGER")
+        conn.commit()
+    except Exception:
+        pass  # kolom sudah ada
+
     # ── Tabel MAHASISWA_PROFIL ────────────────────────────────────────────────
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS MAHASISWA_PROFIL (
@@ -550,16 +557,17 @@ def insert_reward_konfirmasi(data: dict) -> int:
     cursor = conn.cursor()
     cursor.execute("""
         INSERT INTO REWARD_KONFIRMASI (
-            claim_id, mahasiswa_email, tahun_klaim, periode, nomor_urut_lampiran,
-            kategori_lomba, kompetisi_puspresnas, judul_lomba, tahun_kegiatan,
-            nama_ketua, nim, nomor_wa, nama_pemilik_rekening, bank, nomor_rekening,
-            foto_buku_tabungan_path, foto_ktm_path, foto_ktp_path,
+            claim_id, mahasiswa_email, tahun_klaim, periode, periode_id,
+            nomor_urut_lampiran, kategori_lomba, kompetisi_puspresnas, judul_lomba,
+            tahun_kegiatan, nama_ketua, nim, nomor_wa, nama_pemilik_rekening, bank,
+            nomor_rekening, foto_buku_tabungan_path, foto_ktm_path, foto_ktp_path,
             pakta_integritas_path, laporan_akhir_path, karya_publikasi_path,
             bersedia, data_benar
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     """, (
         data.get("claim_id"),            data.get("mahasiswa_email"),
         data.get("tahun_klaim"),         data.get("periode"),
+        data.get("periode_id"),
         data.get("nomor_urut_lampiran"), data.get("kategori_lomba"),
         data.get("kompetisi_puspresnas"),data.get("judul_lomba"),
         data.get("tahun_kegiatan"),      data.get("nama_ketua"),
@@ -580,8 +588,9 @@ def insert_reward_konfirmasi(data: dict) -> int:
 
 def update_reward_konfirmasi(reward_id: int, data: dict):
     """Update data form reward + reset status ke 'menunggu' untuk pengiriman ulang."""
+    # periode dan periode_id TIDAK diupdate — dicatat sekali saat pertama submit, immutable
     TEXT_FIELDS = [
-        "tahun_klaim", "periode", "nomor_urut_lampiran", "kategori_lomba",
+        "tahun_klaim", "nomor_urut_lampiran", "kategori_lomba",
         "kompetisi_puspresnas", "judul_lomba", "tahun_kegiatan",
         "nama_ketua", "nomor_wa", "nama_pemilik_rekening", "bank", "nomor_rekening",
     ]
@@ -852,6 +861,35 @@ def get_stats_visualisasi() -> dict:
 # ---------------------------------------------------------------------------
 # Periode Klaim
 # ---------------------------------------------------------------------------
+def get_periode_terkini():
+    """
+    Kembalikan periode berdasarkan rentang tanggal (tidak peduli status aktif/tutup).
+    Prioritas: periode yang rentang tanggalnya mencakup hari ini.
+    Fallback: periode terakhir yang sudah lewat (paling baru).
+    """
+    conn = _get_conn()
+    cursor = conn.cursor()
+    # Periode yang tanggalnya mencakup hari ini (bisa aktif atau tutup)
+    cursor.execute("""
+        SELECT * FROM PERIODE_KLAIM
+        WHERE DATE('now', 'localtime') BETWEEN tanggal_mulai AND tanggal_selesai
+        ORDER BY id DESC
+        LIMIT 1
+    """)
+    row = cursor.fetchone()
+    if not row:
+        # Fallback: periode terakhir yang sudah berakhir
+        cursor.execute("""
+            SELECT * FROM PERIODE_KLAIM
+            ORDER BY tanggal_selesai DESC
+            LIMIT 1
+        """)
+        row = cursor.fetchone()
+    cols = [d[0] for d in cursor.description] if row else []
+    conn.close()
+    return dict(zip(cols, row)) if row else None
+
+
 def get_periode_aktif():
     """Kembalikan periode yang sedang aktif (status='aktif' dan hari ini dalam rentang tanggal)."""
     conn = _get_conn()
@@ -927,6 +965,39 @@ def update_periode_data(periode_id: int, data: dict) -> bool:
     conn.commit()
     conn.close()
     return True
+
+
+def delete_periode(periode_id: int) -> bool:
+    """Hapus periode. Tidak bisa hapus periode yang sedang aktif."""
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute("SELECT status FROM PERIODE_KLAIM WHERE id = ?", (periode_id,))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return False
+    if row[0] == "aktif":
+        conn.close()
+        return False  # tidak boleh hapus periode yang sedang aktif
+    conn.execute("DELETE FROM PERIODE_KLAIM WHERE id = ?", (periode_id,))
+    conn.commit()
+    conn.close()
+    return True
+
+
+def reset_semua_data() -> None:
+    """Hapus semua data kecuali tabel USERS."""
+    conn = _get_conn()
+    # Urutan sesuai FK: child dulu baru parent
+    conn.execute("DELETE FROM REWARD_KONFIRMASI")
+    conn.execute("DELETE FROM PENGAJUAN_ANGGOTA")
+    conn.execute("DELETE FROM PENGAJUAN")
+    conn.execute("DELETE FROM CLAIMS")
+    conn.execute("DELETE FROM MAHASISWA_PROFIL")
+    conn.execute("DELETE FROM PERIODE_KLAIM")
+    conn.execute("DELETE FROM OTP_SESSIONS")
+    conn.commit()
+    conn.close()
 
 
 def delete_operator(operator_id: int) -> bool:

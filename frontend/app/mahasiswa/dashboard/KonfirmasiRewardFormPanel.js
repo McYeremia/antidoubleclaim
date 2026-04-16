@@ -148,6 +148,7 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
   const [submitting,     setSubmitting]     = useState(false);
   const [submitted,      setSubmitted]      = useState(false);
   const [errors,         setErrors]         = useState({});
+  const [periodeAktif,   setPeriodeAktif]   = useState(null);
   // Kumpulan field yang di-prefill dari pengajuan (tidak boleh diubah)
   const [prefilledFields, setPrefilledFields] = useState(new Set());
 
@@ -156,6 +157,7 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
   const [form, setForm] = useState({
     tahun_klaim:           String(TAHUN_INI),
     periode:               "",
+    periode_id:            "",
     nomor_urut_lampiran:   "",
     kategori_lomba:        "",
     kompetisi_puspresnas:  "",
@@ -193,28 +195,45 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
       fetch(`${API}/reward-konfirmasi/${claimId}`),
       fetch(`${API}/pengajuan/by-claim/${claimId}`),
       fetch(`${API}/profil?email=${encodeURIComponent(session.user.email)}`),
-    ]).then(async ([claimRes, rewardRes, pengajuanRes, profilRes]) => {
+      fetch(`${API}/periode/terkini`),
+    ]).then(async ([claimRes, rewardRes, pengajuanRes, profilRes, periodeRes]) => {
       if (claimRes.status === 404) { setNotFound(true); return; }
 
-      const claimData  = await claimRes.json();
-      const profilData = profilRes.ok ? await profilRes.json() : {};
+      // Parse semua respons di awal (Response hanya bisa dibaca sekali)
+      const claimData    = await claimRes.json();
+      const profilData   = profilRes.ok    ? await profilRes.json()    : {};
+      const periodeData  = periodeRes.ok   ? await periodeRes.json()   : { ditemukan: false };
+      const rewardData   = rewardRes.ok    ? await rewardRes.json()    : null;
+      const pengajuanData = pengajuanRes.ok ? await pengajuanRes.json() : null;
+
       setClaim(claimData);
+      if (pengajuanData) setPengajuan(pengajuanData);
+
+      // ── Tentukan periode yang ditampilkan ─────────────────────────────
+      // Jika reward sudah pernah tersimpan: gunakan periode dari DB (immutable)
+      // Jika belum (submission baru): gunakan periode terkini berdasarkan tanggal
+      if (rewardData && rewardData.periode) {
+        // Tampilkan periode yang sudah tercatat di DB — tidak berubah walau admin
+        // membuka/menutup periode lain
+        setPeriodeAktif({
+          nama:            rewardData.periode,
+          id:              rewardData.periode_id,
+          tanggal_mulai:   null,   // tidak perlu ditampilkan untuk data tersimpan
+          tanggal_selesai: null,
+          status:          "tersimpan",
+        });
+      } else if (periodeData.ditemukan && periodeData.periode) {
+        setPeriodeAktif(periodeData.periode);
+      }
 
       // ── Pre-fill dari data pengajuan ──────────────────────────────────
       const filled = new Set();
-      if (pengajuanRes.ok) {
-        const pData = await pengajuanRes.json();
-        setPengajuan(pData);
+      if (pengajuanData) {
+        const pData = pengajuanData;
         const updates = {};
 
-        if (pData.nama_ketua) {
-          updates.nama_ketua = pData.nama_ketua;
-          filled.add("nama_ketua");
-        }
-        if (pData.nomor_wa) {
-          updates.nomor_wa = pData.nomor_wa;
-          filled.add("nomor_wa");
-        }
+        if (pData.nama_ketua) { updates.nama_ketua = pData.nama_ketua; filled.add("nama_ketua"); }
+        if (pData.nomor_wa)   { updates.nomor_wa   = pData.nomor_wa;   filled.add("nomor_wa");   }
         if (pData.nama_kegiatan) {
           updates.judul_lomba = pData.nama_kegiatan;
           filled.add("judul_lomba");
@@ -224,10 +243,12 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
           filled.add("tahun_kegiatan");
         }
 
-        // Prefill periode dari bulan saat ini
-        // Feb–Jul (bulan 2–7) = Periode 1, Agu–Jan (bulan 8–12, 1) = Periode 2
-        const bulan = new Date().getMonth() + 1;
-        updates.periode = (bulan >= 2 && bulan <= 7) ? "1" : "2";
+        // Periode: untuk submission baru pakai terkini; jika reward sudah ada,
+        // nilai ini akan ditimpa di blok reward di bawah
+        if (!rewardData && periodeData.ditemukan && periodeData.periode) {
+          updates.periode    = periodeData.periode.nama;
+          updates.periode_id = String(periodeData.periode.id);
+        }
         filled.add("periode");
 
         // Prefill kategori_lomba dari kategori_simkatmawa
@@ -242,46 +263,40 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
           filled.add("kategori_lomba");
         }
 
-        // Prefill rekening dari profil (jika belum di-prefill dari pengajuan)
         if (profilData.nomor_wa && !updates.nomor_wa) {
           updates.nomor_wa = profilData.nomor_wa;
           filled.add("nomor_wa");
         }
-        if (profilData.nama_pemilik_rekening) {
-          updates.nama_pemilik_rekening = profilData.nama_pemilik_rekening;
-        }
-        if (profilData.nomor_rekening) {
-          updates.nomor_rekening = profilData.nomor_rekening;
-        }
+        if (profilData.nama_pemilik_rekening) updates.nama_pemilik_rekening = profilData.nama_pemilik_rekening;
+        if (profilData.nomor_rekening)        updates.nomor_rekening        = profilData.nomor_rekening;
 
-        if (Object.keys(updates).length > 0) {
-          setForm(f => ({ ...f, ...updates }));
-        }
+        if (Object.keys(updates).length > 0) setForm(f => ({ ...f, ...updates }));
+
       } else if (claimData.tanggal) {
-        // fallback: tahun dari tanggal klaim + periode dari bulan saat ini
-        const bulan = new Date().getMonth() + 1;
+        // Fallback tanpa data pengajuan
         setForm(f => ({
           ...f,
           tahun_kegiatan: claimData.tanggal.substring(0, 4),
-          periode: (bulan >= 2 && bulan <= 7) ? "1" : "2",
+          ...(!rewardData && periodeData.ditemukan && periodeData.periode ? {
+            periode:    periodeData.periode.nama,
+            periode_id: String(periodeData.periode.id),
+          } : {}),
         }));
       }
       setPrefilledFields(filled);
 
-      // ── Cek reward lama (dikembalikan) ────────────────────────────────
-      if (rewardRes.ok) {
-        const rewardData = await rewardRes.json();
+      // ── Reward lama (dikembalikan) ────────────────────────────────────
+      if (rewardData) {
         setExistingReward(rewardData);
         if (rewardData.reward_status === "dikembalikan") {
           setIsReturned(true);
-          // Data reward lama menimpa prefill pengajuan (kecuali field yang locked)
           setForm(f => ({
             ...f,
             tahun_klaim:           rewardData.tahun_klaim           ?? f.tahun_klaim,
+            // periode & periode_id: pakai dari DB, immutable
             periode:               rewardData.periode               ?? f.periode,
+            periode_id:            rewardData.periode_id != null ? String(rewardData.periode_id) : f.periode_id,
             nomor_urut_lampiran:   rewardData.nomor_urut_lampiran   ?? f.nomor_urut_lampiran,
-            // Untuk field prefilled: tetap pakai nilai pengajuan (sudah di-set di atas),
-            // kecuali jika di reward lama ada nilai dan field BUKAN prefilled
             kategori_lomba:        filled.has("kategori_lomba") ? f.kategori_lomba : (rewardData.kategori_lomba ?? f.kategori_lomba),
             kompetisi_puspresnas:  rewardData.kompetisi_puspresnas  ?? f.kompetisi_puspresnas,
             judul_lomba:           filled.has("judul_lomba")    ? f.judul_lomba    : (rewardData.judul_lomba    ?? f.judul_lomba),
@@ -322,7 +337,6 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
 
   const validate = () => {
     const errs = {};
-    if (!form.periode)                                                errs.periode               = "Wajib dipilih";
     if (!form.nomor_urut_lampiran.trim())                             errs.nomor_urut_lampiran   = "Wajib diisi";
     if (!form.kategori_lomba)                                         errs.kategori_lomba        = "Wajib dipilih";
     if (isPuspresnas && !form.kompetisi_puspresnas)                   errs.kompetisi_puspresnas  = "Wajib dipilih";
@@ -503,21 +517,55 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
           </div>
 
           <div>
-            <RadioGroup
-              label={<>Klaim di Periode ke?{prefilledFields.has("periode") && <PrefilledBadge />}</>}
-              name="periode"
-              required={!prefilledFields.has("periode")}
-              value={form.periode}
-              onChange={handleChange}
-              error={errors.periode}
-              disabled={prefilledFields.has("periode")}
-              options={[
-                { value: "1", label: "1 — Periode Februari - Juli" },
-                { value: "2", label: "2 — Periode Agustus - November" },
-              ]}
-            />
-            {prefilledFields.has("periode") && (
-              <p className="mt-1 text-xs text-indigo-500">Diisi otomatis berdasarkan bulan pengisian form saat ini.</p>
+            <Label>Periode Klaim</Label>
+            {periodeAktif ? (
+              <div className={`flex items-center gap-3 px-4 py-3 rounded-lg border mt-1 ${
+                periodeAktif.status === "tersimpan" ? "bg-indigo-50 border-indigo-200"
+                : periodeAktif.status === "aktif"   ? "bg-green-50 border-green-200"
+                :                                     "bg-blue-50 border-blue-200"
+              }`}>
+                <svg className={`w-4 h-4 flex-shrink-0 ${
+                  periodeAktif.status === "tersimpan" ? "text-indigo-500"
+                  : periodeAktif.status === "aktif"   ? "text-green-600"
+                  :                                     "text-blue-500"
+                }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-semibold truncate ${
+                    periodeAktif.status === "tersimpan" ? "text-indigo-800"
+                    : periodeAktif.status === "aktif"   ? "text-green-800"
+                    :                                     "text-blue-800"
+                  }`}>{periodeAktif.nama}</p>
+                  {periodeAktif.tanggal_mulai && (
+                    <p className={`text-xs mt-0.5 ${
+                      periodeAktif.status === "aktif" ? "text-green-600" : "text-blue-600"
+                    }`}>
+                      {periodeAktif.tanggal_mulai} s/d {periodeAktif.tanggal_selesai}
+                    </p>
+                  )}
+                  {periodeAktif.status === "tersimpan" && (
+                    <p className="text-xs text-indigo-500 mt-0.5">Dicatat saat pengajuan pertama</p>
+                  )}
+                </div>
+                <span className={`flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${
+                  periodeAktif.status === "tersimpan" ? "bg-indigo-100 text-indigo-700"
+                  : periodeAktif.status === "aktif"   ? "bg-green-100 text-green-700"
+                  :                                     "bg-blue-100 text-blue-700"
+                }`}>
+                  {periodeAktif.status === "tersimpan" ? "Tercatat" : periodeAktif.status === "aktif" ? "Aktif" : "Tutup"}
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg mt-1">
+                <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Belum ada periode</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Periode klaim belum dibuat oleh admin</p>
+                </div>
+              </div>
             )}
           </div>
 

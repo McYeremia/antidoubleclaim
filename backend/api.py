@@ -20,7 +20,8 @@ from backend.database import (
     create_operator, delete_operator,
     get_stats_visualisasi,
     get_profil_mahasiswa, upsert_profil_mahasiswa,
-    get_periode_aktif, get_all_periode, create_periode, update_periode_status, update_periode_data,
+    get_periode_aktif, get_periode_terkini, get_all_periode, create_periode,
+    update_periode_status, update_periode_data, delete_periode, reset_semua_data,
 )
 from backend.nim_parser import parse_nim
 
@@ -85,6 +86,15 @@ async def periode_aktif():
         return {"aktif": False, "periode": None}
     return {"aktif": True, "periode": result}
 
+@app.get("/periode/terkini")
+async def periode_terkini():
+    """Periode yang mencakup hari ini berdasarkan tanggal (tidak peduli status aktif/tutup)."""
+    result = get_periode_terkini()
+    if not result:
+        return {"ditemukan": False, "periode": None}
+    aktif_sekarang = result.get("status") == "aktif"
+    return {"ditemukan": True, "aktif": aktif_sekarang, "periode": result}
+
 @app.get("/periode")
 async def list_periode():
     return get_all_periode()
@@ -110,6 +120,20 @@ class PeriodeEdit(BaseModel):
 async def edit_periode(periode_id: int, body: PeriodeEdit):
     update_periode_data(periode_id, body.model_dump())
     return {"success": True}
+
+@app.delete("/periode/{periode_id}")
+async def hapus_periode(periode_id: int, x_operator_id: Optional[str] = Header(None)):
+    _require_superadmin(x_operator_id)
+    ok = delete_periode(periode_id)
+    if not ok:
+        raise HTTPException(status_code=400, detail="Tidak dapat menghapus: periode tidak ditemukan atau sedang aktif.")
+    return {"success": True}
+
+@app.post("/admin/reset-data")
+async def reset_data(x_operator_id: Optional[str] = Header(None)):
+    _require_superadmin(x_operator_id)
+    reset_semua_data()
+    return {"success": True, "pesan": "Semua data berhasil dihapus. Tabel USERS tetap utuh."}
 
 # ── NIM Info ─────────────────────────────────────────────────────────────────
 @app.get("/nim-info")
@@ -343,6 +367,7 @@ async def submit_reward_konfirmasi(
     mahasiswa_email:        str                    = Form(...),
     tahun_klaim:            str                    = Form(...),
     periode:                str                    = Form(...),
+    periode_id:             Optional[str]          = Form(None),
     nomor_urut_lampiran:    str                    = Form(...),
     kategori_lomba:         str                    = Form(...),
     kompetisi_puspresnas:   Optional[str]          = Form(None),
@@ -378,6 +403,7 @@ async def submit_reward_konfirmasi(
             "mahasiswa_email":        mahasiswa_email,
             "tahun_klaim":            tahun_klaim,
             "periode":                periode,
+            "periode_id":             int(periode_id) if periode_id else None,
             "nomor_urut_lampiran":    nomor_urut_lampiran,
             "kategori_lomba":         kategori_lomba,
             "kompetisi_puspresnas":   kompetisi_puspresnas,
@@ -446,6 +472,7 @@ async def resubmit_reward(
     reward_id: int,
     tahun_klaim:           str            = Form(...),
     periode:               str            = Form(...),
+    periode_id:            Optional[str]  = Form(None),
     nomor_urut_lampiran:   str            = Form(...),
     kategori_lomba:        str            = Form(...),
     kompetisi_puspresnas:  Optional[str]  = Form(None),
@@ -476,6 +503,7 @@ async def resubmit_reward(
     data = {
         "tahun_klaim":            tahun_klaim,
         "periode":                periode,
+        "periode_id":             int(periode_id) if periode_id else None,
         "nomor_urut_lampiran":    nomor_urut_lampiran,
         "kategori_lomba":         kategori_lomba,
         "kompetisi_puspresnas":   kompetisi_puspresnas,

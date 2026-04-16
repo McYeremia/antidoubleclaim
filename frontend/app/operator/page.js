@@ -578,7 +578,7 @@ function PengajuanReward() {
 }
 
 // ── Konten: Kelola Operator (Super Admin only) ────────────────────────────────
-function KelolаOperator({ operatorId }) {
+function KelolaOperator({ operatorId }) {
   const [operators, setOperators] = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [showForm,  setShowForm]  = useState(false);
@@ -837,6 +837,41 @@ function PengaturanPeriode({ operatorNama }) {
     fetchPeriode();
   };
 
+  const handleHapusPeriode = async (p) => {
+    if (!confirm(`Hapus periode "${p.nama}"?\nData reward yang sudah tercatat pada periode ini tidak akan terhapus.`)) return;
+    const opId = sessionStorage.getItem("operator_id");
+    const res  = await fetch(`${API}/periode/${p.id}`, {
+      method: "DELETE",
+      headers: opId ? { "x-operator-id": opId } : {},
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      alert(err.detail || "Gagal menghapus periode.");
+      return;
+    }
+    fetchPeriode();
+  };
+
+  const handleResetData = async () => {
+    const konfirmasi = prompt(
+      'Tindakan ini akan menghapus SEMUA data klaim, pengajuan, reward, profil, dan periode.\n' +
+      'Tabel akun operator TIDAK akan terhapus.\n\n' +
+      'Ketik "RESET" untuk melanjutkan:'
+    );
+    if (konfirmasi !== "RESET") { alert("Reset dibatalkan."); return; }
+    const opId = sessionStorage.getItem("operator_id");
+    const res  = await fetch(`${API}/admin/reset-data`, {
+      method: "POST",
+      headers: opId ? { "x-operator-id": opId } : {},
+    });
+    if (res.ok) {
+      alert("Semua data berhasil dihapus.");
+      fetchPeriode();
+    } else {
+      alert("Gagal melakukan reset.");
+    }
+  };
+
   const today = new Date().toISOString().slice(0, 10);
 
   const getPeriodeState = (p) => {
@@ -985,6 +1020,13 @@ function PengaturanPeriode({ operatorNama }) {
                         >
                           {p.status === "aktif" ? "Tutup" : "Aktifkan"}
                         </button>
+                        <button
+                          onClick={() => handleHapusPeriode(p)}
+                          disabled={p.status === "aktif"}
+                          className="px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-red-50 text-red-500 hover:bg-red-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        >
+                          Hapus
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -993,6 +1035,28 @@ function PengaturanPeriode({ operatorNama }) {
             </tbody>
           </table>
         )}
+      </div>
+
+      {/* ── Zona Bahaya ─────────────────────────────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-red-100 shadow-sm p-6 mt-6">
+        <h2 className="text-[13px] font-bold text-red-500 uppercase tracking-widest mb-1">Zona Bahaya</h2>
+        <p className="text-[12px] text-gray-400 mb-5">
+          Tindakan di bawah bersifat permanen dan tidak dapat dibatalkan.
+        </p>
+        <div className="flex items-center justify-between p-4 rounded-xl border border-red-100 bg-red-50/50">
+          <div>
+            <p className="text-[13px] font-semibold text-gray-800">Reset Semua Data</p>
+            <p className="text-[12px] text-gray-400 mt-0.5">
+              Hapus semua klaim, pengajuan, reward, profil mahasiswa, dan periode. Akun operator tetap utuh.
+            </p>
+          </div>
+          <button
+            onClick={handleResetData}
+            className="flex-shrink-0 ml-6 px-4 py-2 bg-red-600 text-white text-[12px] font-bold rounded-xl hover:bg-red-700 transition-colors"
+          >
+            Reset Data
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -1145,7 +1209,7 @@ export default function OperatorDashboard() {
         <main className="flex-1 px-10 py-10 overflow-y-auto">
           {activeMenu === "claim"     && <PengajuanClaim  router={router} />}
           {activeMenu === "reward"    && <PengajuanReward />}
-          {activeMenu === "operators" && isSuperAdmin && <KelolаOperator operatorId={operatorId} />}
+          {activeMenu === "operators" && isSuperAdmin && <KelolaOperator operatorId={operatorId} />}
           {activeMenu === "periode"   && isSuperAdmin && <PengaturanPeriode operatorNama={operatorNama} />}
         </main>
       </div>
