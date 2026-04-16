@@ -683,6 +683,84 @@ def create_operator(username: str, password: str, nama: str, email: str, role: s
         conn.close()
 
 
+# ---------------------------------------------------------------------------
+# Statistik Visualisasi
+# ---------------------------------------------------------------------------
+def get_stats_visualisasi() -> dict:
+    """
+    Mengembalikan statistik klaim berdasarkan:
+    - by_fakultas  : dari kode NIM di email mahasiswa
+    - by_prodi     : dari kode NIM di email mahasiswa
+    - by_jenis     : dari kategori_simkatmawa di PENGAJUAN
+    - by_tahun     : dari tahun_kegiatan di PENGAJUAN (fallback: tahun tanggal CLAIMS)
+    """
+    from backend.nim_parser import parse_nim, FAKULTAS, PRODI
+
+    conn = _get_conn()
+    cursor = conn.cursor()
+
+    # Ambil semua klaim (hanya yang sudah diproses/disetujui)
+    cursor.execute("""
+        SELECT c.mahasiswa_email, c.tanggal,
+               p.kategori_simkatmawa, p.tahun_kegiatan
+        FROM CLAIMS c
+        LEFT JOIN PENGAJUAN p ON p.claim_id = c.id
+        ORDER BY c.id
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+
+    from collections import defaultdict
+    fakultas_count = defaultdict(int)
+    prodi_count    = defaultdict(int)
+    jenis_count    = defaultdict(int)
+    tahun_count    = defaultdict(int)
+
+    for (email, tanggal, kategori, tahun_kegiatan) in rows:
+        # Fakultas & Prodi dari NIM
+        parsed = parse_nim(email)
+        if parsed.get("valid"):
+            fak  = parsed["fakultas"]
+            prod = parsed["prodi"]
+        else:
+            fak  = "Lainnya"
+            prod = "Lainnya"
+        fakultas_count[fak]  += 1
+        prodi_count[prod]    += 1
+
+        # Jenis kegiatan
+        if kategori == "lomba_mandiri":
+            jenis_count["Lomba Mandiri"] += 1
+        elif kategori == "rekognisi_non_lomba":
+            jenis_count["Rekognisi Non-Lomba"] += 1
+        else:
+            jenis_count["Tidak Diketahui"] += 1
+
+        # Tahun kegiatan (pakai tahun_kegiatan dari pengajuan, fallback ke tahun tanggal klaim)
+        tahun = tahun_kegiatan or (tanggal[:4] if tanggal and len(tanggal) >= 4 else "—")
+        tahun_count[tahun] += 1
+
+    def to_list(d):
+        return sorted(
+            [{"name": k, "count": v} for k, v in d.items()],
+            key=lambda x: -x["count"]
+        )
+
+    def to_list_sorted_key(d):
+        return sorted(
+            [{"name": k, "count": v} for k, v in d.items()],
+            key=lambda x: x["name"]
+        )
+
+    return {
+        "total":        sum(v for v in tahun_count.values()),
+        "by_fakultas":  to_list(fakultas_count),
+        "by_prodi":     to_list(prodi_count),
+        "by_jenis":     to_list(jenis_count),
+        "by_tahun":     to_list_sorted_key(tahun_count),
+    }
+
+
 def delete_operator(operator_id: int) -> bool:
     """Hapus akun operator. Tidak bisa hapus superadmin terakhir."""
     conn = _get_conn()
