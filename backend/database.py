@@ -209,6 +209,17 @@ def create_database():
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_reward_claim  ON REWARD_KONFIRMASI (claim_id)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_reward_status ON REWARD_KONFIRMASI (reward_status)")
 
+    # ── Tabel MAHASISWA_PROFIL ────────────────────────────────────────────────
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS MAHASISWA_PROFIL (
+        email                  TEXT PRIMARY KEY,
+        nomor_wa               TEXT,
+        nama_pemilik_rekening  TEXT,
+        nomor_rekening         TEXT,
+        updated_at             TEXT NOT NULL DEFAULT (DATETIME('now', 'localtime'))
+    )
+    """)
+
     # Seed akun superadmin default jika belum ada
     cursor.execute("SELECT id FROM USERS WHERE username = 'admin'")
     if not cursor.fetchone():
@@ -708,6 +719,41 @@ def create_operator(username: str, password: str, nama: str, email: str, role: s
         return False
     finally:
         conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Profil Mahasiswa
+# ---------------------------------------------------------------------------
+def get_profil_mahasiswa(email: str):
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM MAHASISWA_PROFIL WHERE email = ?", (email,))
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        return {}
+    cols = [d[0] for d in cursor.description]
+    return dict(zip(cols, row))
+
+
+def upsert_profil_mahasiswa(email: str, data: dict):
+    conn = _get_conn()
+    conn.execute("""
+        INSERT INTO MAHASISWA_PROFIL (email, nomor_wa, nama_pemilik_rekening, nomor_rekening, updated_at)
+        VALUES (?, ?, ?, ?, DATETIME('now', 'localtime'))
+        ON CONFLICT(email) DO UPDATE SET
+            nomor_wa              = excluded.nomor_wa,
+            nama_pemilik_rekening = excluded.nama_pemilik_rekening,
+            nomor_rekening        = excluded.nomor_rekening,
+            updated_at            = DATETIME('now', 'localtime')
+    """, (
+        email,
+        data.get("nomor_wa"),
+        data.get("nama_pemilik_rekening"),
+        data.get("nomor_rekening"),
+    ))
+    conn.commit()
+    conn.close()
 
 
 # ---------------------------------------------------------------------------

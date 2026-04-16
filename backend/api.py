@@ -19,6 +19,7 @@ from backend.database import (
     authenticate_operator, get_all_operators, get_operator_by_id,
     create_operator, delete_operator,
     get_stats_visualisasi,
+    get_profil_mahasiswa, upsert_profil_mahasiswa,
 )
 from backend.nim_parser import parse_nim
 
@@ -51,6 +52,21 @@ async def root():
 @app.get("/stats/visualisasi")
 async def stats_visualisasi():
     return get_stats_visualisasi()
+
+# ── Profil Mahasiswa ──────────────────────────────────────────────────────────
+class ProfilUpdate(BaseModel):
+    nomor_wa:              Optional[str] = None
+    nama_pemilik_rekening: Optional[str] = None
+    nomor_rekening:        Optional[str] = None
+
+@app.get("/profil")
+async def get_profil(email: str):
+    return get_profil_mahasiswa(email)
+
+@app.put("/profil")
+async def update_profil(email: str, body: ProfilUpdate):
+    upsert_profil_mahasiswa(email, body.model_dump())
+    return {"success": True}
 
 # ── NIM Info ─────────────────────────────────────────────────────────────────
 @app.get("/nim-info")

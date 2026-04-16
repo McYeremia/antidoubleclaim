@@ -192,9 +192,11 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
       fetch(`${API}/claims/${claimId}`),
       fetch(`${API}/reward-konfirmasi/${claimId}`),
       fetch(`${API}/pengajuan/by-claim/${claimId}`),
-    ]).then(async ([claimRes, rewardRes, pengajuanRes]) => {
+      fetch(`${API}/profil?email=${encodeURIComponent(session.user.email)}`),
+    ]).then(async ([claimRes, rewardRes, pengajuanRes, profilRes]) => {
       if (claimRes.status === 404) { setNotFound(true); return; }
-      const claimData = await claimRes.json();
+      const claimData  = await claimRes.json();
+      const profilData = profilRes.ok ? await profilRes.json() : {};
       setClaim(claimData);
 
       // ── Pre-fill dari data pengajuan ──────────────────────────────────
@@ -203,6 +205,7 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
         const pData = await pengajuanRes.json();
         setPengajuan(pData);
         const updates = {};
+
         if (pData.nama_ketua) {
           updates.nama_ketua = pData.nama_ketua;
           filled.add("nama_ketua");
@@ -219,16 +222,48 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
           updates.tahun_kegiatan = String(pData.tahun_kegiatan);
           filled.add("tahun_kegiatan");
         }
-        if (pData.kategori_simkatmawa === "rekognisi") {
+
+        // Prefill periode dari bulan saat ini
+        // Feb–Jul (bulan 2–7) = Periode 1, Agu–Jan (bulan 8–12, 1) = Periode 2
+        const bulan = new Date().getMonth() + 1;
+        updates.periode = (bulan >= 2 && bulan <= 7) ? "1" : "2";
+        filled.add("periode");
+
+        // Prefill kategori_lomba dari kategori_simkatmawa
+        const simkatmawa = pData.kategori_simkatmawa;
+        if (simkatmawa === "rekognisi" || simkatmawa === "rekognisi_non_lomba") {
           updates.kategori_lomba = "publikasi";
           filled.add("kategori_lomba");
+        } else if (simkatmawa === "lomba_mandiri") {
+          const namaUpper = (pData.nama_kegiatan || "").toUpperCase();
+          const adaPuspresnas = KOMPETISI_PUSPRESNAS.some(k => namaUpper.includes(k.toUpperCase()));
+          updates.kategori_lomba = adaPuspresnas ? "puspresnas" : "non_puspresnas";
+          filled.add("kategori_lomba");
         }
+
+        // Prefill rekening dari profil (jika belum di-prefill dari pengajuan)
+        if (profilData.nomor_wa && !updates.nomor_wa) {
+          updates.nomor_wa = profilData.nomor_wa;
+          filled.add("nomor_wa");
+        }
+        if (profilData.nama_pemilik_rekening) {
+          updates.nama_pemilik_rekening = profilData.nama_pemilik_rekening;
+        }
+        if (profilData.nomor_rekening) {
+          updates.nomor_rekening = profilData.nomor_rekening;
+        }
+
         if (Object.keys(updates).length > 0) {
           setForm(f => ({ ...f, ...updates }));
         }
       } else if (claimData.tanggal) {
-        // fallback: tahun dari tanggal klaim
-        setForm(f => ({ ...f, tahun_kegiatan: claimData.tanggal.substring(0, 4) }));
+        // fallback: tahun dari tanggal klaim + periode dari bulan saat ini
+        const bulan = new Date().getMonth() + 1;
+        setForm(f => ({
+          ...f,
+          tahun_kegiatan: claimData.tanggal.substring(0, 4),
+          periode: (bulan >= 2 && bulan <= 7) ? "1" : "2",
+        }));
       }
       setPrefilledFields(filled);
 
@@ -465,18 +500,24 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
             </div>
           </div>
 
-          <RadioGroup
-            label="Klaim di Periode ke?"
-            name="periode"
-            required
-            value={form.periode}
-            onChange={handleChange}
-            error={errors.periode}
-            options={[
-              { value: "1", label: "1 — Periode Februari - Juli" },
-              { value: "2", label: "2 — Periode Agustus - November" },
-            ]}
-          />
+          <div>
+            <RadioGroup
+              label={<>Klaim di Periode ke?{prefilledFields.has("periode") && <PrefilledBadge />}</>}
+              name="periode"
+              required={!prefilledFields.has("periode")}
+              value={form.periode}
+              onChange={handleChange}
+              error={errors.periode}
+              disabled={prefilledFields.has("periode")}
+              options={[
+                { value: "1", label: "1 — Periode Februari - Juli" },
+                { value: "2", label: "2 — Periode Agustus - November" },
+              ]}
+            />
+            {prefilledFields.has("periode") && (
+              <p className="mt-1 text-xs text-indigo-500">Diisi otomatis berdasarkan bulan pengisian form saat ini.</p>
+            )}
+          </div>
 
           <div>
             <RadioGroup

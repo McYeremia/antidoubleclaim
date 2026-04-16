@@ -1033,6 +1033,239 @@ function BarChart({ data, colorClass = "bg-blue-500", formatLabel }) {
   );
 }
 
+// ── Konten: Profil ────────────────────────────────────────────────────────────
+function ProfilPanel({ session, onBack }) {
+  const [nimInfo,  setNimInfo]  = useState(null);
+  const [profil,   setProfil]   = useState(null);
+  const [form,     setForm]     = useState({ nomor_wa: "", nama_pemilik_rekening: "", nomor_rekening: "" });
+  const [loading,  setLoading]  = useState(true);
+  const [saving,   setSaving]   = useState(false);
+  const [saved,    setSaved]    = useState(false);
+
+  useEffect(() => {
+    Promise.all([
+      fetch(`http://127.0.0.1:8000/nim-info?email=${encodeURIComponent(session.user.email)}`),
+      fetch(`http://127.0.0.1:8000/profil?email=${encodeURIComponent(session.user.email)}`),
+    ]).then(async ([nimRes, profilRes]) => {
+      const nim  = nimRes.ok  ? await nimRes.json()   : {};
+      const prof = profilRes.ok ? await profilRes.json() : {};
+      setNimInfo(nim);
+      setProfil(prof);
+      setForm({
+        nomor_wa:              prof.nomor_wa              ?? "",
+        nama_pemilik_rekening: prof.nama_pemilik_rekening ?? "",
+        nomor_rekening:        prof.nomor_rekening        ?? "",
+      });
+    }).finally(() => setLoading(false));
+  }, [session.user.email]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm(f => ({ ...f, [name]: value }));
+    setSaved(false);
+  };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await fetch(`http://127.0.0.1:8000/profil?email=${encodeURIComponent(session.user.email)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      setSaved(true);
+    } catch {
+      alert("Gagal menyimpan. Coba lagi.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="max-w-5xl mx-auto">
+
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-8">
+        <button onClick={onBack} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <div>
+          <h1 className="text-4xl font-black text-gray-900 leading-none tracking-tight">Profil</h1>
+          <p className="text-gray-400 mt-1.5 text-[14px]">Data diri dan informasi rekening.</p>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center gap-3 text-gray-400 py-16 justify-center">
+          <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+          </svg>
+          <span className="text-sm">Memuat profil...</span>
+        </div>
+      ) : (
+        <div className="grid grid-cols-5 gap-5 items-start">
+
+          {/* ── Kolom kiri: identitas + akademik ── */}
+          <div className="col-span-2 space-y-4">
+
+            {/* Kartu identitas */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col items-center text-center">
+              <div className="w-20 h-20 rounded-full bg-gray-900 flex items-center justify-center flex-shrink-0 overflow-hidden mb-4">
+                {session.user.image
+                  ? <img src={session.user.image} alt="avatar" className="w-20 h-20 rounded-full object-cover" />
+                  : <span className="text-2xl font-black text-white">
+                      {session.user.name?.split(" ").map(w => w[0]).join("").slice(0,2).toUpperCase()}
+                    </span>
+                }
+              </div>
+              <p className="text-[16px] font-bold text-gray-900 leading-snug">{session.user.name}</p>
+              <p className="text-[12px] text-gray-400 mt-1 break-all">{session.user.email}</p>
+              {nimInfo?.nim && (
+                <span className="inline-block mt-3 px-3 py-1 bg-gray-100 rounded-full text-[11px] font-semibold text-gray-500 tracking-wider">
+                  NIM {nimInfo.nim}
+                </span>
+              )}
+            </div>
+
+            {/* Data Akademik */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+              <p className="text-[10px] font-bold text-gray-300 uppercase tracking-widest mb-4">Data Akademik</p>
+              <div className="space-y-2.5">
+                {[
+                  { label: "Angkatan",      value: nimInfo?.angkatan ?? "—" },
+                  { label: "Program Studi", value: nimInfo?.prodi    ?? "—" },
+                  { label: "Fakultas",      value: nimInfo?.fakultas ?? "—" },
+                ].map(({ label, value }) => (
+                  <div key={label} className="px-4 py-3 bg-gray-50 rounded-xl">
+                    <p className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">{label}</p>
+                    <p className="text-[13px] font-semibold text-gray-800 mt-1">{value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+
+          {/* ── Kolom kanan: form ── */}
+          <form onSubmit={handleSave} className="col-span-3 bg-white rounded-2xl border border-gray-100 shadow-sm p-7 space-y-6">
+            <div>
+              <p className="text-[10px] font-bold text-gray-300 uppercase tracking-widest mb-0.5">Rekening & Kontak</p>
+              <p className="text-[12px] text-gray-400">Digunakan untuk mengisi form reward secara otomatis.</p>
+            </div>
+
+            {/* Nomor WA */}
+            <div>
+              <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-2">
+                Nomor WhatsApp
+              </label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75}
+                      d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                  </svg>
+                </span>
+                <input
+                  type="text"
+                  name="nomor_wa"
+                  value={form.nomor_wa}
+                  onChange={handleChange}
+                  placeholder="Contoh: 08123456789"
+                  className="block w-full pl-10 pr-4 py-3.5 border border-gray-200 rounded-xl text-[15px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                />
+              </div>
+            </div>
+
+            {/* Divider rekening */}
+            <div className="border-t border-gray-100 pt-5 space-y-4">
+              <p className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">Rekening Bank</p>
+
+              {/* Bank — read only */}
+              <div>
+                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-2">
+                  Bank
+                </label>
+                <div className="flex items-center gap-3 px-4 py-3.5 bg-amber-50 border border-amber-100 rounded-xl">
+                  <svg className="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18M5 6h14a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2z" />
+                  </svg>
+                  <span className="flex-1 text-[15px] font-bold text-amber-700">BNI</span>
+                  <span className="text-[10px] font-semibold text-amber-500 uppercase tracking-widest bg-amber-100 px-2 py-0.5 rounded-md">
+                    Satu-satunya bank
+                  </span>
+                </div>
+              </div>
+
+              {/* Nama Pemilik Rekening */}
+              <div>
+                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-2">
+                  Nama Pemilik Rekening
+                </label>
+                <input
+                  type="text"
+                  name="nama_pemilik_rekening"
+                  value={form.nama_pemilik_rekening}
+                  onChange={handleChange}
+                  placeholder="Nama sesuai buku tabungan"
+                  className="block w-full px-4 py-3.5 border border-gray-200 rounded-xl text-[15px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                />
+              </div>
+
+              {/* Nomor Rekening */}
+              <div>
+                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-2">
+                  Nomor Rekening
+                </label>
+                <input
+                  type="text"
+                  name="nomor_rekening"
+                  value={form.nomor_rekening}
+                  onChange={handleChange}
+                  placeholder="Contoh: 0123456789"
+                  className="block w-full px-4 py-3.5 border border-gray-200 rounded-xl text-[15px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                />
+                {/* Notes */}
+                <div className="flex items-start gap-2.5 mt-2.5 px-4 py-3 bg-amber-50 border border-amber-100 rounded-xl">
+                  <svg className="w-3.5 h-3.5 text-amber-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="text-[11px] text-amber-700 leading-relaxed">
+                    Pastikan menggunakan rekening <span className="font-bold">Bank BNI</span>. Rekening bank lain tidak dapat diproses untuk pencairan reward.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Tombol simpan */}
+            <div className="flex items-center gap-3 pt-1">
+              <button
+                type="submit"
+                disabled={saving}
+                className="px-6 py-3 bg-gray-900 text-white text-[14px] font-semibold rounded-xl hover:bg-gray-700 disabled:opacity-50 transition-colors"
+              >
+                {saving ? "Menyimpan..." : "Simpan Perubahan"}
+              </button>
+              {saved && (
+                <span className="text-[12px] text-green-600 font-medium flex items-center gap-1.5">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Tersimpan
+                </span>
+              )}
+            </div>
+          </form>
+
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Konten: Visualisasi Data ──────────────────────────────────────────────────
 function VisualisasiData() {
   const [stats, setStats]   = useState(null);
@@ -1296,6 +1529,16 @@ export default function MahasiswaDashboard() {
                   {/* Actions */}
                   <div className="p-1.5">
                     <button
+                      onClick={() => { setActiveMenu("profil"); setShowUserMenu(false); }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors text-left"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      Profil Saya
+                    </button>
+                    <button
                       onClick={() => signOut({ callbackUrl: "/" })}
                       className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-red-600 hover:bg-red-50 transition-colors text-left"
                     >
@@ -1320,6 +1563,7 @@ export default function MahasiswaDashboard() {
           {activeMenu === "reward"      && <KonfirmasiReward session={session} initialClaimId={rewardOpenId} onClearInitial={() => setRewardOpenId(null)} />}
           {activeMenu === "visualisasi" && <VisualisasiData />}
           {activeMenu === "sk-rektor"   && <SKRektor />}
+          {activeMenu === "profil"      && <ProfilPanel session={session} onBack={() => setActiveMenu("daftar")} />}
         </main>
       </div>
 

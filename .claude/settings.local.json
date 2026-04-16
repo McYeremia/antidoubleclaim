@@ -32,7 +32,8 @@
       "Bash(python src/ui-ux-pro-max/scripts/search.py \"landing hero minimal academic\" --domain landing -n 3)",
       "Bash(python src/ui-ux-pro-max/scripts/search.py \"macos desktop app dashboard productivity clean vibrancy\" --design-system -p \"Antidoubleclaim Dashboard\" -f markdown)",
       "Bash(python src/ui-ux-pro-max/scripts/search.py \"glassmorphism frosted glass sidebar macos\" --domain style -n 3)",
-      "Bash(python src/ui-ux-pro-max/scripts/search.py \"macos system ui clean minimal\" --domain prompt -n 2)"
+      "Bash(python src/ui-ux-pro-max/scripts/search.py \"macos system ui clean minimal\" --domain prompt -n 2)",
+      "Bash(node -e ' *)"
     ]
   }
 }
