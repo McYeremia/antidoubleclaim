@@ -40,7 +40,8 @@
       "Bash(python -c ' *)",
       "Bash(python -m uvicorn backend.api:app --host 127.0.0.1 --port 8000 --reload)",
       "Bash(curl -s \"http://127.0.0.1:8000/periode/aktif\")",
-      "Bash(curl -s \"http://127.0.0.1:8000/periode\")"
+      "Bash(curl -s \"http://127.0.0.1:8000/periode\")",
+      "Bash(python *)"
     ]
   }
 }
