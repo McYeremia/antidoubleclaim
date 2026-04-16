@@ -291,6 +291,17 @@ def approve_claim(claim_id, operator_id=None):
 
 def discard_claim(claim_id):
     conn = _get_conn()
+    # Hapus child records terlebih dahulu sesuai urutan FK:
+    # 1. PENGAJUAN_ANGGOTA → 2. PENGAJUAN → 3. REWARD_KONFIRMASI → 4. CLAIMS
+    pengajuan_ids = [
+        row[0] for row in
+        conn.execute("SELECT id FROM PENGAJUAN WHERE claim_id = ?", (claim_id,)).fetchall()
+    ]
+    if pengajuan_ids:
+        placeholders = ",".join("?" * len(pengajuan_ids))
+        conn.execute(f"DELETE FROM PENGAJUAN_ANGGOTA WHERE pengajuan_id IN ({placeholders})", pengajuan_ids)
+    conn.execute("DELETE FROM PENGAJUAN WHERE claim_id = ?", (claim_id,))
+    conn.execute("DELETE FROM REWARD_KONFIRMASI WHERE claim_id = ?", (claim_id,))
     conn.execute("DELETE FROM CLAIMS WHERE id = ?", (claim_id,))
     conn.commit()
     conn.close()
