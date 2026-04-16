@@ -503,16 +503,28 @@ export default function DetailKlaim() {
 
   const handleApprove = async () => {
     setActionLoading(true);
-    await fetch(`http://127.0.0.1:8000/claims/${id}/approve`, { method: "PATCH", headers: opHeaders });
-    await fetchAll();
-    setActionLoading(false);
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/claims/${id}/approve`, { method: "PATCH", headers: opHeaders });
+      if (!res.ok) throw new Error(`Server error ${res.status}`);
+      await fetchAll();
+    } catch (err) {
+      alert(`Gagal menyetujui klaim: ${err.message}`);
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const handleDiscard = async () => {
     if (!confirm("Yakin ingin menghapus klaim ini?")) return;
     setActionLoading(true);
-    await fetch(`http://127.0.0.1:8000/claims/${id}`, { method: "DELETE", headers: opHeaders });
-    router.push("/operator");
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/claims/${id}`, { method: "DELETE", headers: opHeaders });
+      if (!res.ok) throw new Error(`Server error ${res.status}`);
+      router.push("/operator");
+    } catch (err) {
+      alert(`Gagal menghapus klaim: ${err.message}`);
+      setActionLoading(false);
+    }
   };
 
   if (loading)  return (
