@@ -18,6 +18,7 @@ from backend.database import (
     get_reward_konfirmasi_by_email, update_reward_status, update_reward_konfirmasi,
     authenticate_operator, get_all_operators, get_operator_by_id,
     create_operator, delete_operator,
+    get_stats_visualisasi,
 )
 from backend.nim_parser import parse_nim
 
@@ -45,6 +46,11 @@ app.mount("/uploads", StaticFiles(directory=UPLOAD_FOLDER), name="uploads")
 @app.get("/")
 async def root():
     return {"message": "Backend Anti-Double Claim Aktif"}
+
+# ── Statistik Visualisasi ────────────────────────────────────────────────────
+@app.get("/stats/visualisasi")
+async def stats_visualisasi():
+    return get_stats_visualisasi()
 
 # ── NIM Info ─────────────────────────────────────────────────────────────────
 @app.get("/nim-info")
