@@ -985,9 +985,9 @@ function SKRektor() {
             </p>
           </Section>
 
-          <Section title="Cara Input Berkas">
+          {/* <Section title="Cara Input Berkas">
             <p className="text-gray-700">Input berkas melalui website SAC (Sistem Anti-Double Claim).</p>
-          </Section>
+          </Section> */}
         </div>
       )}
     </div>

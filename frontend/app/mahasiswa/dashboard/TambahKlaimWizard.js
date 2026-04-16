@@ -155,23 +155,23 @@ function validateStep(step, data, files, showKelompok, totalSteps) {
       else if (isNaN(jp) || jp < 2)        e.jumlah_peserta = "Minimal 2 peserta (kompetisi butuh lebih dari 1 peserta).";
       else if (jp > 100_000)               e.jumlah_peserta = "Jumlah peserta terlalu besar, periksa kembali.";
 
-      const today = new Date(); today.setHours(23, 59, 59, 999);
-      const batasLalu = new Date(today); batasLalu.setMonth(batasLalu.getMonth() - 12);
+      const _now = new Date();
+      const todayStr = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, "0")}-${String(_now.getDate()).padStart(2, "0")}`;
+      const _batas = new Date(_now); _batas.setFullYear(_batas.getFullYear() - 1);
+      const batasLaluStr = `${_batas.getFullYear()}-${String(_batas.getMonth() + 1).padStart(2, "0")}-${String(_batas.getDate()).padStart(2, "0")}`;
 
       if (!data.tanggal_mulai) {
         e.tanggal_mulai = "Tanggal mulai wajib diisi.";
       } else {
-        const tm = new Date(data.tanggal_mulai);
-        if (tm > today)     e.tanggal_mulai = "Tanggal mulai tidak boleh di masa depan.";
-        else if (tm < batasLalu) e.tanggal_mulai = "Melebihi batas 12 bulan pengajuan (SK Rektor Pasal 5).";
+        if (data.tanggal_mulai > todayStr)     e.tanggal_mulai = "Tanggal mulai tidak boleh di masa depan.";
+        else if (data.tanggal_mulai < batasLaluStr) e.tanggal_mulai = "Melebihi batas 12 bulan pengajuan (SK Rektor Pasal 5).";
       }
 
       if (!data.tanggal_selesai) {
         e.tanggal_selesai = "Tanggal selesai wajib diisi.";
       } else {
-        const ts = new Date(data.tanggal_selesai);
-        if (ts > today) e.tanggal_selesai = "Tanggal selesai tidak boleh di masa depan.";
-        else if (data.tanggal_mulai && ts < new Date(data.tanggal_mulai))
+        if (data.tanggal_selesai > todayStr) e.tanggal_selesai = "Tanggal selesai tidak boleh di masa depan.";
+        else if (data.tanggal_mulai && data.tanggal_selesai < data.tanggal_mulai)
           e.tanggal_selesai = "Tanggal selesai harus sama atau setelah tanggal mulai.";
       }
     } else {
@@ -856,7 +856,7 @@ function Step4Lomba({ data, onChange, onBlur, onFileChange, files, errors }) {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
         <FInput id="tanggal_mulai" label="Tanggal Mulai" required
           type="date"
-          max={new Date().toISOString().split("T")[0]}
+          max={(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; })()}
           value={data.tanggal_mulai} onChange={(e) => onChange("tanggal_mulai", e.target.value)}
           onBlur={() => onBlur("tanggal_mulai")}
           hint="Tidak boleh di masa depan, maks. 12 bulan yang lalu (SK Rektor)"
@@ -865,7 +865,7 @@ function Step4Lomba({ data, onChange, onBlur, onFileChange, files, errors }) {
         <FInput id="tanggal_selesai" label="Tanggal Selesai" required
           type="date"
           min={data.tanggal_mulai || undefined}
-          max={new Date().toISOString().split("T")[0]}
+          max={(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; })()}
           value={data.tanggal_selesai} onChange={(e) => onChange("tanggal_selesai", e.target.value)}
           onBlur={() => onBlur("tanggal_selesai")}
           hint="Harus sama atau setelah tanggal mulai"
