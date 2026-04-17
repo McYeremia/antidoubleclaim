@@ -19,7 +19,7 @@ const STATUS_STYLE = (status) =>
 const REWARD_LABEL = {
   menunggu:     "Sedang Diproses",
   diproses:     "Sedang Diproses",
-  selesai:      "Reward Dikirim",
+  selesai:      "Approved",
   dikembalikan: "Perlu Diperbaiki",
   ditolak:      "Ditolak",
 };
