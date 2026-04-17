@@ -24,3 +24,9 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* ── Tombol: turun 2 level font weight ───────────────────────────────────────
+   font-black (900) → font-bold  (700)
+   font-bold  (700) → font-medium (500)                                       */
+button.font-black { font-weight: 700 !important; }
+button.font-bold  { font-weight: 500 !important; }
