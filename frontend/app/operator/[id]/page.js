@@ -437,7 +437,7 @@ function PengajuanDetail({ p, onSaved }) {
         <div className="bg-gray-50 border border-gray-200 rounded-2xl px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.18em]">Estimasi Dana Penghargaan</p>
-            <p className="text-[11px] text-gray-400 mt-0.5">SK Rektor 078/2023 · Non PUSPRESNAS</p>
+            <p className="text-[11px] text-gray-400 mt-0.5">SK Rektor 078/B.02/UKDW/2023 · Non PUSPRESNAS</p>
           </div>
           {editing ? (
             <div className="relative">

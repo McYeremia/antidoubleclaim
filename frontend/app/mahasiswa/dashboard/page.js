@@ -850,13 +850,17 @@ function SKRektor() {
               <table className="w-full text-sm border-collapse">
                 <thead>
                   <tr className="bg-gray-100">
-                    <th className="border border-gray-300 px-3 py-2 text-left">Kategori</th>
-                    <th className="border border-gray-300 px-3 py-2 text-center">Semifinal</th>
-                    <th className="border border-gray-300 px-3 py-2 text-center">Juara 3</th>
-                    <th className="border border-gray-300 px-3 py-2 text-center">Juara 2</th>
-                    <th className="border border-gray-300 px-3 py-2 text-center">Juara 1</th>
-                    <th className="border border-gray-300 px-3 py-2 text-center">Terbaik</th>
-                    <th className="border border-gray-300 px-3 py-2 text-center">Terbaik+</th>
+                    <th className="border border-gray-300 px-3 py-2 text-left" rowSpan={2}>Kategori Kegiatan Kompetisi</th>
+                    <th className="border border-gray-300 px-3 py-2 text-center" colSpan={3}>Tahap Kategori Penghargaan</th>
+                    <th className="border border-gray-300 px-3 py-2 text-center" colSpan={3}>Juara</th>
+                  </tr>
+                  <tr className="bg-gray-100">
+                    <th className="border border-gray-300 px-3 py-2 text-center">Proposal / Peserta</th>
+                    <th className="border border-gray-300 px-3 py-2 text-center">Didanai / Lolos Wil.</th>
+                    <th className="border border-gray-300 px-3 py-2 text-center">Final</th>
+                    <th className="border border-gray-300 px-3 py-2 text-center">3</th>
+                    <th className="border border-gray-300 px-3 py-2 text-center">2</th>
+                    <th className="border border-gray-300 px-3 py-2 text-center">1</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -879,20 +883,24 @@ function SKRektor() {
               <table className="w-full text-sm border-collapse">
                 <thead>
                   <tr className="bg-gray-100">
-                    <th className="border border-gray-300 px-3 py-2 text-left">Tingkat</th>
-                    <th className="border border-gray-300 px-3 py-2 text-center">Peserta</th>
-                    <th className="border border-gray-300 px-3 py-2 text-center">Juara 3</th>
-                    <th className="border border-gray-300 px-3 py-2 text-center">Juara 2</th>
-                    <th className="border border-gray-300 px-3 py-2 text-center">Juara 1</th>
-                    <th className="border border-gray-300 px-3 py-2 text-center">Terbaik</th>
-                    <th className="border border-gray-300 px-3 py-2 text-center">Terbaik+</th>
+                    <th className="border border-gray-300 px-3 py-2 text-left" rowSpan={2}>Kategori Kegiatan Kompetisi</th>
+                    <th className="border border-gray-300 px-3 py-2 text-center" colSpan={3}>Tahap Kategori Penghargaan</th>
+                    <th className="border border-gray-300 px-3 py-2 text-center" colSpan={3}>Juara</th>
+                  </tr>
+                  <tr className="bg-gray-100">
+                    <th className="border border-gray-300 px-3 py-2 text-center">Proposal / Peserta</th>
+                    <th className="border border-gray-300 px-3 py-2 text-center">Didanai / Lolos Wil.</th>
+                    <th className="border border-gray-300 px-3 py-2 text-center">Final</th>
+                    <th className="border border-gray-300 px-3 py-2 text-center">3</th>
+                    <th className="border border-gray-300 px-3 py-2 text-center">2</th>
+                    <th className="border border-gray-300 px-3 py-2 text-center">1</th>
                   </tr>
                 </thead>
                 <tbody>
                   {[
-                    { level: "Regional",       vals: ["0,5", "1", "2", "4", "5", "6"] },
-                    { level: "Nasional",        vals: ["0,5", "2", "4", "8", "10", "12"] },
-                    { level: "Internasional",   vals: ["0,5", "3", "6", "12", "15", "18"] },
+                    { level: "NON PUSPRESNAS REGIONAL",       vals: ["0,5", "1", "2", "4", "5", "6"] },
+                    { level: "NON PUSPRESNAS NASIONAL",        vals: ["0,5", "2", "4", "8", "10", "12"] },
+                    { level: "NON PUSPRESNAS INTERNASIONAL",   vals: ["0,5", "3", "6", "12", "15", "18"] },
                   ].map((row) => (
                     <tr key={row.level}>
                       <td className="border border-gray-300 px-3 py-2 font-medium">{row.level}</td>
@@ -911,23 +919,25 @@ function SKRektor() {
               <table className="w-full text-sm border-collapse">
                 <thead>
                   <tr className="bg-gray-100">
-                    <th className="border border-gray-300 px-3 py-2 text-left">Jenis Publikasi</th>
+                    <th className="border border-gray-300 px-3 py-2 text-left" colSpan={2}>Kategori Kegiatan Publikasi Ilmiah</th>
                     <th className="border border-gray-300 px-3 py-2 text-center">Penulis 1</th>
                     <th className="border border-gray-300 px-3 py-2 text-center">Penulis 2</th>
-                    <th className="border border-gray-300 px-3 py-2 text-center">Penulis 3+</th>
+                    <th className="border border-gray-300 px-3 py-2 text-center">Penulis 3 dst</th>
                   </tr>
                 </thead>
                 <tbody>
                   {[
-                    { jenis: "Jurnal Internasional",   vals: ["6", "4", "2"] },
-                    { jenis: "Jurnal Nasional Scopus",  vals: ["6", "4", "2"] },
-                    { jenis: "Jurnal Nasional SINTA",   vals: ["6", "4", "2"] },
-                    { jenis: "Paten Internasional",     vals: ["6", "4", "2"] },
-                    { jenis: "Pemakalah Internasional", vals: ["2", "–", "–"] },
-                    { jenis: "Pemakalah Nasional",      vals: ["2", "–", "–"] },
-                    { jenis: "Pemakalah Regional",      vals: ["2", "–", "–"] },
+                    { no: 1, jenis: "JURNAL Q1-Q2",              vals: ["8", "6", "4"] },
+                    { no: 2, jenis: "JURNAL Q3-Q4",              vals: ["6", "4", "2"] },
+                    { no: 3, jenis: "JURNAL SINTA 1-2",          vals: ["6", "4", "2"] },
+                    { no: 4, jenis: "PATEN INTERNASIONAL",       vals: ["8", "6", "4"] },
+                    { no: 5, jenis: "PATEN NASIONAL",            vals: ["6", "4", "2"] },
+                    { no: 6, jenis: "PEMAKALAH INTERNASIONAL",   vals: ["6", "4", "2"] },
+                    { no: 7, jenis: "PEMAKALAH NASIONAL",        vals: ["4", "2", "–"] },
+                    { no: 8, jenis: "PEMAKALAH REGIONAL",        vals: ["2", "–", "–"] },
                   ].map((row) => (
                     <tr key={row.jenis}>
+                      <td className="border border-gray-300 px-3 py-2 text-center font-medium w-8">{row.no}</td>
                       <td className="border border-gray-300 px-3 py-2 font-medium">{row.jenis}</td>
                       {row.vals.map((v, i) => (
                         <td key={i} className="border border-gray-300 px-3 py-2 text-center">{v}</td>

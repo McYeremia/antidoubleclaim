@@ -10,34 +10,96 @@ const TAHUN_OPSI = [String(TAHUN_INI), String(TAHUN_INI - 1)];
 
 const PENGALI_REWARD = 225_000;
 
+// ── Tabel Poin SK Rektor 078/B.02/UKDW/2023 ──────────────────────────────────
+// Kolom: peserta, didanai (lolos wil.), final, juara3, juara2, juara1
+// Poin bersifat KUMULATIF: Juara 1 = juara1 + final + didanai + peserta
+const TABEL_PUSPRESNAS = { peserta: 0.5, didanai: 3, final: 6, juara3: 12, juara2: 15, juara1: 18 };
+
 const TABEL_NON_PUSPRESNAS = {
-  "Provinsi / Wilayah": { peserta: 0.5, juara3: 1,  juara2: 2,  juara1: 4,  terbaik: 5,  terbaikPlus: 6  },
-  "Nasional":           { peserta: 0.5, juara3: 2,  juara2: 4,  juara1: 8,  terbaik: 10, terbaikPlus: 12 },
-  "Internasional":      { peserta: 0.5, juara3: 3,  juara2: 6,  juara1: 12, terbaik: 15, terbaikPlus: 18 },
+  "Provinsi / Wilayah": { peserta: 0.5, didanai: 1,  final: 2,  juara3: 4,  juara2: 5,  juara1: 6  },
+  "Nasional":           { peserta: 0.5, didanai: 2,  final: 4,  juara3: 8,  juara2: 10, juara1: 12 },
+  "Internasional":      { peserta: 0.5, didanai: 3,  final: 6,  juara3: 12, juara2: 15, juara1: 18 },
 };
 
+// Mengembalikan { poinAtas, rincian: [...], totalPoin } berdasarkan capaian
 function capaianKePoin(capaian, tabel) {
   if (!capaian || !tabel) return null;
-  if (capaian.includes("Juara 1"))                                      return tabel.juara1;
-  if (capaian.includes("Juara 2"))                                      return tabel.juara2;
-  if (capaian.includes("Juara 3") || capaian.startsWith("Harapan"))    return tabel.juara3;
-  if (capaian.includes("Apresiasi") || capaian.includes("Juara umum")) return tabel.terbaikPlus;
-  if (capaian.includes("Partisipasi") || capaian.includes("Peserta"))  return tabel.peserta;
-  return null;
+
+  // Tentukan level capaian
+  let level = null;
+  if (capaian.includes("Juara 1"))                                     level = "juara1";
+  else if (capaian.includes("Juara 2"))                                level = "juara2";
+  else if (capaian.includes("Juara 3"))                                level = "juara3";
+  else if (capaian.startsWith("Harapan") || capaian.includes("Finalis") || capaian.includes("Final")) level = "final";
+  else if (capaian.includes("Apresiasi") || capaian.includes("Didanai") || capaian.includes("Lolos")) level = "didanai";
+  else if (capaian.includes("Peserta") || capaian.includes("Proposal") || capaian.includes("Partisipasi")) level = "peserta";
+  if (!level) return null;
+
+  // Tahapan kumulatif (dari bawah ke atas)
+  const tahapan = [
+    { key: "peserta", label: "Peserta/Proposal" },
+    { key: "didanai", label: "Didanai/Lolos Wil." },
+    { key: "final",   label: "Final" },
+  ];
+  // Juara ditambahkan HANYA level juara yang dicapai (tidak kumulatif antar juara)
+  const juaraMap = {
+    juara3: { key: "juara3", label: "Juara 3" },
+    juara2: { key: "juara2", label: "Juara 2" },
+    juara1: { key: "juara1", label: "Juara 1" },
+  };
+
+  const rincian = [];
+  let totalPoin = 0;
+
+  // Selalu tambahkan peserta
+  rincian.push({ label: tahapan[0].label, poin: tabel.peserta });
+  totalPoin += tabel.peserta;
+
+  if (level === "peserta") return { totalPoin, rincian };
+
+  // Didanai
+  rincian.push({ label: tahapan[1].label, poin: tabel.didanai });
+  totalPoin += tabel.didanai;
+  if (level === "didanai") return { totalPoin, rincian };
+
+  // Final
+  rincian.push({ label: tahapan[2].label, poin: tabel.final });
+  totalPoin += tabel.final;
+  if (level === "final") return { totalPoin, rincian };
+
+  // Juara (hanya 1 level juara yang dicapai)
+  const juaraInfo = juaraMap[level];
+  rincian.push({ label: juaraInfo.label, poin: tabel[level] });
+  totalPoin += tabel[level];
+
+  return { totalPoin, rincian };
 }
 
 function hitungReward(data) {
   const { kategori_simkatmawa, kategori_kegiatan, capaian, jenis_kepesertaan, jumlah_anggota } = data;
   if (kategori_simkatmawa !== "lomba_mandiri") return null;
   const tabel = TABEL_NON_PUSPRESNAS[kategori_kegiatan];
-  let poin = capaianKePoin(capaian, tabel);
-  if (poin == null) return null;
+  const hasil = capaianKePoin(capaian, tabel);
+  if (!hasil) return null;
+  let poin = hasil.totalPoin;
   const n = Math.max(1, parseInt(jumlah_anggota) || 1);
+  let bonusFactor = 1;
+  let poinPerOrang = poin;
   if (jenis_kepesertaan === "kelompok") {
-    const bonus = n <= 5 ? 1 : n <= 10 ? 1.25 : 1.5;
-    poin = poin * bonus;
+    bonusFactor = n <= 5 ? 1 : n <= 10 ? 1.25 : 1.5;
+    const totalKelompok = poin * bonusFactor;
+    poinPerOrang = totalKelompok / n;
   }
-  return { poin: Math.round(poin * 100) / 100, total: Math.round(poin * PENGALI_REWARD), jumlah_anggota: n };
+  poinPerOrang = Math.round(poinPerOrang * 100) / 100;
+  return {
+    poinDasar: hasil.totalPoin,
+    rincian: hasil.rincian,
+    bonusFactor,
+    jumlah_anggota: n,
+    isKelompok: jenis_kepesertaan === "kelompok",
+    poinPerOrang,
+    total: Math.round(poinPerOrang * PENGALI_REWARD),
+  };
 }
 
 function formatRupiah(n) {
@@ -789,10 +851,14 @@ function Step4Rekognisi({ data, onChange, onBlur, onFileChange, files, errors })
 // Step 4B — Detail Lomba Mandiri
 // ─────────────────────────────────────────────────────────────────────────────
 function Step4Lomba({ data, onChange, onBlur, onFileChange, files, errors }) {
+  // Live estimation preview
+  const tabel   = TABEL_NON_PUSPRESNAS[data.kategori_kegiatan];
+  const preview = (data.kategori_kegiatan && data.capaian) ? capaianKePoin(data.capaian, tabel) : null;
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
-        <FSelect id="kategori_kegiatan" label="Kategori Kegiatan" required
+        <FSelect id="kategori_kegiatan" label="Kategori Kegiatan (Tingkat)" required
           value={data.kategori_kegiatan} onChange={(e) => onChange("kategori_kegiatan", e.target.value)}
           onBlur={() => onBlur("kategori_kegiatan")}
           error={errors?.kategori_kegiatan}>
@@ -852,6 +918,38 @@ function Step4Lomba({ data, onChange, onBlur, onFileChange, files, errors }) {
         <option value="">Pilih capaian</option>
         {CAPAIAN_LOMBA.map((c) => <option key={c}>{c}</option>)}
       </FSelect>
+
+      {/* ── Live Estimasi Poin ── */}
+      {preview ? (
+        <div style={{ background: "#fdf8ed", border: "1px solid #f0d99a", borderRadius: "10px", padding: "12px 14px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+            <p style={{ fontSize: "12px", fontWeight: 700, color: "#8c6200" }}>Estimasi Poin · {data.kategori_kegiatan}</p>
+            <p style={{ fontSize: "18px", fontWeight: 800, color: "#8c6200" }}>
+              {preview.totalPoin} poin
+              <span style={{ fontSize: "11px", fontWeight: 500, marginLeft: "6px" }}>
+                = {formatRupiah(Math.round(preview.totalPoin * PENGALI_REWARD))}
+              </span>
+            </p>
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", alignItems: "center" }}>
+            {preview.rincian.map((r, i) => (
+              <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                {i > 0 && <span style={{ fontSize: "11px", color: "#b5900a", fontWeight: 700 }}>+</span>}
+                <span style={{ fontSize: "12px", background: "rgba(140,98,0,0.1)", color: "#8c6200", fontWeight: 600, padding: "2px 7px", borderRadius: "99px" }}>
+                  {r.poin} ({r.label})
+                </span>
+              </span>
+            ))}
+            <span style={{ fontSize: "11px", color: "#b5900a", fontWeight: 700, marginLeft: "2px" }}>=</span>
+            <span style={{ fontSize: "12px", fontWeight: 800, color: "#8c6200" }}>{preview.totalPoin} poin</span>
+          </div>
+          <p style={{ fontSize: "10px", color: "#b5900a", marginTop: "6px" }}>Poin kumulatif sesuai SK Rektor 078/B.02/UKDW/2023. Estimasi final (termasuk kelompok) ada di tahap Konfirmasi.</p>
+        </div>
+      ) : (data.kategori_kegiatan && !data.capaian) ? (
+        <div style={{ background: "#f8f6f1", border: "1px solid #e2ddd4", borderRadius: "10px", padding: "10px 14px" }}>
+          <p style={{ fontSize: "11px", color: "#9a9490" }}>👆 Pilih capaian untuk melihat estimasi poin secara otomatis.</p>
+        </div>
+      ) : null}
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
         <FInput id="tanggal_mulai" label="Tanggal Mulai" required
@@ -1013,12 +1111,39 @@ function Step6({ data, onChange, nimInfo, errors }) {
       </div>
 
       {hasil ? (
-        <div style={{ background: "#fdf8ed", border: "1px solid #f0d99a", borderRadius: "10px", padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <p style={{ fontSize: "13px", fontWeight: 600, color: "#8c6200" }}>Estimasi Dana Penghargaan</p>
-            <p style={{ fontSize: "11px", color: "#b5900a", marginTop: "2px" }}>{hasil.poin} poin × Rp 225.000 · SK Rektor 078/2023 · Non PUSPRESNAS</p>
+        <div style={{ background: "#fdf8ed", border: "1px solid #f0d99a", borderRadius: "10px", padding: "14px 16px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+            <div>
+              <p style={{ fontSize: "13px", fontWeight: 600, color: "#8c6200" }}>Estimasi Dana Penghargaan</p>
+              <p style={{ fontSize: "11px", color: "#b5900a", marginTop: "2px" }}>SK Rektor 078/B.02/UKDW/2023 · Non PUSPRESNAS</p>
+            </div>
+            <p style={{ fontSize: "22px", fontWeight: 800, color: "#8c6200", fontFamily: "'Syne', sans-serif" }}>{formatRupiah(hasil.total)}</p>
           </div>
-          <p style={{ fontSize: "22px", fontWeight: 800, color: "#8c6200", fontFamily: "'Syne', sans-serif" }}>{formatRupiah(hasil.total)}</p>
+          {/* Rincian poin kumulatif */}
+          <div style={{ background: "rgba(140,98,0,0.06)", borderRadius: "8px", padding: "10px 12px", marginBottom: "6px" }}>
+            <p style={{ fontSize: "10px", fontWeight: 700, color: "#8c6200", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "6px" }}>Rincian Poin Kumulatif</p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", alignItems: "center" }}>
+              {hasil.rincian.map((r, i) => (
+                <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                  {i > 0 && <span style={{ fontSize: "12px", color: "#b5900a", fontWeight: 700 }}>+</span>}
+                  <span style={{ fontSize: "12px", color: "#1c1a17", fontWeight: 600 }}>{r.poin}</span>
+                  <span style={{ fontSize: "10px", color: "#8c6200" }}>({r.label})</span>
+                </span>
+              ))}
+              <span style={{ fontSize: "12px", color: "#b5900a", fontWeight: 700, marginLeft: "4px" }}>=</span>
+              <span style={{ fontSize: "13px", color: "#8c6200", fontWeight: 800 }}>{hasil.poinDasar} poin</span>
+            </div>
+            {hasil.isKelompok && (
+              <div style={{ marginTop: "6px", paddingTop: "6px", borderTop: "1px solid rgba(140,98,0,0.15)" }}>
+                <p style={{ fontSize: "11px", color: "#8c6200" }}>
+                  Kelompok {hasil.jumlah_anggota} orang
+                  {hasil.bonusFactor > 1 && <> · Bonus {Math.round((hasil.bonusFactor - 1) * 100)}%</>}
+                  {" "}→ ({hasil.poinDasar}{hasil.bonusFactor > 1 ? ` × ${hasil.bonusFactor}` : ""}) ÷ {hasil.jumlah_anggota} = <strong>{hasil.poinPerOrang} poin/orang</strong>
+                </p>
+              </div>
+            )}
+          </div>
+          <p style={{ fontSize: "11px", color: "#b5900a" }}>{hasil.poinPerOrang} poin × Rp 225.000 = {formatRupiah(hasil.total)} per mahasiswa</p>
         </div>
       ) : (
         <div style={{ background: "#f8f6f1", border: `1px solid ${T.border}`, borderRadius: "10px", padding: "12px 16px", display: "flex", justifyContent: "space-between" }}>
