@@ -402,6 +402,7 @@ def _row_to_dict(row):
 # Query
 # ---------------------------------------------------------------------------
 def get_all_claims():
+    """Kembalikan semua klaim KECUALI yang berasal dari periode diarsipkan."""
     conn = _get_conn()
     cursor = conn.cursor()
     cursor.execute("""
@@ -411,6 +412,8 @@ def get_all_claims():
                u.nama AS verified_by_nama, c.flag_alasan
         FROM CLAIMS c
         LEFT JOIN USERS u ON u.id = c.verified_by
+        LEFT JOIN PERIODE_KLAIM pk ON pk.id = c.periode_id
+        WHERE (pk.status IS NULL OR pk.status != 'diarsipkan')
         ORDER BY c.id DESC
     """)
     rows = cursor.fetchall()
@@ -1049,6 +1052,24 @@ def get_claims_by_periode_id(periode_id: int) -> list:
     rows = cursor.fetchall()
     conn.close()
     return [_row_to_dict(row) for row in rows]
+
+
+def get_rewards_by_periode_id(periode_id: int) -> list:
+    """Ambil semua reward konfirmasi pada periode tertentu (via claim.periode_id)."""
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT rk.*, c.nama_lomba, p.estimasi_reward, p.kompetisi_puspresnas
+        FROM REWARD_KONFIRMASI rk
+        JOIN CLAIMS c ON c.id = rk.claim_id
+        LEFT JOIN PENGAJUAN p ON p.claim_id = rk.claim_id
+        WHERE c.periode_id = ?
+        ORDER BY rk.id DESC
+    """, (periode_id,))
+    rows = cursor.fetchall()
+    cols = [d[0] for d in cursor.description]
+    conn.close()
+    return [dict(zip(cols, row)) for row in rows]
 
 
 def update_periode_data(periode_id: int, data: dict) -> bool:
