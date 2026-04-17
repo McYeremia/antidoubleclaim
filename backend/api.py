@@ -22,6 +22,7 @@ from backend.database import (
     get_profil_mahasiswa, upsert_profil_mahasiswa,
     get_periode_aktif, get_periode_terkini, get_all_periode, create_periode,
     update_periode_status, update_periode_data, delete_periode, reset_semua_data,
+    arsipkan_periode, get_claims_by_periode_id,
 )
 from backend.nim_parser import parse_nim
 
@@ -108,8 +109,20 @@ async def buat_periode(body: PeriodeCreate):
 async def ubah_status_periode(periode_id: int, status: str):
     ok = update_periode_status(periode_id, status)
     if not ok:
-        raise HTTPException(status_code=400, detail="Status tidak valid. Gunakan 'aktif' atau 'tutup'.")
+        raise HTTPException(status_code=400, detail="Status tidak valid. Gunakan 'aktif', 'tutup', atau 'ditutup'.")
     return {"success": True}
+
+@app.post("/periode/{periode_id}/arsip")
+async def arsip_periode(periode_id: int, x_operator_id: Optional[str] = Header(None)):
+    _require_superadmin(x_operator_id)
+    result = arsipkan_periode(periode_id)
+    if not result["ok"]:
+        raise HTTPException(status_code=400, detail=result.get("alasan", "Tidak dapat mengarsipkan"))
+    return {"success": True}
+
+@app.get("/periode/{periode_id}/claims")
+async def claims_by_periode(periode_id: int):
+    return get_claims_by_periode_id(periode_id)
 
 class PeriodeEdit(BaseModel):
     nama:            str
@@ -239,11 +252,12 @@ async def submit_pengajuan(
     tanggal_surat:       Optional[str]  = Form(None),
     nama_ketua:          Optional[str]  = Form(None),
     peran_pengeclaim:    Optional[str]  = Form(None),
-    keterangan_kelompok: Optional[str]  = Form(None),
-    anggota_json:        Optional[str]  = Form(None),
-    setuju:              str            = Form("false"),
-    claim_id:            Optional[str]  = Form(None),
-    estimasi_reward:     Optional[str]  = Form(None),
+    keterangan_kelompok:  Optional[str]  = Form(None),
+    kompetisi_puspresnas: Optional[str]  = Form(None),
+    anggota_json:         Optional[str]  = Form(None),
+    setuju:               str            = Form("false"),
+    claim_id:             Optional[str]  = Form(None),
+    estimasi_reward:      Optional[str]  = Form(None),
     surat_tugas:         Optional[UploadFile] = File(None),
     foto_penyerahan:     Optional[UploadFile] = File(None),
     dokumen_sertifikat:  Optional[UploadFile] = File(None),
@@ -302,6 +316,7 @@ async def submit_pengajuan(
             "claim_id":             int(claim_id) if claim_id else None,
             "setuju":               setuju.lower() == "true",
             "estimasi_reward":      int(estimasi_reward) if estimasi_reward else None,
+            "kompetisi_puspresnas": kompetisi_puspresnas,
         }
 
         pengajuan_id = insert_pengajuan(data, anggota)

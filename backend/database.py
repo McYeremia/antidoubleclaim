@@ -143,6 +143,8 @@ def create_database():
         "ALTER TABLE PENGAJUAN ADD COLUMN estimasi_reward INTEGER",
         "ALTER TABLE USERS ADD COLUMN role TEXT NOT NULL DEFAULT 'operator'",
         "ALTER TABLE CLAIMS ADD COLUMN flag_alasan TEXT",
+        "ALTER TABLE CLAIMS ADD COLUMN periode_id INTEGER",
+        "ALTER TABLE PENGAJUAN ADD COLUMN kompetisi_puspresnas TEXT",
     ]:
         try:
             cursor.execute(migration)
@@ -316,14 +318,24 @@ def insert_claim(nama_lomba, tingkat, tanggal, peringkat, sertifikat_path,
 
     flag_alasan = detail.get("flag_alasan") if flagged else None
 
+    # Ambil periode aktif untuk dicatat pada klaim
+    cursor.execute("""
+        SELECT id FROM PERIODE_KLAIM
+        WHERE status = 'aktif'
+          AND DATE('now', 'localtime') BETWEEN tanggal_mulai AND tanggal_selesai
+        ORDER BY id DESC LIMIT 1
+    """)
+    periode_row = cursor.fetchone()
+    periode_id  = periode_row[0] if periode_row else None
+
     cursor.execute("""
         INSERT INTO CLAIMS
             (nama_lomba, tingkat, tanggal, peringkat, sertifikat_path,
-             phash, status, mahasiswa_email, nama_display, mirip_dengan_id, flag_alasan)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             phash, status, mahasiswa_email, nama_display, mirip_dengan_id, flag_alasan, periode_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         nama_lomba, tingkat, tanggal, peringkat, sertifikat_path,
-        str(new_hash), status, mahasiswa_email, nama_display, mirip_dengan_id, flag_alasan,
+        str(new_hash), status, mahasiswa_email, nama_display, mirip_dengan_id, flag_alasan, periode_id,
     ))
 
     claim_id = cursor.lastrowid
@@ -421,9 +433,9 @@ def insert_pengajuan(data: dict, anggota: list = None) -> int:
             nama_lembaga, jenis_karya_teks, jenis_karya_pilihan,
             deskripsi_karya, manfaat_karya, nomor_surat, tanggal_surat,
             nama_ketua, peran_pengeclaim, keterangan_kelompok,
-            claim_id, setuju, estimasi_reward
+            claim_id, setuju, estimasi_reward, kompetisi_puspresnas
         ) VALUES (
-            ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
+            ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
         )
     """, (
         data.get("mahasiswa_email"), data.get("nama_display"), data.get("nomor_wa"),
@@ -438,7 +450,7 @@ def insert_pengajuan(data: dict, anggota: list = None) -> int:
         data.get("deskripsi_karya"), data.get("manfaat_karya"), data.get("nomor_surat"), data.get("tanggal_surat"),
         data.get("nama_ketua"), data.get("peran_pengeclaim"), data.get("keterangan_kelompok"),
         data.get("claim_id"), 1 if data.get("setuju") else 0,
-        data.get("estimasi_reward"),
+        data.get("estimasi_reward"), data.get("kompetisi_puspresnas"),
     ))
     pengajuan_id = cursor.lastrowid
 
@@ -501,7 +513,7 @@ def update_pengajuan(pengajuan_id: int, data: dict):
         "nama_lembaga", "jenis_karya_teks", "jenis_karya_pilihan",
         "deskripsi_karya", "manfaat_karya", "nomor_surat", "tanggal_surat",
         "nama_ketua", "peran_pengeclaim", "keterangan_kelompok",
-        "estimasi_reward",
+        "estimasi_reward", "kompetisi_puspresnas",
     ]
     sets   = [f"{col} = ?" for col in EDITABLE if col in data]
     values = [data[col]    for col in EDITABLE if col in data]
@@ -928,10 +940,21 @@ def get_periode_aktif():
 
 
 def get_all_periode():
-    """Kembalikan semua periode, terbaru di atas."""
+    """Kembalikan semua periode, terbaru di atas. Sertakan jumlah klaim per periode."""
     conn = _get_conn()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM PERIODE_KLAIM ORDER BY id DESC")
+    cursor.execute("""
+        SELECT p.*,
+               COUNT(c.id)                                          AS jumlah_klaim,
+               SUM(CASE WHEN c.status = 'sudah dicek' THEN 1 ELSE 0 END) AS klaim_disetujui,
+               SUM(CASE WHEN rk.reward_status = 'selesai' THEN 1 ELSE 0 END) AS reward_selesai,
+               SUM(CASE WHEN rk.id IS NOT NULL AND rk.reward_status != 'selesai' THEN 1 ELSE 0 END) AS reward_pending
+        FROM PERIODE_KLAIM p
+        LEFT JOIN CLAIMS c ON c.periode_id = p.id
+        LEFT JOIN REWARD_KONFIRMASI rk ON rk.claim_id = c.id
+        GROUP BY p.id
+        ORDER BY p.id DESC
+    """)
     rows = cursor.fetchall()
     cols = [d[0] for d in cursor.description]
     conn.close()
@@ -960,17 +983,72 @@ def create_periode(data: dict) -> int:
 
 
 def update_periode_status(periode_id: int, status: str) -> bool:
-    """Buka ('aktif') atau tutup ('tutup') periode. Hanya 1 periode aktif sekaligus."""
-    if status not in ("aktif", "tutup"):
+    """Ubah status periode: 'aktif', 'tutup', atau 'ditutup'. Hanya 1 periode aktif sekaligus."""
+    if status not in ("aktif", "tutup", "ditutup"):
         return False
     conn = _get_conn()
     if status == "aktif":
-        # Tutup semua periode lain terlebih dahulu
         conn.execute("UPDATE PERIODE_KLAIM SET status = 'tutup' WHERE status = 'aktif'")
     conn.execute("UPDATE PERIODE_KLAIM SET status = ? WHERE id = ?", (status, periode_id))
     conn.commit()
     conn.close()
     return True
+
+
+def arsipkan_periode(periode_id: int) -> dict:
+    """
+    Arsipkan periode: ubah status menjadi 'diarsipkan'.
+    Hanya berhasil jika semua reward pada periode tsb sudah selesai.
+    Kembalikan {"ok": True} atau {"ok": False, "alasan": str, "pending": int}.
+    """
+    conn = _get_conn()
+    cursor = conn.cursor()
+
+    # Cek status periode
+    cursor.execute("SELECT status FROM PERIODE_KLAIM WHERE id = ?", (periode_id,))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return {"ok": False, "alasan": "Periode tidak ditemukan"}
+    if row[0] not in ("tutup", "ditutup"):
+        conn.close()
+        return {"ok": False, "alasan": "Hanya periode yang sudah ditutup yang dapat diarsipkan"}
+
+    # Hitung reward yang belum selesai pada periode ini
+    cursor.execute("""
+        SELECT COUNT(*) FROM REWARD_KONFIRMASI rk
+        JOIN CLAIMS c ON c.id = rk.claim_id
+        WHERE c.periode_id = ? AND rk.reward_status != 'selesai'
+    """, (periode_id,))
+    pending = cursor.fetchone()[0]
+
+    if pending > 0:
+        conn.close()
+        return {"ok": False, "alasan": f"Masih ada {pending} reward yang belum selesai", "pending": pending}
+
+    conn.execute("UPDATE PERIODE_KLAIM SET status = 'diarsipkan' WHERE id = ?", (periode_id,))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
+
+
+def get_claims_by_periode_id(periode_id: int) -> list:
+    """Ambil semua klaim yang terdaftar pada periode tertentu."""
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT c.id, c.nama_lomba, c.tingkat, c.tanggal, c.peringkat,
+               c.sertifikat_path, c.status, c.mahasiswa_email, c.nama_display,
+               c.mirip_dengan_id, c.verified_by, c.verified_at,
+               u.nama AS verified_by_nama, c.flag_alasan
+        FROM CLAIMS c
+        LEFT JOIN USERS u ON u.id = c.verified_by
+        WHERE c.periode_id = ?
+        ORDER BY c.id DESC
+    """, (periode_id,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [_row_to_dict(row) for row in rows]
 
 
 def update_periode_data(periode_id: int, data: dict) -> bool:

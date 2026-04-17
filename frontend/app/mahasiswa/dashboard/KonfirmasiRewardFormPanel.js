@@ -234,6 +234,7 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
 
         if (pData.nama_ketua) { updates.nama_ketua = pData.nama_ketua; filled.add("nama_ketua"); }
         if (pData.nomor_wa)   { updates.nomor_wa   = pData.nomor_wa;   filled.add("nomor_wa");   }
+        if (pData.kompetisi_puspresnas) updates.kompetisi_puspresnas = pData.kompetisi_puspresnas;
         if (pData.nama_kegiatan) {
           updates.judul_lomba = pData.nama_kegiatan;
           filled.add("judul_lomba");
@@ -252,14 +253,18 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
         filled.add("periode");
 
         // Prefill kategori_lomba dari kategori_simkatmawa
-        const simkatmawa = pData.kategori_simkatmawa;
-        if (simkatmawa === "rekognisi" || simkatmawa === "rekognisi_non_lomba") {
-          updates.kategori_lomba = "publikasi";
+        const simkatmawa = pData.kategori_simkatmawa ?? "";
+        if (simkatmawa === "lomba_mandiri_puspresnas") {
+          updates.kategori_lomba = "puspresnas";
           filled.add("kategori_lomba");
-        } else if (simkatmawa === "lomba_mandiri") {
+        } else if (simkatmawa.startsWith("lomba_mandiri")) {
+          // Fallback: cek nama kegiatan apakah mengandung nama kompetisi puspresnas
           const namaUpper = (pData.nama_kegiatan || "").toUpperCase();
           const adaPuspresnas = KOMPETISI_PUSPRESNAS.some(k => namaUpper.includes(k.toUpperCase()));
           updates.kategori_lomba = adaPuspresnas ? "puspresnas" : "non_puspresnas";
+          filled.add("kategori_lomba");
+        } else if (simkatmawa.startsWith("rekognisi")) {
+          updates.kategori_lomba = "publikasi";
           filled.add("kategori_lomba");
         }
 
@@ -339,7 +344,6 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
     const errs = {};
     if (!form.nomor_urut_lampiran.trim())                             errs.nomor_urut_lampiran   = "Wajib diisi";
     if (!form.kategori_lomba)                                         errs.kategori_lomba        = "Wajib dipilih";
-    if (isPuspresnas && !form.kompetisi_puspresnas)                   errs.kompetisi_puspresnas  = "Wajib dipilih";
     if ((isPuspresnas || isNonPuspresnas) && !form.judul_lomba.trim()) errs.judul_lomba           = "Wajib diisi";
     if (!form.nama_ketua.trim())                                      errs.nama_ketua            = "Wajib diisi";
     if (!form.nomor_wa.trim())                                        errs.nomor_wa              = "Wajib diisi";
@@ -593,22 +597,6 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
         {/* ── Detail Kegiatan ── */}
         {kategoriDipilih && (
           <SectionCard title="Detail Kegiatan">
-            {isPuspresnas && (
-              <div>
-                <Label required>Kompetisi PUSPRESNAS</Label>
-                <Select
-                  name="kompetisi_puspresnas"
-                  value={form.kompetisi_puspresnas}
-                  onChange={handleChange}
-                  error={errors.kompetisi_puspresnas}
-                >
-                  <option value="">Pilih kompetisi</option>
-                  {KOMPETISI_PUSPRESNAS.map(k => (
-                    <option key={k} value={k}>{k}</option>
-                  ))}
-                </Select>
-              </div>
-            )}
             {(isPuspresnas || isNonPuspresnas) && (
               <div>
                 <Label required={!prefilledFields.has("judul_lomba")}>
@@ -727,7 +715,7 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
                 name="foto_buku_tabungan"
                 onChange={handleFileChange}
                 required
-                hint={`Format: ${isPuspresnas ? (form.kompetisi_puspresnas || "KategoriKompetisi") : isNonPuspresnas ? "NonPUSPRESNAS" : "Publikasi"}_${form.nama_pemilik_rekening || "NamaPemilik"}_Buku Tabungan`}
+                hint={`Format: ${isPuspresnas ? (form.kompetisi_puspresnas || "PUSPRESNAS") : isNonPuspresnas ? "NonPUSPRESNAS" : "Publikasi"}_${form.nama_pemilik_rekening || "NamaPemilik"}_Buku Tabungan`}
                 currentFile={files.foto_buku_tabungan}
                 existingPath={existingReward?.foto_buku_tabungan_path}
                 error={errors.foto_buku_tabungan}
@@ -737,7 +725,7 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
                 name="foto_ktm"
                 onChange={handleFileChange}
                 required
-                hint={`Format: ${isPuspresnas ? (form.kompetisi_puspresnas || "KategoriKompetisi") : isNonPuspresnas ? "NonPUSPRESNAS" : "Publikasi"}_${form.nama_pemilik_rekening || "NamaPemilik"}_KTM`}
+                hint={`Format: ${isPuspresnas ? (form.kompetisi_puspresnas || "PUSPRESNAS") : isNonPuspresnas ? "NonPUSPRESNAS" : "Publikasi"}_${form.nama_pemilik_rekening || "NamaPemilik"}_KTM`}
                 currentFile={files.foto_ktm}
                 existingPath={existingReward?.foto_ktm_path}
                 error={errors.foto_ktm}
@@ -747,7 +735,7 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
                 name="foto_ktp"
                 onChange={handleFileChange}
                 required
-                hint={`Format: ${isPuspresnas ? (form.kompetisi_puspresnas || "KategoriKompetisi") : isNonPuspresnas ? "NonPUSPRESNAS" : "Publikasi"}_${form.nama_pemilik_rekening || "NamaPemilik"}_KTP`}
+                hint={`Format: ${isPuspresnas ? (form.kompetisi_puspresnas || "PUSPRESNAS") : isNonPuspresnas ? "NonPUSPRESNAS" : "Publikasi"}_${form.nama_pemilik_rekening || "NamaPemilik"}_KTP`}
                 currentFile={files.foto_ktp}
                 existingPath={existingReward?.foto_ktp_path}
                 error={errors.foto_ktp}
