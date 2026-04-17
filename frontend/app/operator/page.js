@@ -500,8 +500,8 @@ function PengajuanReward() {
   const diproses = rewards.filter(r => r.reward_status === "diproses");
   const selesai  = rewards.filter(r => r.reward_status === "selesai");
 
-  const exportToExcel = () => {
-    const rows = selesai.map((r, i) => ({
+  const exportToExcel = (data, filename) => {
+    const rows = data.map((r, i) => ({
       "No.":                    i + 1,
       "Nama Ketua":             r.nama_ketua ?? "",
       "NIM":                    r.nim ?? "",
@@ -532,7 +532,7 @@ function PengajuanReward() {
     ws["!cols"] = colWidths;
 
     const date = new Date().toISOString().slice(0, 10);
-    XLSX.writeFile(wb, `reward_disetujui_${date}.xlsx`);
+    XLSX.writeFile(wb, `${filename}_${date}.xlsx`);
   };
 
   const Section = ({ title, color, items, onExport, onBulkKirim, rowActions }) => (
@@ -670,6 +670,7 @@ function PengajuanReward() {
             color="bg-blue-50/30 text-blue-600 border-blue-50"
             items={diproses}
             onBulkKirim={handleKirimSemuaReward}
+            onExport={() => exportToExcel(diproses, "reward_approved")}
             rowActions={(r) => (
               <>
                 <button
@@ -687,7 +688,7 @@ function PengajuanReward() {
               </>
             )}
           />
-          <Section title="Arsip Selesai (Dana Terkirim)" color="bg-green-50/30 text-green-600 border-green-50" items={selesai} onExport={exportToExcel} />
+          <Section title="Arsip Selesai (Dana Terkirim)" color="bg-green-50/30 text-green-600 border-green-50" items={selesai} onExport={() => exportToExcel(selesai, "reward_terkirim")} />
         </div>
       )}
 
