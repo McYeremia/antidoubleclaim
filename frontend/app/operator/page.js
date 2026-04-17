@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import * as XLSX from "xlsx";
 
 const API = "http://127.0.0.1:8000";
 
@@ -412,7 +413,7 @@ function RewardDetailModal({ reward, onClose, onStatusUpdate }) {
         </div>
 
         {/* Footer Aksi */}
-        {reward.reward_status !== "selesai" && reward.reward_status !== "ditolak" && (
+        {reward.reward_status !== "selesai" && reward.reward_status !== "ditolak" && reward.reward_status !== "diproses" && (
           <div className="px-8 py-6 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between flex-shrink-0">
             <div className="flex gap-2">
                <button onClick={() => handleStatus("dikembalikan")} disabled={updating}
@@ -424,7 +425,7 @@ function RewardDetailModal({ reward, onClose, onStatusUpdate }) {
                 TOLAK
               </button>
             </div>
-            <button onClick={() => handleStatus("selesai")} disabled={updating}
+            <button onClick={() => handleStatus("diproses")} disabled={updating}
               className="px-8 py-2.5 rounded-xl text-[12px] font-black bg-gray-900 text-white hover:bg-gray-700 transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-gray-200">
               {updating ? "MEMPROSES..." : "APPROVE DATA REKENING"}
             </button>
@@ -437,9 +438,12 @@ function RewardDetailModal({ reward, onClose, onStatusUpdate }) {
 
 // ── Konten: Pengajuan Reward ──────────────────────────────────────────────────
 function PengajuanReward() {
-  const [rewards,        setRewards]        = useState([]);
-  const [loading,        setLoading]        = useState(true);
-  const [selectedReward, setSelectedReward] = useState(null);
+  const [rewards,           setRewards]           = useState([]);
+  const [loading,           setLoading]           = useState(true);
+  const [selectedReward,    setSelectedReward]    = useState(null);
+  const [bermasalahTarget,  setBermasalahTarget]  = useState(null);
+  const [bermasalahCatatan, setBermasalahCatatan] = useState("");
+  const [bermasalahLoading, setBermasalahLoading] = useState(false);
 
   const fetchRewards = async () => {
     setLoading(true);
@@ -456,15 +460,112 @@ function PengajuanReward() {
 
   useEffect(() => { fetchRewards(); }, []);
 
+  const handleKirimReward = async (id) => {
+    if (!confirm("Konfirmasi bahwa dana penghargaan sudah dikirim ke rekening mahasiswa ini?")) return;
+    await fetch(`http://127.0.0.1:8000/reward-konfirmasi/${id}/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "selesai" }),
+    });
+    fetchRewards();
+  };
+
+  const handleKirimSemuaReward = async () => {
+    if (!confirm(`Konfirmasi bahwa dana penghargaan sudah dikirim ke SEMUA ${diproses.length} mahasiswa di bagian Approved?`)) return;
+    await Promise.all(diproses.map(r =>
+      fetch(`http://127.0.0.1:8000/reward-konfirmasi/${r.id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "selesai" }),
+      })
+    ));
+    fetchRewards();
+  };
+
+  const handleKonfirmasiBermasalah = async () => {
+    if (!bermasalahCatatan.trim()) return;
+    setBermasalahLoading(true);
+    await fetch(`http://127.0.0.1:8000/reward-konfirmasi/${bermasalahTarget.id}/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "dikembalikan", catatan: bermasalahCatatan }),
+    });
+    setBermasalahLoading(false);
+    setBermasalahTarget(null);
+    setBermasalahCatatan("");
+    fetchRewards();
+  };
+
   const menunggu = rewards.filter(r => r.reward_status === "menunggu");
   const diproses = rewards.filter(r => r.reward_status === "diproses");
   const selesai  = rewards.filter(r => r.reward_status === "selesai");
 
-  const Section = ({ title, color, items }) => (
+  const exportToExcel = () => {
+    const rows = selesai.map((r, i) => ({
+      "No.":                    i + 1,
+      "Nama Ketua":             r.nama_ketua ?? "",
+      "NIM":                    r.nim ?? "",
+      "Nomor WA":               r.nomor_wa ?? "",
+      "Nama Lomba":             r.nama_lomba ?? "",
+      "Kategori":               KATEGORI_LABEL[r.kategori_lomba] ?? r.kategori_lomba ?? "",
+      "Periode":                r.periode ?? "",
+      "Tahun Klaim":            r.tahun_klaim ?? "",
+      "Tahun Kegiatan":         r.tahun_kegiatan ?? "",
+      "No. Urut Lampiran":      r.nomor_urut_lampiran ?? "",
+      "Nama Pemilik Rekening":  r.nama_pemilik_rekening ?? "",
+      "Bank":                   r.bank ?? "",
+      "Nomor Rekening":         r.nomor_rekening ?? "",
+      "Dana Penghargaan (Rp)":  r.estimasi_reward ?? "",
+      "Tanggal Pengajuan":      r.created_at ?? "",
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Reward Disetujui");
+
+    const colWidths = [
+      { wch: 5 }, { wch: 25 }, { wch: 15 }, { wch: 16 },
+      { wch: 35 }, { wch: 22 }, { wch: 12 }, { wch: 12 },
+      { wch: 15 }, { wch: 18 }, { wch: 25 }, { wch: 12 },
+      { wch: 20 }, { wch: 22 }, { wch: 18 },
+    ];
+    ws["!cols"] = colWidths;
+
+    const date = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `reward_disetujui_${date}.xlsx`);
+  };
+
+  const Section = ({ title, color, items, onExport, onBulkKirim, rowActions }) => (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-8">
       <div className={`px-6 py-4 border-b flex items-center justify-between border-gray-50 ${color}`}>
-        <h3 className="font-bold text-[11px] uppercase tracking-widest">{title}</h3>
-        <span className="text-[11px] font-black bg-white/50 px-2 py-0.5 rounded-full">{items.length}</span>
+        <div className="flex items-center gap-3">
+          <h3 className="font-bold text-[11px] uppercase tracking-widest">{title}</h3>
+          <span className="text-[11px] font-black bg-white/50 px-2 py-0.5 rounded-full">{items.length}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          {onBulkKirim && items.length > 0 && (
+            <button
+              onClick={onBulkKirim}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black bg-green-600 text-white hover:bg-green-700 transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+              </svg>
+              KIRIM SEMUA REWARD
+            </button>
+          )}
+          {onExport && items.length > 0 && (
+            <button
+              onClick={onExport}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black bg-green-700 text-white hover:bg-green-800 transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+              </svg>
+              EXPORT EXCEL
+            </button>
+          )}
+        </div>
       </div>
       {items.length === 0 ? (
         <p className="text-center text-gray-400 text-[13px] py-12">Tidak ada data.</p>
@@ -502,12 +603,15 @@ function PengajuanReward() {
                 </td>
                 <td className="px-6 py-4 text-[12px] text-gray-400 font-medium">{r.created_at}</td>
                 <td className="px-6 py-4 text-right">
-                  <button
-                    onClick={() => setSelectedReward(r)}
-                    className="px-4 py-1.5 rounded-xl text-[11px] font-black bg-gray-900 text-white hover:bg-gray-700 transition-all hover:scale-105"
-                  >
-                    DETAIL
-                  </button>
+                  <div className="flex items-center justify-end gap-2">
+                    {rowActions && rowActions(r)}
+                    <button
+                      onClick={() => setSelectedReward(r)}
+                      className="px-4 py-1.5 rounded-xl text-[11px] font-black bg-gray-900 text-white hover:bg-gray-700 transition-all hover:scale-105"
+                    >
+                      DETAIL
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -561,8 +665,29 @@ function PengajuanReward() {
       ) : (
         <div>
           <Section title="Antrian Menunggu Verifikasi" color="bg-orange-50/30 text-orange-600 border-orange-50" items={menunggu} />
-          <Section title="Data Dalam Proses"            color="bg-blue-50/30 text-blue-600 border-blue-50"       items={diproses} />
-          <Section title="Arsip Selesai"                color="bg-green-50/30 text-green-600 border-green-50"    items={selesai}  />
+          <Section
+            title="Approved"
+            color="bg-blue-50/30 text-blue-600 border-blue-50"
+            items={diproses}
+            onBulkKirim={handleKirimSemuaReward}
+            rowActions={(r) => (
+              <>
+                <button
+                  onClick={() => handleKirimReward(r.id)}
+                  className="px-3 py-1.5 rounded-xl text-[11px] font-black bg-green-600 text-white hover:bg-green-700 transition-colors"
+                >
+                  REWARD DIKIRIM
+                </button>
+                <button
+                  onClick={() => { setBermasalahTarget(r); setBermasalahCatatan(""); }}
+                  className="px-3 py-1.5 rounded-xl text-[11px] font-black bg-red-50 text-red-600 hover:bg-red-100 transition-colors border border-red-100"
+                >
+                  REKENING BERMASALAH
+                </button>
+              </>
+            )}
+          />
+          <Section title="Arsip Selesai (Dana Terkirim)" color="bg-green-50/30 text-green-600 border-green-50" items={selesai} onExport={exportToExcel} />
         </div>
       )}
 
@@ -572,6 +697,47 @@ function PengajuanReward() {
           onClose={() => setSelectedReward(null)}
           onStatusUpdate={fetchRewards}
         />
+      )}
+
+      {bermasalahTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+             onClick={() => setBermasalahTarget(null)}>
+          <div className="bg-white rounded-[28px] shadow-2xl w-full max-w-md p-8"
+               onClick={e => e.stopPropagation()}>
+            <h3 className="text-[16px] font-black text-gray-900 mb-1">Rekening Bermasalah</h3>
+            <p className="text-[13px] text-gray-400 mb-1">
+              Mahasiswa: <span className="font-bold text-gray-700">{bermasalahTarget.nama_ketua}</span>
+            </p>
+            <p className="text-[13px] text-gray-400 mb-5">
+              Rekening: <span className="font-bold text-gray-700 uppercase">{bermasalahTarget.bank}</span> · {bermasalahTarget.nomor_rekening}
+            </p>
+            <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2">
+              Keterangan masalah <span className="text-red-400">*</span>
+            </p>
+            <textarea
+              rows={4}
+              value={bermasalahCatatan}
+              onChange={e => setBermasalahCatatan(e.target.value)}
+              placeholder="Contoh: Nomor rekening tidak ditemukan, nama pemilik tidak sesuai..."
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-[14px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-400 transition-all mb-6"
+            />
+            <div className="flex items-center justify-end gap-3">
+              <button
+                onClick={() => setBermasalahTarget(null)}
+                className="px-5 py-2.5 text-[12px] font-bold text-gray-500 hover:text-gray-900 transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleKonfirmasiBermasalah}
+                disabled={bermasalahLoading || !bermasalahCatatan.trim()}
+                className="px-6 py-2.5 rounded-xl text-[12px] font-black bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-40"
+              >
+                {bermasalahLoading ? "MENGIRIM..." : "KIRIM NOTIFIKASI"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

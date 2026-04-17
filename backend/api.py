@@ -445,9 +445,10 @@ async def list_rewards(email: Optional[str] = None):
     conn = _get_conn()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT rk.*, c.nama_lomba
+        SELECT rk.*, c.nama_lomba, p.estimasi_reward
         FROM REWARD_KONFIRMASI rk
         LEFT JOIN CLAIMS c ON c.id = rk.claim_id
+        LEFT JOIN PENGAJUAN p ON p.claim_id = rk.claim_id
         ORDER BY rk.id DESC
     """)
     rows = cursor.fetchall()
