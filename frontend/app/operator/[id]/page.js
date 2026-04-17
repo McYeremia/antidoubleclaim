@@ -14,9 +14,19 @@ const STATUS_STYLE = {
 const TAHUN_INI = new Date().getFullYear();
 const OPT_TAHUN = [String(TAHUN_INI), String(TAHUN_INI - 1), String(TAHUN_INI - 2)];
 
+const isLombaMandiri = (kat) =>
+  kat === "lomba_mandiri_puspresnas" || kat === "lomba_mandiri_non_puspresnas";
+
+const LABEL_KATEGORI = {
+  lomba_mandiri_puspresnas:     "Lomba Mandiri — Puspresnas (DIKTI)",
+  lomba_mandiri_non_puspresnas: "Lomba Mandiri — Non Puspresnas (Non DIKTI)",
+  rekognisi:                    "Rekognisi Non-Lomba",
+};
+
 const OPT_KATEGORI_SIMKATMAWA = [
-  { value: "lomba_mandiri", label: "Lomba Mandiri" },
-  { value: "rekognisi",     label: "Rekognisi Non-Lomba" },
+  { value: "lomba_mandiri_puspresnas",     label: "Lomba Mandiri — Puspresnas (DIKTI)" },
+  { value: "lomba_mandiri_non_puspresnas", label: "Lomba Mandiri — Non Puspresnas (Non DIKTI)" },
+  { value: "rekognisi",                    label: "Rekognisi Non-Lomba" },
 ];
 const OPT_JENIS_KEPESERTAAN = [
   { value: "individu", label: "Individu" },
@@ -26,12 +36,13 @@ const OPT_ADA_DOSPEM = [
   { value: "ya",    label: "Ya" },
   { value: "tidak", label: "Tidak" },
 ];
-const OPT_KATEGORI_LOMBA   = ["Provinsi / Wilayah", "Nasional", "Internasional"];
-const OPT_TINGKATAN        = ["Internasional", "Nasional", "Provinsi"];
+const OPT_KATEGORI_LOMBA    = ["Provinsi / Wilayah", "Nasional", "Internasional"];
+const OPT_TINGKATAN         = ["Internasional", "Nasional", "Provinsi"];
 const OPT_MODEL_PELAKSANAAN = ["Online", "Offline"];
 const OPT_CAPAIAN = [
   "Juara 1", "Juara 2", "Juara 3",
   "Harapan 1", "Harapan 2", "Harapan 3",
+  "Didanai / Lolos Wilayah",
   "Apresiasi kejuaraan / Penghargaan tambahan / Juara umum",
   "Partisipasi / Delegasi / Peserta kejuaraan",
 ];
@@ -47,6 +58,51 @@ const OPT_KATEGORI_REKOGNISI = [
   "Tuan rumah kejuaraan/kompetisi mandiri",
 ];
 const OPT_JENIS_KARYA = ["Teknologi Tepat Guna", "Seni Budaya", "Produk Kreatif"];
+
+// ── Kalkulasi estimasi reward (sinkron dengan TambahKlaimWizard) ──────────────
+const PENGALI_REWARD = 225_000;
+const TABEL_PUSPRESNAS = { peserta: 0.5, didanai: 3, final: 6, juara3: 12, juara2: 15, juara1: 18 };
+const TABEL_NON_PUSPRESNAS = {
+  "Provinsi / Wilayah": { peserta: 0.5, didanai: 1, final: 2, juara3: 4,  juara2: 5,  juara1: 6  },
+  "Nasional":           { peserta: 0.5, didanai: 2, final: 4, juara3: 8,  juara2: 10, juara1: 12 },
+  "Internasional":      { peserta: 0.5, didanai: 3, final: 6, juara3: 12, juara2: 15, juara1: 18 },
+};
+
+function capaianKeLevel(capaian) {
+  if (!capaian) return null;
+  if (capaian.includes("Juara 1"))                                                          return "juara1";
+  if (capaian.includes("Juara 2"))                                                          return "juara2";
+  if (capaian.includes("Juara 3"))                                                          return "juara3";
+  if (capaian.startsWith("Harapan") || capaian.includes("Finalis") || capaian.includes("Final") || capaian.includes("Apresiasi")) return "final";
+  if (capaian.includes("Didanai") || capaian.includes("Lolos"))                            return "didanai";
+  if (capaian.includes("Peserta") || capaian.includes("Proposal") || capaian.includes("Partisipasi")) return "peserta";
+  return null;
+}
+
+function hitungEstimasi(form) {
+  if (!isLombaMandiri(form.kategori_simkatmawa)) return null;
+  const tabel = form.kategori_simkatmawa === "lomba_mandiri_puspresnas"
+    ? TABEL_PUSPRESNAS
+    : TABEL_NON_PUSPRESNAS[form.kategori_kegiatan];
+  if (!tabel) return null;
+  const level = capaianKeLevel(form.capaian);
+  if (!level) return null;
+
+  const tahapan = ["peserta", "didanai", "final"];
+  const juaraMap = { juara3: "juara3", juara2: "juara2", juara1: "juara1" };
+  let total = 0;
+  for (const t of tahapan) {
+    total += tabel[t];
+    if (t === level) break;
+    if (level in juaraMap && t === "final") { total += tabel[level]; break; }
+  }
+
+  const n = Math.max(1, parseInt(form.jumlah_anggota) || 1);
+  const bonusFactor = form.jenis_kepesertaan === "kelompok"
+    ? (n > 10 ? 1.5 : n >= 6 ? 1.25 : 1) : 1;
+
+  return Math.round(total * bonusFactor * PENGALI_REWARD);
+}
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 function InfoRow({ label, value }) {
@@ -129,16 +185,17 @@ function EditSelect({ label, name, value, onChange, options, span2 = false }) {
 
 // ── Blok data pengajuan lengkap ───────────────────────────────────────────────
 function PengajuanDetail({ p, onSaved }) {
-  const [editing, setEditing]   = useState(false);
-  const [form,    setForm]      = useState({});
-  const [saving,  setSaving]    = useState(false);
-  const [saved,   setSaved]     = useState(false);
+  const [editing,       setEditing]       = useState(false);
+  const [form,          setForm]          = useState({});
+  const [saving,        setSaving]        = useState(false);
+  const [saved,         setSaved]         = useState(false);
+  const [autoEstimasi,  setAutoEstimasi]  = useState(true);
 
   if (!p) return null;
 
-  const isLomba    = (editing ? form.kategori_simkatmawa : p.kategori_simkatmawa) === "lomba_mandiri";
-  const isKarya    = (editing ? form.kategori_kegiatan   : p.kategori_kegiatan)?.startsWith("Karya Mahasiswa");
-  const isKelompok = (editing ? form.jenis_kepesertaan   : p.jenis_kepesertaan)  === "kelompok";
+  const isLomba    = isLombaMandiri(editing ? form.kategori_simkatmawa : p.kategori_simkatmawa);
+  const isKarya    = (editing ? form.kategori_kegiatan : p.kategori_kegiatan)?.startsWith("Karya Mahasiswa");
+  const isKelompok = (editing ? form.jenis_kepesertaan : p.jenis_kepesertaan) === "kelompok";
 
   const anggota = p.anggota_list
     ? p.anggota_list.split(";;").map(s => { const [nama, nim] = s.split("|"); return { nama, nim }; })
@@ -146,13 +203,30 @@ function PengajuanDetail({ p, onSaved }) {
 
   const startEdit = () => {
     setForm({ ...p });
+    setAutoEstimasi(true);
     setEditing(true);
     setSaved(false);
   };
 
   const cancelEdit = () => setEditing(false);
 
-  const set = (name, value) => setForm(f => ({ ...f, [name]: value }));
+  const AUTO_TRIGGER = ["capaian", "kategori_kegiatan", "kategori_simkatmawa", "jenis_kepesertaan", "jumlah_anggota"];
+
+  const set = (name, value) => {
+    if (name === "estimasi_reward") {
+      setAutoEstimasi(false);
+      const updated = { ...form, estimasi_reward: value === "" ? null : Number(value) };
+      setForm(updated);
+      onFormChange?.(updated);
+      return;
+    }
+    const updated = { ...form, [name]: value };
+    if (autoEstimasi && AUTO_TRIGGER.includes(name)) {
+      const hasil = hitungEstimasi(updated);
+      if (hasil !== null) updated.estimasi_reward = hasil;
+    }
+    setForm(updated);
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -311,7 +385,7 @@ function PengajuanDetail({ p, onSaved }) {
             ) : (
               <>
                 <InfoRow label="Kategori SIMKATMAWA"
-                  value={isLomba ? "Lomba Mandiri" : "Rekognisi Non-Lomba"} />
+                  value={LABEL_KATEGORI[p.kategori_simkatmawa] ?? p.kategori_simkatmawa} />
                 <InfoRow label="Jenis Kepesertaan"  value={p.jenis_kepesertaan} />
                 <InfoRow label="Tahun Kegiatan"     value={p.tahun_kegiatan} />
 
@@ -433,25 +507,45 @@ function PengajuanDetail({ p, onSaved }) {
       </div>
 
       {/* Estimasi Reward */}
-      {d.estimasi_reward != null && (
+      {(d.estimasi_reward != null || editing) && (
         <div className="bg-gray-50 border border-gray-200 rounded-2xl px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.18em]">Estimasi Dana Penghargaan</p>
-            <p className="text-[11px] text-gray-400 mt-0.5">SK Rektor 078/B.02/UKDW/2023 · Non PUSPRESNAS</p>
+            <p className="text-[11px] text-gray-400 mt-0.5">
+              SK Rektor 078/B.02/UKDW/2023 ·{" "}
+              {d.kategori_simkatmawa === "lomba_mandiri_puspresnas" ? "PUSPRESNAS (DIKTI)" : "Non PUSPRESNAS"}
+            </p>
           </div>
           {editing ? (
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] font-semibold text-gray-500">Rp</span>
-              <input
-                type="number"
-                value={d.estimasi_reward ?? ""}
-                onChange={e => set("estimasi_reward", e.target.value ? Number(e.target.value) : null)}
-                className="w-48 pl-9 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-[15px] font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all text-right"
-              />
+            <div className="flex items-center gap-2">
+              {autoEstimasi && (
+                <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest bg-blue-50 px-2 py-0.5 rounded-full">AUTO</span>
+              )}
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] font-semibold text-gray-500">Rp</span>
+                <input
+                  type="number"
+                  value={d.estimasi_reward ?? ""}
+                  onChange={e => set("estimasi_reward", e.target.value)}
+                  className="w-52 pl-9 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-[15px] font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all text-right"
+                />
+              </div>
+              {!autoEstimasi && (
+                <button
+                  onClick={() => {
+                    setAutoEstimasi(true);
+                    const hasil = hitungEstimasi(form);
+                    if (hasil !== null) set("estimasi_reward", String(hasil));
+                  }}
+                  className="text-[10px] font-black text-gray-400 hover:text-gray-900 uppercase tracking-widest underline"
+                >
+                  Reset Auto
+                </button>
+              )}
             </div>
           ) : (
             <p className="text-[18px] font-bold text-gray-900 tabular-nums">
-              {"Rp " + Number(d.estimasi_reward).toLocaleString("id-ID")}
+              {d.estimasi_reward != null ? "Rp " + Number(d.estimasi_reward).toLocaleString("id-ID") : "—"}
             </p>
           )}
         </div>
@@ -583,38 +677,8 @@ export default function DetailKlaim() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-          {/* Main Info Column */}
-          <div className="lg:col-span-5 space-y-10">
-            <div className="bg-white rounded-[32px] shadow-sm border border-gray-100 p-8 space-y-8">
-              <SectionTitle>Identitas Klaim Dasar</SectionTitle>
-              <div className="space-y-6">
-                <InfoRow label="Nama Lomba / Capaian" value={claim.nama_lomba} />
-                <div className="grid grid-cols-2 gap-6">
-                  <InfoRow label="Tingkat"   value={claim.tingkat} />
-                  <InfoRow label="Peringkat" value={claim.peringkat} />
-                </div>
-                <InfoRow label="Tanggal Sertifikat" value={claim.tanggal} />
-                <div className="pt-4 border-t border-gray-50">
-                  <InfoRow label="Mahasiswa Pengunggah"   value={claim.nama_display} />
-                  <p className="text-[12px] font-mono text-gray-400 mt-1">{claim.mahasiswa_email}</p>
-                </div>
-              </div>
-
-              {claim.verified_by_nama && (
-                <div className="rounded-2xl bg-green-50 border border-green-100 px-5 py-4 flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center shrink-0">
-                     <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                     </svg>
-                  </div>
-                  <div>
-                    <p className="text-[12px] font-black text-green-700 uppercase tracking-widest">Diverifikasi Sistem</p>
-                    <p className="text-[11px] text-green-600 font-bold mt-0.5">{claim.verified_by_nama} · {claim.verified_at ?? "—"}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-
+          {/* Sertifikat Column */}
+          <div className="lg:col-span-4 space-y-10">
             <div className="bg-white rounded-[32px] shadow-sm border border-gray-100 p-8">
               <SectionTitle>Preview Sertifikat Digital</SectionTitle>
               <CertPreview url={fileUrl} filename={claim.sertifikat_filename} />
@@ -629,7 +693,7 @@ export default function DetailKlaim() {
           </div>
 
           {/* Detailed Form Column */}
-          <div className="lg:col-span-7 space-y-10">
+          <div className="lg:col-span-8 space-y-10">
              <PengajuanDetail p={pengajuan} onSaved={fetchAll} />
           </div>
         </div>

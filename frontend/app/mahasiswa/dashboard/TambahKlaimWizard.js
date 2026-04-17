@@ -30,8 +30,8 @@ function capaianKePoin(capaian, tabel) {
   if (capaian.includes("Juara 1"))                                     level = "juara1";
   else if (capaian.includes("Juara 2"))                                level = "juara2";
   else if (capaian.includes("Juara 3"))                                level = "juara3";
-  else if (capaian.startsWith("Harapan") || capaian.includes("Finalis") || capaian.includes("Final")) level = "final";
-  else if (capaian.includes("Apresiasi") || capaian.includes("Didanai") || capaian.includes("Lolos")) level = "didanai";
+  else if (capaian.startsWith("Harapan") || capaian.includes("Finalis") || capaian.includes("Final") || capaian.includes("Apresiasi")) level = "final";
+  else if (capaian.includes("Didanai") || capaian.includes("Lolos")) level = "didanai";
   else if (capaian.includes("Peserta") || capaian.includes("Proposal") || capaian.includes("Partisipasi")) level = "peserta";
   if (!level) return null;
 
@@ -77,28 +77,22 @@ function capaianKePoin(capaian, tabel) {
 
 function hitungReward(data) {
   const { kategori_simkatmawa, kategori_kegiatan, capaian, jenis_kepesertaan, jumlah_anggota } = data;
-  if (kategori_simkatmawa !== "lomba_mandiri") return null;
-  const tabel = TABEL_NON_PUSPRESNAS[kategori_kegiatan];
+  if (!isLombaMandiri(kategori_simkatmawa)) return null;
+  const tabel = kategori_simkatmawa === "lomba_mandiri_puspresnas"
+    ? TABEL_PUSPRESNAS
+    : TABEL_NON_PUSPRESNAS[kategori_kegiatan];
   const hasil = capaianKePoin(capaian, tabel);
   if (!hasil) return null;
-  let poin = hasil.totalPoin;
   const n = Math.max(1, parseInt(jumlah_anggota) || 1);
-  let bonusFactor = 1;
-  let poinPerOrang = poin;
-  if (jenis_kepesertaan === "kelompok") {
-    bonusFactor = n <= 5 ? 1 : n <= 10 ? 1.25 : 1.5;
-    const totalKelompok = poin * bonusFactor;
-    poinPerOrang = totalKelompok / n;
-  }
-  poinPerOrang = Math.round(poinPerOrang * 100) / 100;
+  const bonusFactor = jenis_kepesertaan === "kelompok"
+    ? (n > 10 ? 1.5 : n >= 6 ? 1.25 : 1) : 1;
   return {
-    poinDasar: hasil.totalPoin,
-    rincian: hasil.rincian,
+    poinDasar:  hasil.totalPoin,
+    rincian:    hasil.rincian,
     bonusFactor,
-    jumlah_anggota: n,
+    jumlah:     n,
     isKelompok: jenis_kepesertaan === "kelompok",
-    poinPerOrang,
-    total: Math.round(poinPerOrang * PENGALI_REWARD),
+    total:      Math.round(hasil.totalPoin * bonusFactor * PENGALI_REWARD),
   };
 }
 
@@ -125,9 +119,13 @@ const CAPAIAN_LOMBA = [
   "Harapan 1",
   "Harapan 2",
   "Harapan 3",
+  "Didanai / Lolos Wilayah",
   "Apresiasi kejuaraan / Penghargaan tambahan / Juara umum",
   "Partisipasi / Delegasi / Peserta kejuaraan",
 ];
+
+const isLombaMandiri = (kat) =>
+  kat === "lomba_mandiri_puspresnas" || kat === "lomba_mandiri_non_puspresnas";
 
 // Ukuran file maks
 const MAX_FILE_MB = 10;
@@ -208,7 +206,7 @@ function validateStep(step, data, files, showKelompok, totalSteps) {
       if (ferr) e.dokumen_lainnya = ferr;
     }
 
-    if (data.kategori_simkatmawa === "lomba_mandiri") {
+    if (isLombaMandiri(data.kategori_simkatmawa)) {
       if (!data.capaian)          e.capaian = "Capaian peserta wajib dipilih.";
       if (!data.model_pelaksanaan) e.model_pelaksanaan = "Model pelaksanaan wajib dipilih.";
 
@@ -665,49 +663,82 @@ function Step2({ data, onChange, onBlur, onFileChange, files, errors }) {
 // Step 3 — Pilih Kategori SIMKATMAWA
 // ─────────────────────────────────────────────────────────────────────────────
 function Step3({ data, onChange, errors }) {
-  const cards = [
-    {
-      value: "lomba_mandiri",
-      title: "Lomba Mandiri",
-      desc: "Kegiatan kejuaraan yang diselenggarakan secara mandiri oleh perguruan tinggi dan telah terselenggara minimal 2 kali secara berturut-turut.",
-      icon: "🏆",
-    },
-    {
-      value: "rekognisi",
-      title: "Rekognisi (Non-Lomba)",
-      desc: "Prestasi non kompetisi yang diraih oleh mahasiswa, diberikan oleh pemerintah, komunitas, organisasi, atau masyarakat.",
-      icon: "🎖️",
-    },
-  ];
+  const kat = data.kategori_simkatmawa;
+  const isLomba = isLombaMandiri(kat);
+
+  const cardStyle = (active) => ({
+    textAlign: "left",
+    padding: "16px",
+    borderRadius: "10px",
+    border: `2px solid ${active ? T.accent : T.border}`,
+    background: active ? "rgba(200,130,15,0.05)" : "#fff",
+    cursor: "pointer",
+    transition: "border-color 0.15s, background 0.15s",
+    width: "100%",
+  });
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
       <p style={{ fontSize: "13px", color: "#7a756e" }}>Pilih kategori kegiatan yang sesuai dengan prestasi yang ingin diklaim.</p>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-        {cards.map((c) => {
-          const active = data.kategori_simkatmawa === c.value;
-          return (
-            <button
-              key={c.value}
-              type="button"
-              onClick={() => onChange("kategori_simkatmawa", c.value)}
-              style={{
-                textAlign: "left",
-                padding: "16px",
-                borderRadius: "10px",
-                border: `2px solid ${active ? T.accent : T.border}`,
-                background: active ? "rgba(200,130,15,0.05)" : "#fff",
-                cursor: "pointer",
-                transition: "border-color 0.15s, background 0.15s",
-              }}
-            >
-              <div style={{ fontSize: "22px", marginBottom: "8px" }}>{c.icon}</div>
-              <p style={{ fontWeight: 600, fontSize: "13px", color: active ? T.accent : "#1c1a17", marginBottom: "4px" }}>{c.title}</p>
-              <p style={{ fontSize: "11px", color: "#7a756e", lineHeight: 1.5 }}>{c.desc}</p>
-            </button>
-          );
-        })}
+
+      {/* Rekognisi */}
+      <button type="button" onClick={() => onChange("kategori_simkatmawa", "rekognisi")} style={cardStyle(kat === "rekognisi")}>
+        <div style={{ fontSize: "22px", marginBottom: "8px" }}>🎖️</div>
+        <p style={{ fontWeight: 600, fontSize: "13px", color: kat === "rekognisi" ? T.accent : "#1c1a17", marginBottom: "4px" }}>Rekognisi (Non-Lomba)</p>
+        <p style={{ fontSize: "11px", color: "#7a756e", lineHeight: 1.5 }}>Prestasi non kompetisi yang diraih oleh mahasiswa, diberikan oleh pemerintah, komunitas, organisasi, atau masyarakat.</p>
+      </button>
+
+      {/* Lomba Mandiri group */}
+      <div style={{ border: `2px solid ${isLomba ? T.accent : T.border}`, borderRadius: "12px", overflow: "hidden", transition: "border-color 0.15s" }}>
+        <div style={{ padding: "12px 16px", background: isLomba ? "rgba(200,130,15,0.05)" : "#fafaf9", borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: "10px" }}>
+          <span style={{ fontSize: "20px" }}>🏆</span>
+          <div>
+            <p style={{ fontWeight: 700, fontSize: "13px", color: isLomba ? T.accent : "#1c1a17" }}>Lomba Mandiri</p>
+            <p style={{ fontSize: "11px", color: "#7a756e" }}>Kegiatan kejuaraan yang diselenggarakan secara mandiri oleh perguruan tinggi, minimal 2 kali berturut-turut.</p>
+          </div>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0" }}>
+          {[
+            { value: "lomba_mandiri_puspresnas",     label: "Puspresnas (DIKTI)",     desc: "Kompetisi yang terdaftar dalam sistem PUSPRESNAS / DIKTI." },
+            { value: "lomba_mandiri_non_puspresnas", label: "Non Puspresnas (Non DIKTI)", desc: "Kompetisi mandiri perguruan tinggi di luar sistem PUSPRESNAS." },
+          ].map((opt, i) => {
+            const active = kat === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => onChange("kategori_simkatmawa", opt.value)}
+                style={{
+                  textAlign: "left",
+                  padding: "14px 16px",
+                  background: active ? "rgba(200,130,15,0.08)" : "#fff",
+                  border: "none",
+                  borderLeft: i === 1 ? `1px solid ${T.border}` : "none",
+                  cursor: "pointer",
+                  transition: "background 0.15s",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "4px",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <div style={{
+                    width: "14px", height: "14px", borderRadius: "50%", flexShrink: 0,
+                    border: `2px solid ${active ? T.accent : T.border}`,
+                    background: active ? T.accent : "transparent",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    {active && <div style={{ width: "5px", height: "5px", borderRadius: "50%", background: "#fff" }} />}
+                  </div>
+                  <p style={{ fontWeight: 600, fontSize: "12px", color: active ? T.accent : "#1c1a17" }}>{opt.label}</p>
+                </div>
+                <p style={{ fontSize: "11px", color: "#9a9490", lineHeight: 1.4, paddingLeft: "22px" }}>{opt.desc}</p>
+              </button>
+            );
+          })}
+        </div>
       </div>
+
       <FieldError>{errors?.kategori_simkatmawa}</FieldError>
     </div>
   );
@@ -851,9 +882,13 @@ function Step4Rekognisi({ data, onChange, onBlur, onFileChange, files, errors })
 // Step 4B — Detail Lomba Mandiri
 // ─────────────────────────────────────────────────────────────────────────────
 function Step4Lomba({ data, onChange, onBlur, onFileChange, files, errors }) {
-  // Live estimation preview
-  const tabel   = TABEL_NON_PUSPRESNAS[data.kategori_kegiatan];
-  const preview = (data.kategori_kegiatan && data.capaian) ? capaianKePoin(data.capaian, tabel) : null;
+  const isPuspresnas = data.kategori_simkatmawa === "lomba_mandiri_puspresnas";
+  const tabel = isPuspresnas
+    ? TABEL_PUSPRESNAS
+    : TABEL_NON_PUSPRESNAS[data.kategori_kegiatan];
+  const preview = (data.capaian && (isPuspresnas || data.kategori_kegiatan))
+    ? capaianKePoin(data.capaian, tabel)
+    : null;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -923,7 +958,7 @@ function Step4Lomba({ data, onChange, onBlur, onFileChange, files, errors }) {
       {preview ? (
         <div style={{ background: "#fdf8ed", border: "1px solid #f0d99a", borderRadius: "10px", padding: "12px 14px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-            <p style={{ fontSize: "12px", fontWeight: 700, color: "#8c6200" }}>Estimasi Poin · {data.kategori_kegiatan}</p>
+            <p style={{ fontSize: "12px", fontWeight: 700, color: "#8c6200" }}>Estimasi Poin · {isPuspresnas ? "Puspresnas (DIKTI)" : data.kategori_kegiatan}</p>
             <p style={{ fontSize: "18px", fontWeight: 800, color: "#8c6200" }}>
               {preview.totalPoin} poin
               <span style={{ fontSize: "11px", fontWeight: 500, marginLeft: "6px" }}>
@@ -943,7 +978,7 @@ function Step4Lomba({ data, onChange, onBlur, onFileChange, files, errors }) {
             <span style={{ fontSize: "11px", color: "#b5900a", fontWeight: 700, marginLeft: "2px" }}>=</span>
             <span style={{ fontSize: "12px", fontWeight: 800, color: "#8c6200" }}>{preview.totalPoin} poin</span>
           </div>
-          <p style={{ fontSize: "10px", color: "#b5900a", marginTop: "6px" }}>Poin kumulatif sesuai SK Rektor 078/B.02/UKDW/2023. Estimasi final (termasuk kelompok) ada di tahap Konfirmasi.</p>
+          <p style={{ fontSize: "10px", color: "#b5900a", marginTop: "6px" }}>Poin kumulatif sesuai SK Rektor 078/B.02/UKDW/2023.</p>
         </div>
       ) : (data.kategori_kegiatan && !data.capaian) ? (
         <div style={{ background: "#f8f6f1", border: "1px solid #e2ddd4", borderRadius: "10px", padding: "10px 14px" }}>
@@ -1012,12 +1047,13 @@ function Step5({ data, onChange, onBlur, errors }) {
     onChange("anggota", arr);
   };
 
-  const anggotaFields = jumlah > 1 ? Array.from({ length: jumlah - 1 }, (_, i) => i) : [];
+  // jumlah termasuk ketua dan pengaju sendiri (sudah tercatat otomatis)
+  const anggotaFields = jumlah > 2 ? Array.from({ length: jumlah - 2 }, (_, i) => i) : [];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
       <div style={{ background: "#f6fdf8", border: "1px solid #c2e8d0", borderRadius: "8px", padding: "10px 14px", fontSize: "12px", color: "#1a7a4a" }}>
-        Isi NIM dan nama seluruh anggota kelompok. Pastikan sesuai data PDDikti — akan diverifikasi saat pengecekan.
+        Isi data ketua dan anggota lainnya. Data Anda sebagai pengaju sudah tercatat otomatis — tidak perlu diisi lagi.
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
@@ -1085,7 +1121,9 @@ function Step6({ data, onChange, nimInfo, errors }) {
     ["NIM",         nimInfo?.nim ?? "-"],
     ["Email",       data.email],
     ["Nomor WA",    data.nomor_wa],
-    ["Kategori",    data.kategori_simkatmawa === "lomba_mandiri" ? "Lomba Mandiri" : "Rekognisi Non-Lomba"],
+    ["Kategori",    data.kategori_simkatmawa === "lomba_mandiri_puspresnas"     ? "Lomba Mandiri — Puspresnas (DIKTI)"
+                  : data.kategori_simkatmawa === "lomba_mandiri_non_puspresnas" ? "Lomba Mandiri — Non Puspresnas (Non DIKTI)"
+                  : "Rekognisi Non-Lomba"],
     ["Kegiatan",    data.nama_kegiatan],
     ["Kepesertaan", data.jenis_kepesertaan],
     ["Capaian / Tingkatan", data.capaian || data.tingkatan],
@@ -1115,12 +1153,11 @@ function Step6({ data, onChange, nimInfo, errors }) {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
             <div>
               <p style={{ fontSize: "13px", fontWeight: 600, color: "#8c6200" }}>Estimasi Dana Penghargaan</p>
-              <p style={{ fontSize: "11px", color: "#b5900a", marginTop: "2px" }}>SK Rektor 078/B.02/UKDW/2023 · Non PUSPRESNAS</p>
+              <p style={{ fontSize: "11px", color: "#b5900a", marginTop: "2px" }}>SK Rektor 078/B.02/UKDW/2023 · {data.kategori_simkatmawa === "lomba_mandiri_puspresnas" ? "PUSPRESNAS (DIKTI)" : "Non PUSPRESNAS"}</p>
             </div>
             <p style={{ fontSize: "22px", fontWeight: 800, color: "#8c6200", fontFamily: "'Syne', sans-serif" }}>{formatRupiah(hasil.total)}</p>
           </div>
-          {/* Rincian poin kumulatif */}
-          <div style={{ background: "rgba(140,98,0,0.06)", borderRadius: "8px", padding: "10px 12px", marginBottom: "6px" }}>
+          <div style={{ background: "rgba(140,98,0,0.06)", borderRadius: "8px", padding: "10px 12px" }}>
             <p style={{ fontSize: "10px", fontWeight: 700, color: "#8c6200", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "6px" }}>Rincian Poin Kumulatif</p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", alignItems: "center" }}>
               {hasil.rincian.map((r, i) => (
@@ -1133,17 +1170,14 @@ function Step6({ data, onChange, nimInfo, errors }) {
               <span style={{ fontSize: "12px", color: "#b5900a", fontWeight: 700, marginLeft: "4px" }}>=</span>
               <span style={{ fontSize: "13px", color: "#8c6200", fontWeight: 800 }}>{hasil.poinDasar} poin</span>
             </div>
-            {hasil.isKelompok && (
-              <div style={{ marginTop: "6px", paddingTop: "6px", borderTop: "1px solid rgba(140,98,0,0.15)" }}>
-                <p style={{ fontSize: "11px", color: "#8c6200" }}>
-                  Kelompok {hasil.jumlah_anggota} orang
-                  {hasil.bonusFactor > 1 && <> · Bonus {Math.round((hasil.bonusFactor - 1) * 100)}%</>}
-                  {" "}→ ({hasil.poinDasar}{hasil.bonusFactor > 1 ? ` × ${hasil.bonusFactor}` : ""}) ÷ {hasil.jumlah_anggota} = <strong>{hasil.poinPerOrang} poin/orang</strong>
-                </p>
-              </div>
-            )}
           </div>
-          <p style={{ fontSize: "11px", color: "#b5900a" }}>{hasil.poinPerOrang} poin × Rp 225.000 = {formatRupiah(hasil.total)} per mahasiswa</p>
+          {hasil.bonusFactor > 1 ? (
+            <p style={{ fontSize: "11px", color: "#b5900a", marginTop: "8px" }}>
+              {hasil.poinDasar} poin × Rp 225.000 × {hasil.bonusFactor === 1.5 ? "1,50 (bonus &gt;10 anggota)" : "1,25 (bonus 6–10 anggota)"} = {formatRupiah(hasil.total)}
+            </p>
+          ) : (
+            <p style={{ fontSize: "11px", color: "#b5900a", marginTop: "8px" }}>{hasil.poinDasar} poin × Rp 225.000 = {formatRupiah(hasil.total)}</p>
+          )}
         </div>
       ) : (
         <div style={{ background: "#f8f6f1", border: `1px solid ${T.border}`, borderRadius: "10px", padding: "12px 16px", display: "flex", justifyContent: "space-between" }}>
@@ -1237,7 +1271,7 @@ export default function TambahKlaimWizard({ session, onClose, onSuccess }) {
     if (fieldErrors[key]) setFieldErrors((prev) => { const n = { ...prev }; delete n[key]; return n; });
   };
 
-  const showKelompok = data.jenis_kepesertaan === "kelompok";
+  const showKelompok = data.jenis_kepesertaan === "kelompok" && (isLombaMandiri(data.kategori_simkatmawa) || data.kategori_simkatmawa === "rekognisi");
   const stepLabels   = ["Data Diri", "Dosen Pembimbing", "Kategori", "Detail", ...(showKelompok ? ["Kelompok"] : []), "Konfirmasi"];
   const totalSteps   = stepLabels.length;
   const getStepLabel = () => stepLabels[step - 1] ?? "";
@@ -1271,7 +1305,7 @@ export default function TambahKlaimWizard({ session, onClose, onSuccess }) {
     if (!files.dokumen_sertifikat) { setFieldErrors({ dokumen_sertifikat: "Dokumen sertifikat belum diunggah." }); return; }
 
     setLoading(true);
-    const isLomba = data.kategori_simkatmawa === "lomba_mandiri";
+    const isLomba = isLombaMandiri(data.kategori_simkatmawa);
 
     try {
       const uploadPayload = new FormData();
@@ -1396,8 +1430,8 @@ export default function TambahKlaimWizard({ session, onClose, onSuccess }) {
           {step === 1 && <Step1 data={data} onChange={onChange} onBlur={handleBlur} nimInfo={nimInfo} errors={fieldErrors} />}
           {step === 2 && <Step2 data={data} onChange={onChange} onBlur={handleBlur} onFileChange={onFileChange} files={files} errors={fieldErrors} />}
           {step === 3 && <Step3 data={data} onChange={onChange} errors={fieldErrors} />}
-          {step === 4 && data.kategori_simkatmawa === "rekognisi"     && <Step4Rekognisi data={data} onChange={onChange} onBlur={handleBlur} onFileChange={onFileChange} files={files} errors={fieldErrors} />}
-          {step === 4 && data.kategori_simkatmawa === "lomba_mandiri" && <Step4Lomba     data={data} onChange={onChange} onBlur={handleBlur} onFileChange={onFileChange} files={files} errors={fieldErrors} />}
+          {step === 4 && data.kategori_simkatmawa === "rekognisi"          && <Step4Rekognisi data={data} onChange={onChange} onBlur={handleBlur} onFileChange={onFileChange} files={files} errors={fieldErrors} />}
+          {step === 4 && isLombaMandiri(data.kategori_simkatmawa)          && <Step4Lomba     data={data} onChange={onChange} onBlur={handleBlur} onFileChange={onFileChange} files={files} errors={fieldErrors} />}
           {step === 5 && showKelompok && <Step5 data={data} onChange={onChange} onBlur={handleBlur} errors={fieldErrors} />}
           {isLastStep && <Step6 data={data} onChange={onChange} nimInfo={nimInfo} errors={fieldErrors} />}
         </div>
