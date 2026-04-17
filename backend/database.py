@@ -513,6 +513,24 @@ def update_pengajuan(pengajuan_id: int, data: dict):
         f"UPDATE PENGAJUAN SET {', '.join(sets)} WHERE id = ?",
         (*values, pengajuan_id),
     )
+
+    # Sync field terkait ke tabel CLAIMS
+    cursor.execute("SELECT claim_id, nama_kegiatan, kategori_kegiatan, tingkatan, capaian, tanggal_mulai, tahun_kegiatan FROM PENGAJUAN WHERE id = ?", (pengajuan_id,))
+    row = cursor.fetchone()
+    if row:
+        claim_id, nama_kegiatan, kategori_kegiatan, tingkatan, capaian, tanggal_mulai, tahun_kegiatan = row
+        tingkat_baru  = kategori_kegiatan or tingkatan
+        tanggal_baru  = tanggal_mulai or tahun_kegiatan
+        claim_updates = {}
+        if nama_kegiatan: claim_updates["nama_lomba"] = nama_kegiatan
+        if tingkat_baru:  claim_updates["tingkat"]    = tingkat_baru
+        if capaian:       claim_updates["peringkat"]  = capaian
+        if tanggal_baru:  claim_updates["tanggal"]    = tanggal_baru
+        if claim_updates and claim_id:
+            c_sets   = [f"{k} = ?" for k in claim_updates]
+            c_values = list(claim_updates.values())
+            cursor.execute(f"UPDATE CLAIMS SET {', '.join(c_sets)} WHERE id = ?", (*c_values, claim_id))
+
     conn.commit()
     conn.close()
 
