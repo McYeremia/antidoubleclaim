@@ -1275,8 +1275,8 @@ export default function OperatorDashboard() {
   const isSuperAdmin = operatorRole === "superadmin";
 
   const menus = [
-    { key: "claim",  label: "Pengajuan Claim",  icon: <IconClaim />  },
-    { key: "reward", label: "Pengajuan Reward",  icon: <IconReward /> },
+    { key: "claim",     label: "Pengajuan Claim",    icon: <IconClaim />    },
+    { key: "reward",    label: "Pengajuan Reward",   icon: <IconReward />   },
     ...(isSuperAdmin ? [
       { key: "operators", label: "Kelola Operator",    icon: <IconUsers />    },
       { key: "periode",   label: "Pengaturan Periode", icon: <IconCalendar /> },
@@ -1288,17 +1288,13 @@ export default function OperatorDashboard() {
 
       {/* ── Sidebar ── */}
       <aside className="w-[240px] bg-white flex flex-col flex-shrink-0 border-r border-gray-100">
-        {/* Logo */}
         <div className="px-7 pt-9 pb-8">
-          <div>
-            <p className="text-[22px] font-black text-gray-900 leading-none tracking-tight uppercase">
-              ANTI<br />DOUBLE<br />CLAIM
-            </p>
-            <p className="text-[10px] font-semibold text-gray-400 mt-2.5 tracking-widest uppercase">Portal Pengelola</p>
-          </div>
+          <p className="text-[22px] font-black text-gray-900 leading-none tracking-tight uppercase">
+            ANTI<br />DOUBLE<br />CLAIM
+          </p>
+          <p className="text-[10px] font-semibold text-gray-400 mt-2.5 tracking-widest uppercase">Portal Pengelola</p>
         </div>
 
-        {/* Nav */}
         <nav className="flex-1 px-4 space-y-0.5">
           {menus.map((m) => (
             <button
@@ -1319,24 +1315,20 @@ export default function OperatorDashboard() {
 
       {/* ── Area Kanan ── */}
       <div className="flex-1 flex flex-col overflow-hidden">
-
-        {/* Top bar */}
         <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-8 flex-shrink-0">
           <div className="flex items-center gap-4">
             <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse"></div>
             <h2 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.3em]">{activeMenu} node active</h2>
           </div>
-
-          {/* User Profile */}
           <div className="relative">
             <button
               onClick={() => setShowUserMenu(v => !v)}
               className="flex items-center gap-3 px-3 py-1.5 rounded-xl hover:bg-gray-50 transition-colors"
             >
               <div className="w-9 h-9 rounded-full bg-gray-900 flex items-center justify-center flex-shrink-0">
-                 <span className="text-xs font-bold text-white uppercase">
-                    {operatorNama.split(" ").map(w => w[0]).join("").slice(0,2)}
-                 </span>
+                <span className="text-xs font-bold text-white uppercase">
+                  {operatorNama.split(" ").map(w => w[0]).join("").slice(0,2)}
+                </span>
               </div>
               <div className="text-left">
                 <p className="text-[13px] font-bold text-gray-900 leading-tight">{operatorNama}</p>
@@ -1349,7 +1341,6 @@ export default function OperatorDashboard() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
               </svg>
             </button>
-
             {showUserMenu && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setShowUserMenu(false)} />
@@ -1372,7 +1363,6 @@ export default function OperatorDashboard() {
           </div>
         </header>
 
-        {/* Konten */}
         <main className="flex-1 px-10 py-10 overflow-y-auto">
           {activeMenu === "claim"     && <PengajuanClaim  router={router} />}
           {activeMenu === "reward"    && <PengajuanReward />}
@@ -1380,7 +1370,6 @@ export default function OperatorDashboard() {
           {activeMenu === "periode"   && isSuperAdmin && <PengaturanPeriode operatorNama={operatorNama} />}
         </main>
       </div>
-
     </div>
   );
 }
