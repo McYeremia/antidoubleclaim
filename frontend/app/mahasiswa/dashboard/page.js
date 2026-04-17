@@ -1044,6 +1044,16 @@ function BarChart({ data, colorClass = "bg-blue-500", formatLabel }) {
 }
 
 // ── Konten: Profil ────────────────────────────────────────────────────────────
+// ── Validasi rekening BNI lokal ──────────────────────────────────────────────
+function validateRekeningBNI(nomor) {
+  if (!nomor) return { status: "empty", msg: "" };
+  const digits = nomor.replace(/\D/g, "");
+  if (digits.length === 0)  return { status: "invalid", msg: "Hanya boleh berisi angka" };
+  if (digits.length < 10)   return { status: "invalid", msg: `Kurang ${10 - digits.length} digit lagi (BNI: 10 digit)` };
+  if (digits.length > 10)   return { status: "invalid", msg: `Terlalu panjang — BNI hanya 10 digit` };
+  return { status: "valid", msg: "Format nomor rekening BNI valid" };
+}
+
 function ProfilPanel({ session, onBack }) {
   const [nimInfo,  setNimInfo]  = useState(null);
   const [profil,   setProfil]   = useState(null);
@@ -1234,19 +1244,81 @@ function ProfilPanel({ session, onBack }) {
                   type="text"
                   name="nomor_rekening"
                   value={form.nomor_rekening}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    // hanya izinkan angka
+                    const val = e.target.value.replace(/\D/g, "");
+                    setForm(f => ({ ...f, nomor_rekening: val }));
+                    setSaved(false);
+                  }}
                   placeholder="Contoh: 0123456789"
-                  className="block w-full px-4 py-3.5 border border-gray-200 rounded-xl text-[15px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  maxLength={10}
+                  inputMode="numeric"
+                  className={`block w-full px-4 py-3.5 border rounded-xl text-[15px] text-gray-900 focus:outline-none focus:ring-2 focus:border-transparent transition-all ${
+                    (() => {
+                      const v = validateRekeningBNI(form.nomor_rekening);
+                      if (v.status === "valid")   return "border-green-300 focus:ring-green-400";
+                      if (v.status === "invalid") return "border-red-300   focus:ring-red-400";
+                      return "border-gray-200 focus:ring-blue-500";
+                    })()
+                  }`}
                 />
-                {/* Notes */}
-                <div className="flex items-start gap-2.5 mt-2.5 px-4 py-3 bg-amber-50 border border-amber-100 rounded-xl">
-                  <svg className="w-3.5 h-3.5 text-amber-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <p className="text-[11px] text-amber-700 leading-relaxed">
-                    Pastikan menggunakan rekening <span className="font-bold">Bank BNI</span>. Rekening bank lain tidak dapat diproses untuk pencairan reward.
-                  </p>
-                </div>
+
+                {/* Status Validasi */}
+                {(() => {
+                  const v = validateRekeningBNI(form.nomor_rekening);
+                  const hasName = (form.nama_pemilik_rekening || "").trim().length >= 3;
+
+                  if (v.status === "valid") return (
+                    <div className="mt-2.5 rounded-xl overflow-hidden border border-green-200">
+                      <div className="flex items-center gap-2.5 px-4 py-2.5 bg-green-50">
+                        <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+                          <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-[12px] font-bold text-green-700">Format Rekening BNI Valid</p>
+                          <p className="text-[11px] text-green-600 mt-0.5">10 digit · Bank BNI</p>
+                        </div>
+                        <span className="text-[10px] font-black text-green-600 bg-green-100 px-2 py-0.5 rounded-full uppercase tracking-wider">BNI ✓</span>
+                      </div>
+                      {!hasName && (
+                        <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 border-t border-green-100">
+                          <svg className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <p className="text-[11px] text-amber-700">Lengkapi nama pemilik rekening di atas</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+
+                  if (v.status === "invalid") return (
+                    <div className="flex items-center gap-2.5 mt-2.5 px-4 py-2.5 bg-red-50 border border-red-200 rounded-xl">
+                      <div className="w-5 h-5 rounded-full bg-red-400 flex items-center justify-center flex-shrink-0">
+                        <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-[12px] font-bold text-red-700">Format Tidak Valid</p>
+                        <p className="text-[11px] text-red-500 mt-0.5">{v.msg}</p>
+                      </div>
+                    </div>
+                  );
+
+                  // empty — tampilkan panduan
+                  return (
+                    <div className="flex items-start gap-2.5 mt-2.5 px-4 py-3 bg-amber-50 border border-amber-100 rounded-xl">
+                      <svg className="w-3.5 h-3.5 text-amber-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <p className="text-[11px] text-amber-700 leading-relaxed">
+                        Nomor rekening BNI terdiri dari <span className="font-bold">10 digit angka</span>. Rekening bank lain tidak dapat diproses.
+                      </p>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 
