@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import OperatorSidebar, { OperatorTopbar } from "../_sidebar";
 
 const STATUS_STYLE = {
   "belum dicek":    "bg-blue-100 text-blue-700",
@@ -289,56 +290,55 @@ function PengajuanDetail({ p, onSaved }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
-        {/* Data Mahasiswa */}
-        <div className="space-y-6">
-          <SectionTitle>Profil Mahasiswa</SectionTitle>
-          <div className="grid grid-cols-1 gap-6">
+      <div className="space-y-10">
+        {/* Profil Mahasiswa + Dosen Pembimbing */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-8">
+          {/* Data Mahasiswa */}
+          <div className="space-y-5">
+            <SectionTitle>Profil Mahasiswa</SectionTitle>
             {editing ? (
-              <>
-                <EditInput label="Nama Lengkap"     name="nama_display" value={d.nama_display} onChange={set} />
+              <div className="grid grid-cols-1 gap-5">
+                <EditInput label="Nama Lengkap"   name="nama_display" value={d.nama_display} onChange={set} />
                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                   <InfoRow label="Email Institusi" value={p.mahasiswa_email} />
+                  <InfoRow label="Email Institusi" value={p.mahasiswa_email} />
                 </div>
                 <EditInput label="Nomor WhatsApp" name="nomor_wa"     value={d.nomor_wa}     onChange={set} />
-              </>
+              </div>
             ) : (
-              <>
+              <div className="grid grid-cols-1 gap-5">
                 <InfoRow label="Nama Lengkap"     value={p.nama_display} />
-                <InfoRow label="Email Institusi" value={p.mahasiswa_email} />
-                <InfoRow label="Nomor WhatsApp" value={p.nomor_wa} />
-              </>
+                <InfoRow label="Email Institusi"  value={p.mahasiswa_email} />
+                <InfoRow label="Nomor WhatsApp"   value={p.nomor_wa} />
+              </div>
             )}
           </div>
-        </div>
 
-        {/* Dosen Pembimbing */}
-        <div className="space-y-6">
-          <SectionTitle>Dosen Pembimbing</SectionTitle>
-          <div className="grid grid-cols-1 gap-6">
+          {/* Dosen Pembimbing */}
+          <div className="space-y-5">
+            <SectionTitle>Dosen Pembimbing</SectionTitle>
             {editing ? (
-              <>
+              <div className="grid grid-cols-1 gap-5">
                 <EditSelect label="Menggunakan Dospem" name="ada_dospem" value={d.ada_dospem}
                   options={OPT_ADA_DOSPEM} onChange={set} />
                 {d.ada_dospem === "ya" &&
                   <EditInput label="NIK/NIDN/NIDK" name="nidn_dospem" value={d.nidn_dospem} onChange={set} />}
-              </>
+              </div>
             ) : (
-              <>
+              <div className="grid grid-cols-1 gap-5">
                 <InfoRow label="Menggunakan Dospem" value={p.ada_dospem === "ya" ? "Ya" : "Tidak"} />
                 {p.ada_dospem === "ya" && <InfoRow label="NIK/NIDN/NIDK" value={p.nidn_dospem} />}
-              </>
+              </div>
             )}
-            <div className="pt-2">
+            <div className="pt-1">
               <FileLink label="Surat Tugas Dospem" path={p.surat_tugas_path} />
             </div>
           </div>
         </div>
 
         {/* Detail Kegiatan */}
-        <div className="col-span-1 md:col-span-2 space-y-6">
+        <div className="space-y-6">
           <SectionTitle>Rincian Kegiatan</SectionTitle>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
             {editing ? (
               <>
                 <EditSelect label="Kategori SIMKATMAWA" name="kategori_simkatmawa"
@@ -348,11 +348,11 @@ function PengajuanDetail({ p, onSaved }) {
                 <EditSelect label="Tahun Kegiatan" name="tahun_kegiatan"
                   value={d.tahun_kegiatan} options={OPT_TAHUN} onChange={set} />
 
-                <div className="col-span-1 md:col-span-3">
+                <div className="col-span-2 sm:col-span-3">
                    <EditInput label="Nama Lengkap Kegiatan" name="nama_kegiatan" value={d.nama_kegiatan} onChange={set} />
                 </div>
 
-                <div className="col-span-1 md:col-span-2">
+                <div className="col-span-2">
                   <EditSelect label="Kategori Kegiatan" name="kategori_kegiatan"
                     value={d.kategori_kegiatan}
                     options={isLomba ? OPT_KATEGORI_LOMBA : OPT_KATEGORI_REKOGNISI}
@@ -373,11 +373,11 @@ function PengajuanDetail({ p, onSaved }) {
                   <EditInput label="Tanggal Selesai" name="tanggal_selesai"
                     value={d.tanggal_selesai} onChange={set} type="date" />
                 </>}
-                <div className="col-span-1 md:col-span-3">
+                <div className="col-span-2 sm:col-span-3">
                   <EditInput label="URL Website Penyelenggara" name="url_penyelenggara"
                     value={d.url_penyelenggara} onChange={set} />
                 </div>
-                <div className="col-span-1 md:col-span-3">
+                <div className="col-span-2 sm:col-span-3">
                   <EditInput label="Keterangan Tambahan" name="keterangan"
                     value={d.keterangan} onChange={set} />
                 </div>
@@ -389,11 +389,11 @@ function PengajuanDetail({ p, onSaved }) {
                 <InfoRow label="Jenis Kepesertaan"  value={p.jenis_kepesertaan} />
                 <InfoRow label="Tahun Kegiatan"     value={p.tahun_kegiatan} />
 
-                <div className="col-span-1 md:col-span-3">
+                <div className="col-span-2 sm:col-span-3">
                    <InfoRow label="Nama Lengkap Kegiatan" value={p.nama_kegiatan} />
                 </div>
 
-                <div className="col-span-1 md:col-span-2">
+                <div className="col-span-2">
                   <InfoRow label="Kategori Kegiatan"  value={p.kategori_kegiatan} />
                 </div>
                 {!isLomba && <InfoRow label="Tingkatan" value={p.tingkatan} />}
@@ -405,14 +405,14 @@ function PengajuanDetail({ p, onSaved }) {
                   <InfoRow label="Tanggal Mulai"     value={p.tanggal_mulai} />
                   <InfoRow label="Tanggal Selesai"   value={p.tanggal_selesai} />
                 </>}
-                <div className="col-span-1 md:col-span-3">
+                <div className="col-span-2 sm:col-span-3">
                   <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">URL Website Penyelenggara</p>
                   <a href={p.url_penyelenggara} target="_blank" rel="noopener noreferrer"
                      className="text-[13px] font-bold text-gray-900 underline underline-offset-4 hover:text-blue-600 transition-colors break-all">
                     {p.url_penyelenggara || "—"}
                   </a>
                 </div>
-                {p.keterangan && <div className="col-span-1 md:col-span-3"><InfoRow label="Keterangan Tambahan" value={p.keterangan} /></div>}
+                {p.keterangan && <div className="col-span-2 sm:col-span-3"><InfoRow label="Keterangan Tambahan" value={p.keterangan} /></div>}
               </>
             )}
           </div>
@@ -420,33 +420,33 @@ function PengajuanDetail({ p, onSaved }) {
 
         {/* Karya Mahasiswa */}
         {isKarya && (
-          <div className="col-span-1 md:col-span-2 space-y-6">
+          <div className="space-y-6">
             <SectionTitle>Eksistensi Karya Mahasiswa</SectionTitle>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-2 gap-6">
               {editing ? (
                 <>
-                  <EditInput label="Nama Lembaga/Mitra"  name="nama_lembaga"        value={d.nama_lembaga}        onChange={set} />
-                  <EditInput label="Judul/Jenis Karya"   name="jenis_karya_teks"    value={d.jenis_karya_teks}    onChange={set} />
-                  <EditSelect label="Pilihan Kategori Karya" name="jenis_karya_pilihan"
+                  <EditInput label="Nama Lembaga/Mitra"      name="nama_lembaga"        value={d.nama_lembaga}        onChange={set} />
+                  <EditInput label="Judul/Jenis Karya"        name="jenis_karya_teks"    value={d.jenis_karya_teks}    onChange={set} />
+                  <EditSelect label="Pilihan Kategori Karya"  name="jenis_karya_pilihan"
                     value={d.jenis_karya_pilihan} options={OPT_JENIS_KARYA} onChange={set} />
-                  <EditInput label="Nomor Surat Keterangan" name="nomor_surat"         value={d.nomor_surat}         onChange={set} />
-                  <EditInput label="Tanggal Surat"       name="tanggal_surat"       value={d.tanggal_surat}       onChange={set} type="date" />
-                  <div className="col-span-1 md:col-span-2">
-                    <EditInput label="Deskripsi Karya"     name="deskripsi_karya"     value={d.deskripsi_karya}     onChange={set} />
+                  <EditInput label="Nomor Surat Keterangan"   name="nomor_surat"         value={d.nomor_surat}         onChange={set} />
+                  <EditInput label="Tanggal Surat"            name="tanggal_surat"       value={d.tanggal_surat}       onChange={set} type="date" />
+                  <div className="col-span-2">
+                    <EditInput label="Deskripsi Karya"        name="deskripsi_karya"     value={d.deskripsi_karya}     onChange={set} />
                   </div>
-                  <div className="col-span-1 md:col-span-2">
-                    <EditInput label="Manfaat Karya"       name="manfaat_karya"       value={d.manfaat_karya}       onChange={set} />
+                  <div className="col-span-2">
+                    <EditInput label="Manfaat Karya"          name="manfaat_karya"       value={d.manfaat_karya}       onChange={set} />
                   </div>
                 </>
               ) : (
                 <>
-                  <InfoRow label="Nama Lembaga/Mitra"  value={p.nama_lembaga} />
-                  <InfoRow label="Judul/Jenis Karya"   value={p.jenis_karya_teks} />
-                  <InfoRow label="Pilihan Kategori Karya" value={p.jenis_karya_pilihan} />
-                  <InfoRow label="Nomor Surat Keterangan" value={p.nomor_surat} />
-                  <InfoRow label="Tanggal Surat"       value={p.tanggal_surat} />
-                  <div className="col-span-1 md:col-span-2"><InfoRow label="Deskripsi Karya" value={p.deskripsi_karya} /></div>
-                  <div className="col-span-1 md:col-span-2"><InfoRow label="Manfaat Karya"   value={p.manfaat_karya} /></div>
+                  <InfoRow label="Nama Lembaga/Mitra"        value={p.nama_lembaga} />
+                  <InfoRow label="Judul/Jenis Karya"          value={p.jenis_karya_teks} />
+                  <InfoRow label="Pilihan Kategori Karya"     value={p.jenis_karya_pilihan} />
+                  <InfoRow label="Nomor Surat Keterangan"     value={p.nomor_surat} />
+                  <InfoRow label="Tanggal Surat"              value={p.tanggal_surat} />
+                  <div className="col-span-2"><InfoRow label="Deskripsi Karya" value={p.deskripsi_karya} /></div>
+                  <div className="col-span-2"><InfoRow label="Manfaat Karya"   value={p.manfaat_karya} /></div>
                 </>
               )}
             </div>
@@ -455,23 +455,23 @@ function PengajuanDetail({ p, onSaved }) {
 
         {/* Data Kelompok */}
         {isKelompok && (
-          <div className="col-span-1 md:col-span-2 space-y-6">
+          <div className="space-y-6">
             <SectionTitle>Kolaborasi Kelompok</SectionTitle>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
+            <div className="grid grid-cols-2 gap-6 mb-6">
               {editing ? (
                 <>
-                  <EditInput label="Nama Lengkap Ketua"     name="nama_ketua"           value={d.nama_ketua}           onChange={set} />
-                  <EditInput label="Peran Pengeclaim"       name="peran_pengeclaim"     value={d.peran_pengeclaim}     onChange={set} />
-                  <div className="col-span-1 md:col-span-2">
-                    <EditInput label="Keterangan Kelompok"  name="keterangan_kelompok"  value={d.keterangan_kelompok}  onChange={set} />
+                  <EditInput label="Nama Lengkap Ketua"    name="nama_ketua"          value={d.nama_ketua}          onChange={set} />
+                  <EditInput label="Peran Pengeclaim"      name="peran_pengeclaim"    value={d.peran_pengeclaim}    onChange={set} />
+                  <div className="col-span-2">
+                    <EditInput label="Keterangan Kelompok" name="keterangan_kelompok" value={d.keterangan_kelompok} onChange={set} />
                   </div>
                 </>
               ) : (
                 <>
-                  <InfoRow label="Nama Lengkap Ketua"     value={p.nama_ketua} />
-                  <InfoRow label="Peran Pengeclaim"       value={p.peran_pengeclaim} />
+                  <InfoRow label="Nama Lengkap Ketua"  value={p.nama_ketua} />
+                  <InfoRow label="Peran Pengeclaim"    value={p.peran_pengeclaim} />
                   {p.keterangan_kelompok &&
-                    <div className="col-span-1 md:col-span-2"><InfoRow label="Keterangan Kelompok" value={p.keterangan_kelompok} /></div>}
+                    <div className="col-span-2"><InfoRow label="Keterangan Kelompok" value={p.keterangan_kelompok} /></div>}
                 </>
               )}
             </div>
@@ -497,21 +497,21 @@ function PengajuanDetail({ p, onSaved }) {
         )}
 
         {/* Dokumen */}
-        <div className="col-span-1 md:col-span-2 space-y-6">
+        <div className="space-y-6">
           <SectionTitle>Dokumen Pendukung Tambahan</SectionTitle>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-2 gap-6">
             <FileLink label="Foto Penyerahan Sertifikat" path={p.foto_penyerahan_path} />
-            <FileLink label="Dokumen Pendukung Lainnya" path={p.dokumen_lainnya_path} />
+            <FileLink label="Dokumen Pendukung Lainnya"  path={p.dokumen_lainnya_path} />
           </div>
         </div>
       </div>
 
       {/* Estimasi Reward */}
       {(d.estimasi_reward != null || editing) && (
-        <div className="bg-gray-50 border border-gray-200 rounded-2xl px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.18em]">Estimasi Dana Penghargaan</p>
-            <p className="text-[11px] text-gray-400 mt-0.5">
+            <p className="text-[10px] font-bold text-amber-600 uppercase tracking-[0.18em]">Estimasi Dana Penghargaan</p>
+            <p className="text-[11px] text-amber-500 mt-0.5">
               SK Rektor 078/B.02/UKDW/2023 ·{" "}
               {d.kategori_simkatmawa === "lomba_mandiri_puspresnas" ? "PUSPRESNAS (DIKTI)" : "Non PUSPRESNAS"}
             </p>
@@ -544,7 +544,7 @@ function PengajuanDetail({ p, onSaved }) {
               )}
             </div>
           ) : (
-            <p className="text-[18px] font-bold text-gray-900 tabular-nums">
+            <p className="text-[22px] font-black text-amber-700 tabular-nums">
               {d.estimasi_reward != null ? "Rp " + Number(d.estimasi_reward).toLocaleString("id-ID") : "—"}
             </p>
           )}
@@ -643,7 +643,11 @@ export default function DetailKlaim() {
   const canAct  = claim.status !== "sudah dicek";
 
   return (
-    <main className="min-h-screen bg-[#f7f7f8] py-12 px-4 sm:px-10" style={{ fontFamily: "var(--font-poppins, sans-serif)" }}>
+    <div className="min-h-screen bg-[#f7f7f8] flex" style={{ fontFamily: "var(--font-poppins, sans-serif)" }}>
+      <OperatorSidebar activeKey="claim" />
+    <div className="flex-1 flex flex-col overflow-auto">
+      <OperatorTopbar />
+    <main className="flex-1 py-12 px-4 sm:px-10">
       <div className="max-w-6xl mx-auto space-y-10 animate-in fade-in duration-500">
 
         {/* Header Navigation */}
@@ -736,12 +740,12 @@ export default function DetailKlaim() {
                   <InfoRow label="Peringkat" value={miripClaim.peringkat} />
                 </div>
                 <InfoRow label="Mahasiswa"  value={miripClaim.nama_display} />
-                <Link href={`/operator/${miripClaim.id}`}
-                      className="inline-flex items-center gap-2 text-[12px] font-black text-orange-700 underline underline-offset-4 hover:text-orange-900 mt-2 uppercase tracking-widest">
-                  Analisis Klaim Terkait
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                <Link href={`/operator/compare/${claim.id}`}
+                      className="inline-flex items-center gap-2 text-[12px] font-black text-orange-700 bg-orange-100 hover:bg-orange-200 transition-colors px-4 py-2 rounded-xl mt-2 uppercase tracking-widest">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7" />
                   </svg>
+                  Bandingkan Sertifikat
                 </Link>
               </div>
               <div className="space-y-4">
@@ -757,5 +761,7 @@ export default function DetailKlaim() {
 
       </div>
     </main>
+    </div>
+    </div>
   );
 }
