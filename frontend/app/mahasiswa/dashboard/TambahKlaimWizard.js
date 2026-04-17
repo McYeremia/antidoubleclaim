@@ -100,6 +100,11 @@ function formatRupiah(n) {
   return "Rp " + n.toLocaleString("id-ID");
 }
 
+const KOMPETISI_PUSPRESNAS = [
+  "PKM", "PPK ORMAWA", "P2MW", "NUDC", "KDMI",
+  "ONMIPA", "KBMK", "GEMASTIK", "PILMAPRES",
+];
+
 const KATEGORI_REKOGNISI = [
   "Karya Mahasiswa berupa teknologi tepat guna/seni budaya/produk kreatif untuk UMKM dan Industri",
   "Juri/Pelatih/Wasit",
@@ -207,6 +212,8 @@ function validateStep(step, data, files, showKelompok, totalSteps) {
     }
 
     if (isLombaMandiri(data.kategori_simkatmawa)) {
+      if (data.kategori_simkatmawa === "lomba_mandiri_puspresnas" && !data.kompetisi_puspresnas)
+        e.kompetisi_puspresnas = "Jenis kompetisi PUSPRESNAS wajib dipilih.";
       if (!data.capaian)          e.capaian = "Capaian peserta wajib dipilih.";
       if (!data.model_pelaksanaan) e.model_pelaksanaan = "Model pelaksanaan wajib dipilih.";
 
@@ -892,6 +899,16 @@ function Step4Lomba({ data, onChange, onBlur, onFileChange, files, errors }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+      {isPuspresnas && (
+        <FSelect id="kompetisi_puspresnas" label="Jenis Kompetisi PUSPRESNAS" required
+          value={data.kompetisi_puspresnas} onChange={(e) => onChange("kompetisi_puspresnas", e.target.value)}
+          onBlur={() => onBlur("kompetisi_puspresnas")}
+          error={errors?.kompetisi_puspresnas}>
+          <option value="">Pilih kompetisi</option>
+          {KOMPETISI_PUSPRESNAS.map(k => <option key={k}>{k}</option>)}
+        </FSelect>
+      )}
+
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
         <FSelect id="kategori_kegiatan" label="Kategori Kegiatan (Tingkat)" required
           value={data.kategori_kegiatan} onChange={(e) => onChange("kategori_kegiatan", e.target.value)}
@@ -900,7 +917,7 @@ function Step4Lomba({ data, onChange, onBlur, onFileChange, files, errors }) {
           <option value="">Pilih kategori</option>
           <option>Provinsi / Wilayah</option>
           <option>Nasional</option>
-          <option>Internasional</option>
+          {!isPuspresnas && <option>Internasional</option>}
         </FSelect>
 
         <FSelect id="model_pelaksanaan" label="Model Pelaksanaan" required
@@ -1047,13 +1064,13 @@ function Step5({ data, onChange, onBlur, errors }) {
     onChange("anggota", arr);
   };
 
-  // jumlah termasuk ketua dan pengaju sendiri (sudah tercatat otomatis)
-  const anggotaFields = jumlah > 2 ? Array.from({ length: jumlah - 2 }, (_, i) => i) : [];
+  // jumlah termasuk ketua; ketua sudah ada field nama_ketua terpisah
+  const anggotaFields = jumlah > 1 ? Array.from({ length: jumlah - 1 }, (_, i) => i) : [];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
       <div style={{ background: "#f6fdf8", border: "1px solid #c2e8d0", borderRadius: "8px", padding: "10px 14px", fontSize: "12px", color: "#1a7a4a" }}>
-        Isi data ketua dan anggota lainnya. Data Anda sebagai pengaju sudah tercatat otomatis — tidak perlu diisi lagi.
+        Isi nama ketua di field di atas, lalu isi data anggota lainnya di bawah.
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
@@ -1223,6 +1240,7 @@ const INITIAL_DATA = {
   deskripsi_karya: "", manfaat_karya: "", nomor_surat: "", tanggal_surat: "",
   jumlah_anggota: "", nama_ketua: "", peran_pengeclaim: "",
   anggota: [], keterangan_kelompok: "",
+  kompetisi_puspresnas: "",
   setuju: false,
 };
 
@@ -1257,6 +1275,7 @@ export default function TambahKlaimWizard({ session, onClose, onSuccess }) {
         jumlah_peserta: "", model_pelaksanaan: "", keterangan: "",
         nama_lembaga: "", jenis_karya_teks: "", jenis_karya_pilihan: "",
         deskripsi_karya: "", manfaat_karya: "", nomor_surat: "", tanggal_surat: "",
+        kompetisi_puspresnas: "",
       }));
       setFieldErrors({});
       return;
@@ -1349,9 +1368,10 @@ export default function TambahKlaimWizard({ session, onClose, onSuccess }) {
       ap("manfaat_karya",       data.manfaat_karya);
       ap("nomor_surat",         data.nomor_surat);
       ap("tanggal_surat",       data.tanggal_surat);
-      ap("nama_ketua",          data.nama_ketua);
-      ap("peran_pengeclaim",    data.peran_pengeclaim);
-      ap("keterangan_kelompok", data.keterangan_kelompok);
+      ap("nama_ketua",           data.nama_ketua);
+      ap("peran_pengeclaim",     data.peran_pengeclaim);
+      ap("keterangan_kelompok",  data.keterangan_kelompok);
+      ap("kompetisi_puspresnas", data.kompetisi_puspresnas);
       pengajuanPayload.append("setuju", String(data.setuju));
       if (claimId) pengajuanPayload.append("claim_id", String(claimId));
       const rewardHasil = hitungReward(data);
