@@ -22,7 +22,7 @@ from backend.database import (
     get_profil_mahasiswa, upsert_profil_mahasiswa,
     get_periode_aktif, get_periode_terkini, get_all_periode, create_periode,
     update_periode_status, update_periode_data, delete_periode, reset_semua_data,
-    arsipkan_periode, get_claims_by_periode_id,
+    arsipkan_periode, get_claims_by_periode_id, get_rewards_by_periode_id,
 )
 from backend.nim_parser import parse_nim
 
@@ -123,6 +123,10 @@ async def arsip_periode(periode_id: int, x_operator_id: Optional[str] = Header(N
 @app.get("/periode/{periode_id}/claims")
 async def claims_by_periode(periode_id: int):
     return get_claims_by_periode_id(periode_id)
+
+@app.get("/periode/{periode_id}/rewards")
+async def rewards_by_periode(periode_id: int):
+    return get_rewards_by_periode_id(periode_id)
 
 class PeriodeEdit(BaseModel):
     nama:            str
@@ -464,6 +468,8 @@ async def list_rewards(email: Optional[str] = None):
         FROM REWARD_KONFIRMASI rk
         LEFT JOIN CLAIMS c ON c.id = rk.claim_id
         LEFT JOIN PENGAJUAN p ON p.claim_id = rk.claim_id
+        LEFT JOIN PERIODE_KLAIM pk ON pk.id = c.periode_id
+        WHERE (pk.status IS NULL OR pk.status != 'diarsipkan')
         ORDER BY rk.id DESC
     """)
     rows = cursor.fetchall()

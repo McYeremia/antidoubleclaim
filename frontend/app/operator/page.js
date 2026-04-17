@@ -1247,8 +1247,11 @@ function ArsipPeriode() {
   const [loading,       setLoading]       = useState(true);
   const [selected,      setSelected]      = useState(null);
   const [claims,        setClaims]        = useState([]);
-  const [claimsLoading, setClaimsLoading] = useState(false);
+  const [rewards,       setRewards]       = useState([]);
+  const [activeTab,     setActiveTab]     = useState("claims");
+  const [dataLoading,   setDataLoading]   = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [detailItem,    setDetailItem]    = useState(null);
 
   const fetchPeriode = async () => {
     setLoading(true);
@@ -1264,13 +1267,18 @@ function ArsipPeriode() {
 
   const openPeriode = async (p) => {
     setSelected(p);
-    setClaimsLoading(true);
+    setActiveTab("claims");
+    setDetailItem(null);
+    setDataLoading(true);
     try {
-      const res  = await fetch(`${API}/periode/${p.id}/claims`);
-      const data = await res.json();
-      setClaims(data);
-    } catch { setClaims([]); }
-    finally  { setClaimsLoading(false); }
+      const [rClaims, rRewards] = await Promise.all([
+        fetch(`${API}/periode/${p.id}/claims`),
+        fetch(`${API}/periode/${p.id}/rewards`),
+      ]);
+      setClaims(await rClaims.json());
+      setRewards(await rRewards.json());
+    } catch { setClaims([]); setRewards([]); }
+    finally  { setDataLoading(false); }
   };
 
   const handleTutup = async (p) => {
@@ -1299,13 +1307,115 @@ function ArsipPeriode() {
     if (selected?.id === p.id) openPeriode({ ...p, status: "diarsipkan" });
   };
 
-  const closable  = (p) => p.status === "aktif";
+  const closable   = (p) => p.status === "aktif";
   const archivable = (p) => p.status === "tutup" || p.status === "ditutup";
 
+  /* ── Detail Modal ── */
+  if (detailItem) {
+    const reward = rewards.find(r => r.claim_id === detailItem.id);
+    const Field  = ({ label, value }) => value ? (
+      <div>
+        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-0.5">{label}</p>
+        <p className="text-[13px] text-gray-900 font-medium">{value}</p>
+      </div>
+    ) : null;
+    return (
+      <div className="space-y-6 animate-in fade-in duration-300">
+        <button onClick={() => setDetailItem(null)}
+          className="text-[11px] font-black text-gray-400 uppercase tracking-widest hover:text-gray-900 transition-colors flex items-center gap-2">
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" />
+          </svg>
+          Kembali ke Periode
+        </button>
+
+        {/* Header klaim */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-5">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-1">Detail Klaim #{detailItem.id}</p>
+              <h2 className="text-2xl font-black text-gray-900">{detailItem.nama_lomba}</h2>
+            </div>
+            <span className={`px-3 py-1.5 rounded-full text-[11px] font-black uppercase tracking-widest ${STATUS_BADGE[detailItem.status] ?? "bg-gray-100 text-gray-500"}`}>
+              {detailItem.status}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-x-8 gap-y-4 sm:grid-cols-3">
+            <Field label="Mahasiswa"   value={detailItem.nama_display} />
+            <Field label="Email"       value={detailItem.mahasiswa_email} />
+            <Field label="Tingkat"     value={detailItem.tingkat} />
+            <Field label="Peringkat"   value={detailItem.peringkat} />
+            <Field label="Tanggal"     value={detailItem.tanggal} />
+            <Field label="Diverifikasi oleh" value={detailItem.verified_by_nama} />
+            {detailItem.flag_alasan && <Field label="Catatan" value={detailItem.flag_alasan} />}
+          </div>
+          {detailItem.sertifikat_path && (
+            <div>
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Sertifikat</p>
+              <a href={`${API}/uploads/${detailItem.sertifikat_path}`} target="_blank" rel="noreferrer"
+                className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-blue-600 hover:underline">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13l-3 3m0 0l-3-3m3 3V8m0 13a9 9 0 110-18 9 9 0 010 18z" />
+                </svg>
+                Lihat Sertifikat
+              </a>
+            </div>
+          )}
+        </div>
+
+        {/* Info Reward jika ada */}
+        {reward ? (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-5">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Konfirmasi Reward</p>
+              <span className={`px-3 py-1.5 rounded-full text-[11px] font-black uppercase tracking-widest ${
+                reward.reward_status === "selesai" ? "bg-green-100 text-green-700"
+                : reward.reward_status === "diproses" ? "bg-blue-100 text-blue-700"
+                : "bg-orange-100 text-orange-600"
+              }`}>{reward.reward_status}</span>
+            </div>
+            <div className="grid grid-cols-2 gap-x-8 gap-y-4 sm:grid-cols-3">
+              <Field label="Nama Rekening"   value={reward.nama_rekening} />
+              <Field label="No. Rekening"    value={reward.nomor_rekening} />
+              <Field label="Bank"            value={reward.bank} />
+              <Field label="Estimasi Reward" value={reward.estimasi_reward} />
+              <Field label="Kategori Lomba"  value={reward.kategori_lomba} />
+              <Field label="Nama Lomba Lengkap" value={reward.nama_lomba_lengkap} />
+              {reward.catatan_reward && <Field label="Catatan" value={reward.catatan_reward} />}
+            </div>
+            <div className="flex flex-wrap gap-4">
+              {reward.bukti_transfer_path && (
+                <a href={`${API}/uploads/${reward.bukti_transfer_path}`} target="_blank" rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-blue-600 hover:underline">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13l-3 3m0 0l-3-3m3 3V8m0 13a9 9 0 110-18 9 9 0 010 18z" />
+                  </svg>
+                  Bukti Transfer
+                </a>
+              )}
+              {reward.sertifikat_reward_path && (
+                <a href={`${API}/uploads/${reward.sertifikat_reward_path}`} target="_blank" rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-blue-600 hover:underline">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13l-3 3m0 0l-3-3m3 3V8m0 13a9 9 0 110-18 9 9 0 010 18z" />
+                  </svg>
+                  Sertifikat Reward
+                </a>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="bg-gray-50 rounded-2xl border border-gray-100 p-6 text-center">
+            <p className="text-[13px] text-gray-400">Belum ada data konfirmasi reward untuk klaim ini.</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  /* ── Detail Periode ── */
   if (selected) {
     const style = ARSIP_STATUS_STYLE[selected.status] ?? { badge: "bg-gray-100 text-gray-500", label: selected.status };
-    const sudahDicek = claims.filter(c => c.status === "sudah dicek");
-    const belum      = claims.filter(c => c.status !== "sudah dicek");
     return (
       <div className="space-y-8 animate-in fade-in duration-500">
         <div className="flex items-center gap-4">
@@ -1368,56 +1478,134 @@ function ArsipPeriode() {
           </div>
         )}
 
-        {/* Tabel klaim */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-50 flex items-center justify-between">
-            <h2 className="font-bold text-[11px] text-gray-400 uppercase tracking-widest">Daftar Klaim dalam Periode</h2>
-            <span className="text-[11px] font-black text-gray-400">{claims.length} klaim</span>
-          </div>
-          {claimsLoading ? (
-            <div className="flex items-center justify-center py-16">
-              <svg className="w-7 h-7 text-gray-200 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-            </div>
-          ) : claims.length === 0 ? (
-            <p className="text-center text-gray-400 text-[13px] py-12">Tidak ada klaim pada periode ini.</p>
-          ) : (
-            <table className="w-full text-sm text-left">
-              <thead>
-                <tr className="border-b border-gray-50">
-                  <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest w-16">ID</th>
-                  <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Nama Lomba</th>
-                  <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Mahasiswa</th>
-                  <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Status</th>
-                  <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Tanggal</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {claims.map(c => (
-                  <tr key={c.id} className="hover:bg-gray-50/60 transition-colors">
-                    <td className="px-6 py-4 font-mono text-[12px] text-gray-300 font-bold">#{c.id}</td>
-                    <td className="px-6 py-4">
-                      <p className="font-bold text-gray-900 text-[13px]">{c.nama_lomba}</p>
-                      <p className="text-[11px] text-gray-400 mt-0.5">{c.tingkat} · {c.peringkat}</p>
-                    </td>
-                    <td className="px-6 py-4">
-                      <p className="font-medium text-gray-900 text-[13px]">{c.nama_display}</p>
-                      <p className="text-[11px] font-mono text-gray-400 mt-0.5">{c.mahasiswa_email}</p>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                        STATUS_BADGE[c.status] ?? "bg-gray-100 text-gray-500"
-                      }`}>{c.status}</span>
-                    </td>
-                    <td className="px-6 py-4 text-[12px] text-gray-400">{c.tanggal}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+        {/* Tabs */}
+        <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+          {[{ key: "claims", label: `Klaim (${claims.length})` }, { key: "rewards", label: `Reward (${rewards.length})` }].map(tab => (
+            <button key={tab.key} onClick={() => setActiveTab(tab.key)}
+              className={`px-5 py-2 rounded-lg text-[12px] font-black transition-all ${
+                activeTab === tab.key ? "bg-white shadow text-gray-900" : "text-gray-500 hover:text-gray-700"
+              }`}>
+              {tab.label}
+            </button>
+          ))}
         </div>
+
+        {/* Tabel klaim */}
+        {activeTab === "claims" && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            {dataLoading ? (
+              <div className="flex items-center justify-center py-16">
+                <svg className="w-7 h-7 text-gray-200 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              </div>
+            ) : claims.length === 0 ? (
+              <p className="text-center text-gray-400 text-[13px] py-12">Tidak ada klaim pada periode ini.</p>
+            ) : (
+              <table className="w-full text-sm text-left">
+                <thead>
+                  <tr className="border-b border-gray-50">
+                    <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest w-16">ID</th>
+                    <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Nama Lomba</th>
+                    <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Mahasiswa</th>
+                    <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Status</th>
+                    <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Tanggal</th>
+                    <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {claims.map(c => (
+                    <tr key={c.id} className="hover:bg-gray-50/60 transition-colors">
+                      <td className="px-6 py-4 font-mono text-[12px] text-gray-300 font-bold">#{c.id}</td>
+                      <td className="px-6 py-4">
+                        <p className="font-bold text-gray-900 text-[13px]">{c.nama_lomba}</p>
+                        <p className="text-[11px] text-gray-400 mt-0.5">{c.tingkat} · {c.peringkat}</p>
+                      </td>
+                      <td className="px-6 py-4">
+                        <p className="font-medium text-gray-900 text-[13px]">{c.nama_display}</p>
+                        <p className="text-[11px] font-mono text-gray-400 mt-0.5">{c.mahasiswa_email}</p>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                          STATUS_BADGE[c.status] ?? "bg-gray-100 text-gray-500"
+                        }`}>{c.status}</span>
+                      </td>
+                      <td className="px-6 py-4 text-[12px] text-gray-400">{c.tanggal}</td>
+                      <td className="px-6 py-4">
+                        <button onClick={() => setDetailItem(c)}
+                          className="px-3 py-1.5 rounded-lg text-[11px] font-black bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors uppercase tracking-wide">
+                          Detail
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+
+        {/* Tabel reward */}
+        {activeTab === "rewards" && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            {dataLoading ? (
+              <div className="flex items-center justify-center py-16">
+                <svg className="w-7 h-7 text-gray-200 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              </div>
+            ) : rewards.length === 0 ? (
+              <p className="text-center text-gray-400 text-[13px] py-12">Tidak ada data reward pada periode ini.</p>
+            ) : (
+              <table className="w-full text-sm text-left">
+                <thead>
+                  <tr className="border-b border-gray-50">
+                    <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Nama Lomba</th>
+                    <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Rekening</th>
+                    <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Estimasi</th>
+                    <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Status</th>
+                    <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {rewards.map(r => {
+                    const claimForReward = claims.find(c => c.id === r.claim_id);
+                    return (
+                      <tr key={r.id} className="hover:bg-gray-50/60 transition-colors">
+                        <td className="px-6 py-4">
+                          <p className="font-bold text-gray-900 text-[13px]">{r.nama_lomba}</p>
+                          <p className="text-[11px] text-gray-400 mt-0.5">Klaim #{r.claim_id}</p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className="font-medium text-gray-900 text-[13px]">{r.nama_rekening}</p>
+                          <p className="text-[11px] font-mono text-gray-400 mt-0.5">{r.bank} · {r.nomor_rekening}</p>
+                        </td>
+                        <td className="px-6 py-4 text-[12px] text-gray-700 font-semibold">{r.estimasi_reward || "—"}</td>
+                        <td className="px-6 py-4">
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                            r.reward_status === "selesai"  ? "bg-green-100 text-green-700"
+                            : r.reward_status === "diproses" ? "bg-blue-100 text-blue-700"
+                            : "bg-orange-100 text-orange-600"
+                          }`}>{r.reward_status}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          {claimForReward && (
+                            <button onClick={() => setDetailItem(claimForReward)}
+                              className="px-3 py-1.5 rounded-lg text-[11px] font-black bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors uppercase tracking-wide">
+                              Detail
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
       </div>
     );
   }
