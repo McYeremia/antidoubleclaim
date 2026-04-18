@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Header
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Header, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -23,8 +23,16 @@ from backend.database import (
     get_periode_aktif, get_periode_terkini, get_all_periode, create_periode,
     update_periode_status, update_periode_data, delete_periode, reset_semua_data,
     arsipkan_periode, get_claims_by_periode_id, get_rewards_by_periode_id,
+    get_reward_konfirmasi_by_id,
 )
 from backend.nim_parser import parse_nim
+from backend.email_service import (
+    kirim_email_klaim_disetujui,
+    kirim_email_klaim_tidak_lolos,
+    kirim_email_reward_diproses,
+    kirim_email_reward_dikembalikan,
+    kirim_email_reward_selesai,
+)
 
 app = FastAPI()
 
@@ -172,19 +180,21 @@ async def detail_claim(claim_id: int):
     return claim
 
 @app.patch("/claims/{claim_id}/approve")
-async def approve(claim_id: int, x_operator_id: Optional[str] = Header(None)):
+async def approve(claim_id: int, background_tasks: BackgroundTasks, x_operator_id: Optional[str] = Header(None)):
     claim = get_claim_by_id(claim_id)
     if not claim:
         raise HTTPException(status_code=404, detail="Klaim tidak ditemukan")
     op_id = int(x_operator_id) if x_operator_id and x_operator_id.isdigit() else None
     approve_claim(claim_id, operator_id=op_id)
+    background_tasks.add_task(kirim_email_klaim_disetujui, claim["mahasiswa_email"], claim["nama_lomba"])
     return {"message": "Klaim disetujui", "id": claim_id}
 
 @app.delete("/claims/{claim_id}")
-async def discard(claim_id: int):
+async def discard(claim_id: int, background_tasks: BackgroundTasks):
     claim = get_claim_by_id(claim_id)
     if not claim:
         raise HTTPException(status_code=404, detail="Klaim tidak ditemukan")
+    background_tasks.add_task(kirim_email_klaim_tidak_lolos, claim["mahasiswa_email"], claim["nama_lomba"])
     discard_claim(claim_id)
     return {"message": "Klaim dihapus", "id": claim_id}
 
@@ -478,8 +488,20 @@ async def list_rewards(email: Optional[str] = None):
     return [dict(zip(cols, row)) for row in rows]
 
 @app.patch("/reward-konfirmasi/{reward_id}/status")
-async def update_reward(reward_id: int, body: RewardStatusUpdate):
+async def update_reward(reward_id: int, body: RewardStatusUpdate, background_tasks: BackgroundTasks):
+    reward = get_reward_konfirmasi_by_id(reward_id)
     update_reward_status(reward_id, body.status, body.catatan)
+    if reward:
+        claim = get_claim_by_id(reward["claim_id"])
+        if claim:
+            email      = reward["mahasiswa_email"]
+            nama_lomba = claim["nama_lomba"]
+            if body.status == "diproses":
+                background_tasks.add_task(kirim_email_reward_diproses, email, nama_lomba)
+            elif body.status == "dikembalikan":
+                background_tasks.add_task(kirim_email_reward_dikembalikan, email, nama_lomba, body.catatan)
+            elif body.status == "selesai":
+                background_tasks.add_task(kirim_email_reward_selesai, email, nama_lomba)
     return {"success": True}
 
 @app.get("/reward-konfirmasi/{claim_id}")

@@ -693,6 +693,19 @@ def get_reward_konfirmasi_by_email(email: str) -> list:
     return [dict(zip(cols, row)) for row in rows]
 
 
+def get_reward_konfirmasi_by_id(reward_id: int):
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM REWARD_KONFIRMASI WHERE id = ?", (reward_id,))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return None
+    cols = [d[0] for d in cursor.description]
+    conn.close()
+    return dict(zip(cols, row))
+
+
 def update_reward_status(reward_id: int, status: str, catatan: str = None):
     conn = _get_conn()
     if catatan is not None:
