@@ -950,6 +950,7 @@ def get_all_periode():
         SELECT p.*,
                COUNT(c.id)                                          AS jumlah_klaim,
                SUM(CASE WHEN c.status = 'sudah dicek' THEN 1 ELSE 0 END) AS klaim_disetujui,
+               SUM(CASE WHEN c.status IN ('belum dicek', 'perlu ditinjau') THEN 1 ELSE 0 END) AS klaim_pending,
                SUM(CASE WHEN rk.reward_status = 'selesai' THEN 1 ELSE 0 END) AS reward_selesai,
                SUM(CASE WHEN rk.id IS NOT NULL AND rk.reward_status != 'selesai' THEN 1 ELSE 0 END) AS reward_pending
         FROM PERIODE_KLAIM p
@@ -1017,17 +1018,36 @@ def arsipkan_periode(periode_id: int) -> dict:
         conn.close()
         return {"ok": False, "alasan": "Hanya periode yang sudah ditutup yang dapat diarsipkan"}
 
+    # Cek klaim yang belum diverifikasi pada periode ini
+    cursor.execute("""
+        SELECT COUNT(*) FROM CLAIMS
+        WHERE periode_id = ? AND status IN ('belum dicek', 'perlu ditinjau')
+    """, (periode_id,))
+    klaim_pending = cursor.fetchone()[0]
+
+    if klaim_pending > 0:
+        conn.close()
+        return {
+            "ok": False,
+            "alasan": f"Masih ada {klaim_pending} klaim yang belum diverifikasi (belum dicek / perlu ditinjau)",
+            "klaim_pending": klaim_pending,
+        }
+
     # Hitung reward yang belum selesai pada periode ini
     cursor.execute("""
         SELECT COUNT(*) FROM REWARD_KONFIRMASI rk
         JOIN CLAIMS c ON c.id = rk.claim_id
         WHERE c.periode_id = ? AND rk.reward_status != 'selesai'
     """, (periode_id,))
-    pending = cursor.fetchone()[0]
+    reward_pending = cursor.fetchone()[0]
 
-    if pending > 0:
+    if reward_pending > 0:
         conn.close()
-        return {"ok": False, "alasan": f"Masih ada {pending} reward yang belum selesai", "pending": pending}
+        return {
+            "ok": False,
+            "alasan": f"Masih ada {reward_pending} reward yang belum selesai (dana belum terkirim)",
+            "reward_pending": reward_pending,
+        }
 
     conn.execute("UPDATE PERIODE_KLAIM SET status = 'diarsipkan' WHERE id = ?", (periode_id,))
     conn.commit()
