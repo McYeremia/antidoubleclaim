@@ -7,7 +7,7 @@ import imagehash
 import json
 
 PHASH_THRESHOLD  = 10   # Maximum Hamming distance agar dianggap mirip secara visual
-FUZZY_THRESHOLD  = 85   # Minimum skor fuzzy nama lomba (0–100) agar dianggap mirip
+FUZZY_THRESHOLD  = 80   # Minimum skor fuzzy nama lomba (0–100) agar dianggap mirip
 
 # ---------------------------------------------------------------------------
 # Helper koneksi
