@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { API } from "./shared";
+import { API, formatTanggal } from "./shared";
 
 const STATE_STYLE = {
   aktif:       { badge: "bg-green-100 text-green-700",   label: "Aktif" },
@@ -236,7 +236,7 @@ export default function PengaturanPeriode({ operatorNama }) {
                       <p className="text-[11px] text-gray-400 mt-0.5">Dibuat oleh {p.dibuat_oleh || "—"}</p>
                     </td>
                     <td className="px-4 py-4 text-gray-600">
-                      {p.tanggal_mulai} <span className="text-gray-300 mx-1">→</span> {p.tanggal_selesai}
+                      {formatTanggal(p.tanggal_mulai)} <span className="text-gray-300 mx-1">→</span> {formatTanggal(p.tanggal_selesai)}
                     </td>
                     <td className="px-4 py-4">
                       <span className={`inline-block px-2.5 py-1 rounded-lg text-[11px] font-bold ${style.badge}`}>

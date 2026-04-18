@@ -2,6 +2,27 @@
 
 export const API = "http://127.0.0.1:8000";
 
+const BULAN = [
+  "Januari","Februari","Maret","April","Mei","Juni",
+  "Juli","Agustus","September","Oktober","November","Desember",
+];
+
+/** "2026-04-18" → "18 April 2026" */
+export function formatTanggal(str) {
+  if (!str) return "—";
+  const [y, m, d] = str.slice(0, 10).split("-");
+  return `${parseInt(d)} ${BULAN[parseInt(m) - 1]} ${y}`;
+}
+
+/** "2026-04-18 01:01:31" → "18 April 2026, 01:01" */
+export function formatDatetime(str) {
+  if (!str) return "—";
+  const [date, time] = str.split(" ");
+  const [y, m, d] = date.split("-");
+  const jam = time ? time.slice(0, 5) : "";
+  return `${parseInt(d)} ${BULAN[parseInt(m) - 1]} ${y}${jam ? `, ${jam}` : ""}`;
+}
+
 export const STATUS_BADGE = {
   "perlu ditinjau": "bg-orange-100 text-orange-700",
   "belum dicek":    "bg-blue-100 text-blue-700",

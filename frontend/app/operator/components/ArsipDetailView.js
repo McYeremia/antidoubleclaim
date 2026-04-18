@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
   API, STATUS_BADGE, KATEGORI_LABEL, ARSIP_LABEL_KATEGORI, arsipIsLomba,
   ArsipField, ArsipSectionTitle, ArsipFileLink, ArsipCertPreview,
+  formatTanggal, formatDatetime,
 } from "./shared";
 
 export default function ArsipDetailView({ detailItem, rewards, onBack }) {
@@ -79,7 +80,7 @@ export default function ArsipDetailView({ detailItem, rewards, onBack }) {
               <ArsipField label="Status Klaim"      value={detailItem.status} />
               <ArsipField label="Tingkat"           value={detailItem.tingkat} />
               <ArsipField label="Peringkat"         value={detailItem.peringkat} />
-              <ArsipField label="Tanggal Klaim"     value={detailItem.tanggal} />
+              <ArsipField label="Tanggal Klaim"     value={formatTanggal(detailItem.tanggal)} />
               <ArsipField label="Diverifikasi oleh" value={detailItem.verified_by_nama} />
               {detailItem.flag_alasan && <ArsipField label="Alasan Flag" value={detailItem.flag_alasan} />}
             </div>
@@ -148,8 +149,8 @@ export default function ArsipDetailView({ detailItem, rewards, onBack }) {
                         <ArsipField label="Model Pelaksanaan"   value={p.model_pelaksanaan} />
                         <ArsipField label="Jumlah Peserta"      value={p.jumlah_peserta} />
                         <ArsipField label="Capaian / Peringkat" value={p.capaian} />
-                        <ArsipField label="Tanggal Mulai"       value={p.tanggal_mulai} />
-                        <ArsipField label="Tanggal Selesai"     value={p.tanggal_selesai} />
+                        <ArsipField label="Tanggal Mulai"       value={formatTanggal(p.tanggal_mulai)} />
+                        <ArsipField label="Tanggal Selesai"     value={formatTanggal(p.tanggal_selesai)} />
                       </>
                     )}
                     <div className="col-span-2 sm:col-span-3">
@@ -175,7 +176,7 @@ export default function ArsipDetailView({ detailItem, rewards, onBack }) {
                       <ArsipField label="Judul/Jenis Karya"      value={p.jenis_karya_teks} />
                       <ArsipField label="Pilihan Kategori Karya" value={p.jenis_karya_pilihan} />
                       <ArsipField label="Nomor Surat Keterangan" value={p.nomor_surat} />
-                      <ArsipField label="Tanggal Surat"          value={p.tanggal_surat} />
+                      <ArsipField label="Tanggal Surat"          value={formatTanggal(p.tanggal_surat)} />
                       <div className="col-span-2"><ArsipField label="Deskripsi Karya" value={p.deskripsi_karya} /></div>
                       <div className="col-span-2"><ArsipField label="Manfaat Karya"   value={p.manfaat_karya} /></div>
                     </div>
@@ -240,7 +241,7 @@ export default function ArsipDetailView({ detailItem, rewards, onBack }) {
 
             {p && (
               <div className="pt-6 border-t border-gray-50 flex justify-between items-center">
-                <ArsipField label="Tanggal Pengajuan" value={p.created_at} />
+                <ArsipField label="Tanggal Pengajuan" value={formatDatetime(p.created_at)} />
                 <p className="text-[10px] font-black text-gray-200 uppercase tracking-widest">Antidoubleclaim Verification Engine</p>
               </div>
             )}

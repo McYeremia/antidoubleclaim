@@ -4,6 +4,13 @@ import { useEffect, useState } from "react";
 
 const API = "http://127.0.0.1:8000";
 
+const _BULAN = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+function formatTanggal(str) {
+  if (!str) return "";
+  const [y, m, d] = str.slice(0, 10).split("-");
+  return `${parseInt(d)} ${_BULAN[parseInt(m) - 1]} ${y}`;
+}
+
 const KOMPETISI_PUSPRESNAS = [
   "PKM", "PPK ORMAWA", "P2MW", "NUDC", "KDMI",
   "ONMIPA", "KBMK", "GEMASTIK", "PILMAPRES",
@@ -545,7 +552,7 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
                     <p className={`text-xs mt-0.5 ${
                       periodeAktif.status === "aktif" ? "text-green-600" : "text-blue-600"
                     }`}>
-                      {periodeAktif.tanggal_mulai} s/d {periodeAktif.tanggal_selesai}
+                      {formatTanggal(periodeAktif.tanggal_mulai)} s/d {formatTanggal(periodeAktif.tanggal_selesai)}
                     </p>
                   )}
                   {periodeAktif.status === "tersimpan" && (
