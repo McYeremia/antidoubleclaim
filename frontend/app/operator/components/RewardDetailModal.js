@@ -152,7 +152,7 @@ export default function RewardDetailModal({ reward, onClose, onStatusUpdate }) {
         </div>
 
         {/* Footer Aksi */}
-        {reward.reward_status !== "selesai" && reward.reward_status !== "ditolak" && reward.reward_status !== "diproses" && (
+        {reward.reward_status !== "selesai" && reward.reward_status !== "diproses" && (
           <div className="px-8 py-6 border-t border-gray-100 bg-gray-50/50 flex items-center justify-between flex-shrink-0">
             <div className="flex gap-2">
               <button
@@ -161,13 +161,6 @@ export default function RewardDetailModal({ reward, onClose, onStatusUpdate }) {
                 className="px-4 py-2.5 rounded-xl text-[12px] font-black bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors"
               >
                 KEMBALIKAN
-              </button>
-              <button
-                onClick={() => handleStatus("ditolak")}
-                disabled={updating}
-                className="px-4 py-2.5 rounded-xl text-[12px] font-black bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
-              >
-                TOLAK
               </button>
             </div>
             <button

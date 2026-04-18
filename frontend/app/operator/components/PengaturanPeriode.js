@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import { API } from "./shared";
 
 const STATE_STYLE = {
-  aktif:       { badge: "bg-green-100 text-green-700",  label: "Aktif" },
-  tutup:       { badge: "bg-gray-100 text-gray-500",    label: "Tutup" },
-  belum_mulai: { badge: "bg-blue-100 text-blue-600",    label: "Belum Dimulai" },
-  kadaluarsa:  { badge: "bg-red-100 text-red-600",      label: "Kadaluarsa" },
+  aktif:       { badge: "bg-green-100 text-green-700",   label: "Aktif" },
+  tutup:       { badge: "bg-gray-100 text-gray-500",     label: "Tutup" },
+  belum_mulai: { badge: "bg-blue-100 text-blue-600",     label: "Belum Dimulai" },
+  kadaluarsa:  { badge: "bg-red-100 text-red-600",       label: "Kadaluarsa" },
+  diarsipkan:  { badge: "bg-purple-100 text-purple-700", label: "Diarsipkan" },
 };
 
 export default function PengaturanPeriode({ operatorNama }) {
@@ -124,6 +125,7 @@ export default function PengaturanPeriode({ operatorNama }) {
   const today = new Date().toISOString().slice(0, 10);
 
   const getPeriodeState = (p) => {
+    if (p.status === "diarsipkan") return "diarsipkan";
     if (p.status !== "aktif") return "tutup";
     if (today < p.tanggal_mulai) return "belum_mulai";
     if (today > p.tanggal_selesai) return "kadaluarsa";
@@ -243,24 +245,32 @@ export default function PengaturanPeriode({ operatorNama }) {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        <button onClick={() => openEdit(p)}
-                          className="px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors">
-                          Edit
-                        </button>
-                        <button onClick={() => handleToggle(p)}
-                          className={`px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-colors ${
-                            p.status === "aktif"
-                              ? "bg-red-50 text-red-600 hover:bg-red-100"
-                              : "bg-green-50 text-green-700 hover:bg-green-100"
-                          }`}>
-                          {p.status === "aktif" ? "Tutup" : "Aktifkan"}
-                        </button>
-                        <button
-                          onClick={() => handleHapusPeriode(p)}
-                          disabled={p.status === "aktif"}
-                          className="px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-red-50 text-red-500 hover:bg-red-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
-                          Hapus
-                        </button>
+                        {p.status === "diarsipkan" ? (
+                          <span className="text-[11px] font-black text-purple-400 italic tracking-widest uppercase px-1">
+                            Diarsipkan
+                          </span>
+                        ) : (
+                          <>
+                            <button onClick={() => openEdit(p)}
+                              className="px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors">
+                              Edit
+                            </button>
+                            <button onClick={() => handleToggle(p)}
+                              className={`px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-colors ${
+                                p.status === "aktif"
+                                  ? "bg-red-50 text-red-600 hover:bg-red-100"
+                                  : "bg-green-50 text-green-700 hover:bg-green-100"
+                              }`}>
+                              {p.status === "aktif" ? "Tutup" : "Aktifkan"}
+                            </button>
+                            <button
+                              onClick={() => handleHapusPeriode(p)}
+                              disabled={p.status === "aktif"}
+                              className="px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-red-50 text-red-500 hover:bg-red-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+                              Hapus
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>

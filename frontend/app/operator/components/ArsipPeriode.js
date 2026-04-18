@@ -115,10 +115,11 @@ export default function ArsipPeriode() {
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-5 gap-4">
           {[
             { label: "Total Klaim",     value: selected.jumlah_klaim ?? 0,    color: "text-gray-900" },
             { label: "Klaim Disetujui", value: selected.klaim_disetujui ?? 0, color: "text-green-600" },
+            { label: "Klaim Pending",   value: selected.klaim_pending ?? 0,   color: "text-red-500" },
             { label: "Reward Selesai",  value: selected.reward_selesai ?? 0,  color: "text-blue-600" },
             { label: "Reward Pending",  value: selected.reward_pending ?? 0,  color: "text-orange-600" },
           ].map(s => (
@@ -129,16 +130,32 @@ export default function ArsipPeriode() {
           ))}
         </div>
 
-        {(selected.reward_pending ?? 0) > 0 && selected.status !== "aktif" && (
-          <div className="bg-orange-50 border border-orange-200 rounded-2xl px-6 py-4 flex items-center gap-4">
-            <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center shrink-0">
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <p className="text-[13px] font-semibold text-orange-900">
-              Masih ada <strong>{selected.reward_pending} reward</strong> yang belum selesai. Selesaikan transfer dana sebelum mengarsipkan.
-            </p>
+        {selected.status !== "aktif" && (
+          <div className="space-y-3">
+            {(selected.klaim_pending ?? 0) > 0 && (
+              <div className="bg-red-50 border border-red-200 rounded-2xl px-6 py-4 flex items-center gap-4">
+                <div className="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center shrink-0">
+                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <p className="text-[13px] font-semibold text-red-900">
+                  Masih ada <strong>{selected.klaim_pending} klaim</strong> yang belum diverifikasi (belum dicek / perlu ditinjau). Selesaikan semua klaim sebelum mengarsipkan.
+                </p>
+              </div>
+            )}
+            {(selected.reward_pending ?? 0) > 0 && (
+              <div className="bg-orange-50 border border-orange-200 rounded-2xl px-6 py-4 flex items-center gap-4">
+                <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center shrink-0">
+                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <p className="text-[13px] font-semibold text-orange-900">
+                  Masih ada <strong>{selected.reward_pending} reward</strong> yang belum selesai. Selesaikan transfer dana sebelum mengarsipkan.
+                </p>
+              </div>
+            )}
           </div>
         )}
 
@@ -393,6 +410,9 @@ export default function ArsipPeriode() {
                     <td className="px-4 py-4">
                       <p className="font-black text-gray-900">{p.jumlah_klaim ?? 0}</p>
                       <p className="text-[11px] text-gray-400">{p.klaim_disetujui ?? 0} disetujui</p>
+                      {(p.klaim_pending ?? 0) > 0 && (
+                        <p className="text-[11px] text-red-500">{p.klaim_pending} belum dicek</p>
+                      )}
                     </td>
                     <td className="px-4 py-4">
                       <p className="font-black text-green-700">{p.reward_selesai ?? 0} selesai</p>
