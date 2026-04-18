@@ -1,6 +1,6 @@
 "use client";
 
-import { KATEGORI_LABEL } from "./shared";
+import { KATEGORI_LABEL, formatDatetime } from "./shared";
 
 export default function RewardSection({
   title, color, items,
@@ -72,7 +72,7 @@ export default function RewardSection({
                   <p className="text-[12px] font-black text-gray-900 uppercase">{r.bank}</p>
                   <p className="text-[12px] font-mono text-gray-400 mt-0.5 font-bold">{r.nomor_rekening ?? "—"}</p>
                 </td>
-                <td className="px-6 py-4 text-[12px] text-gray-400 font-medium">{r.created_at}</td>
+                <td className="px-6 py-4 text-[12px] text-gray-400 font-medium">{formatDatetime(r.created_at)}</td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex items-center justify-end gap-2">
                     {rowActions && rowActions(r)}

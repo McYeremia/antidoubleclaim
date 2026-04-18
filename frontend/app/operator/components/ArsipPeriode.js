@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { API, ARSIP_STATUS_STYLE, STATUS_BADGE } from "./shared";
+import { API, ARSIP_STATUS_STYLE, STATUS_BADGE, formatTanggal } from "./shared";
 import ArsipDetailView from "./ArsipDetailView";
 
 export default function ArsipPeriode() {
@@ -96,7 +96,7 @@ export default function ArsipPeriode() {
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-4xl font-black text-gray-900 leading-none tracking-tight">{selected.nama}</h1>
-            <p className="text-gray-400 mt-2 text-[14px]">{selected.tanggal_mulai} → {selected.tanggal_selesai}</p>
+            <p className="text-gray-400 mt-2 text-[14px]">{formatTanggal(selected.tanggal_mulai)} → {formatTanggal(selected.tanggal_selesai)}</p>
           </div>
           <div className="flex items-center gap-3">
             <span className={`px-3 py-1.5 rounded-full text-[11px] font-black uppercase tracking-widest ${style.badge}`}>{style.label}</span>
@@ -243,7 +243,7 @@ export default function ArsipPeriode() {
                             STATUS_BADGE[c.status] ?? "bg-gray-100 text-gray-500"
                           }`}>{c.status}</span>
                         </td>
-                        <td className="px-6 py-4 text-[12px] text-gray-400">{c.tanggal}</td>
+                        <td className="px-6 py-4 text-[12px] text-gray-400">{formatTanggal(c.tanggal)}</td>
                         <td className="px-6 py-4">
                           <button onClick={() => setDetailItem(c)}
                             className="px-3 py-1.5 rounded-lg text-[11px] font-black bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors uppercase tracking-wide">
@@ -406,7 +406,7 @@ export default function ArsipPeriode() {
                       <p className="font-semibold text-gray-900">{p.nama}</p>
                       <p className="text-[11px] text-gray-400 mt-0.5">Dibuat oleh {p.dibuat_oleh || "—"}</p>
                     </td>
-                    <td className="px-4 py-4 text-gray-500 text-[12px]">{p.tanggal_mulai} → {p.tanggal_selesai}</td>
+                    <td className="px-4 py-4 text-gray-500 text-[12px]">{formatTanggal(p.tanggal_mulai)} → {formatTanggal(p.tanggal_selesai)}</td>
                     <td className="px-4 py-4">
                       <p className="font-black text-gray-900">{p.jumlah_klaim ?? 0}</p>
                       <p className="text-[11px] text-gray-400">{p.klaim_disetujui ?? 0} disetujui</p>

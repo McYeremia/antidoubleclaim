@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { API, KATEGORI_LABEL, REWARD_STATUS_BADGE, InfoRow, DocLink } from "./shared";
+import { API, KATEGORI_LABEL, REWARD_STATUS_BADGE, InfoRow, DocLink, formatTanggal, formatDatetime } from "./shared";
 
 export default function RewardDetailModal({ reward, onClose, onStatusUpdate }) {
   const [claim,    setClaim]    = useState(null);
@@ -74,7 +74,7 @@ export default function RewardDetailModal({ reward, onClose, onStatusUpdate }) {
                 </div>
                 <div>
                   <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Tanggal Klaim</p>
-                  <p className="text-gray-200 mt-0.5">{claim.tanggal}</p>
+                  <p className="text-gray-200 mt-0.5">{formatTanggal(claim.tanggal)}</p>
                 </div>
               </div>
             </div>

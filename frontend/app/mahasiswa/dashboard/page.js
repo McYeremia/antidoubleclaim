@@ -31,6 +31,23 @@ const REWARD_STYLE = {
   ditolak:      "bg-red-100 text-red-700",
 };
 
+// ── Format tanggal ────────────────────────────────────────────────────────────
+const BULAN = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+
+function formatTanggal(str) {
+  if (!str) return "—";
+  const [y, m, d] = str.slice(0, 10).split("-");
+  return `${parseInt(d)} ${BULAN[parseInt(m) - 1]} ${y}`;
+}
+
+function formatDatetime(str) {
+  if (!str) return "—";
+  const [date, time] = str.split(" ");
+  const [y, m, d] = date.split("-");
+  const jam = time ? time.slice(0, 5) : "";
+  return `${parseInt(d)} ${BULAN[parseInt(m) - 1]} ${y}${jam ? `, ${jam}` : ""}`;
+}
+
 // ── Ikon sidebar ──────────────────────────────────────────────────────────────
 const IconPlus = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -293,8 +310,8 @@ function DetailModal({ claim, onClose }) {
                   <InfoRow label="Model Pelaksanaan" value={pengajuan.model_pelaksanaan} />
                   <InfoRow label="Jumlah Peserta"    value={pengajuan.jumlah_peserta} />
                   <InfoRow label="Capaian"           value={pengajuan.capaian} />
-                  <InfoRow label="Tanggal Mulai"     value={pengajuan.tanggal_mulai} />
-                  <InfoRow label="Tanggal Selesai"   value={pengajuan.tanggal_selesai} />
+                  <InfoRow label="Tanggal Mulai"     value={formatTanggal(pengajuan.tanggal_mulai)} />
+                  <InfoRow label="Tanggal Selesai"   value={formatTanggal(pengajuan.tanggal_selesai)} />
                 </>}
                 <div className="col-span-2">
                   <p className="text-xs text-gray-400 uppercase">URL Penyelenggara</p>
@@ -324,7 +341,7 @@ function DetailModal({ claim, onClose }) {
                   <InfoRow label="Pilihan Jenis Karya" value={pengajuan.jenis_karya_pilihan} />
                   <InfoRow label="Jenis Karya"         value={pengajuan.jenis_karya_teks} />
                   <InfoRow label="Nomor Surat"         value={pengajuan.nomor_surat} />
-                  <InfoRow label="Tanggal Surat"       value={pengajuan.tanggal_surat} />
+                  <InfoRow label="Tanggal Surat"       value={formatTanggal(pengajuan.tanggal_surat)} />
                   <div className="col-span-2"><InfoRow label="Deskripsi Karya" value={pengajuan.deskripsi_karya} /></div>
                   <div className="col-span-2"><InfoRow label="Manfaat Karya"   value={pengajuan.manfaat_karya} /></div>
                 </div>
@@ -377,7 +394,7 @@ function DetailModal({ claim, onClose }) {
               )}
 
               <div className="pt-3">
-                <InfoRow label="Tanggal Pengajuan" value={pengajuan.created_at} />
+                <InfoRow label="Tanggal Pengajuan" value={formatDatetime(pengajuan.created_at)} />
               </div>
             </>
           ) : (
@@ -386,8 +403,8 @@ function DetailModal({ claim, onClose }) {
               <div className="col-span-2"><InfoRow label="Nama Lomba" value={claim.nama_lomba} /></div>
               <InfoRow label="Tingkat"   value={claim.tingkat} />
               <InfoRow label="Peringkat" value={claim.peringkat} />
-              <InfoRow label="Tanggal"   value={claim.tanggal} />
-              {claim.verified_at && <InfoRow label="Diverifikasi" value={claim.verified_at} />}
+              <InfoRow label="Tanggal"   value={formatTanggal(claim.tanggal)} />
+              {claim.verified_at && <InfoRow label="Diverifikasi" value={formatDatetime(claim.verified_at)} />}
             </div>
           )}
         </div>
@@ -514,7 +531,7 @@ function DaftarKlaim({ session, search, onOpenForm, onTambahKlaim }) {
                         {claim.peringkat}
                       </span>
                     </td>
-                    <td className="px-5 py-4 text-[12px] text-gray-400">{claim.tanggal}</td>
+                    <td className="px-5 py-4 text-[12px] text-gray-400">{formatTanggal(claim.tanggal)}</td>
                     <td className="px-5 py-4">
                       <span className="inline-flex items-center gap-1.5 text-[12px] font-medium uppercase tracking-wide">
                         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${claim.status === "sudah dicek" ? "bg-green-500" : "bg-gray-300"}`} />
@@ -554,13 +571,117 @@ function DaftarKlaim({ session, search, onOpenForm, onTambahKlaim }) {
   );
 }
 
+// ── Modal: Detail Reward yang Sudah Disubmit ─────────────────────────────────
+const API_URL = "http://127.0.0.1:8000";
+const KATEGORI_LABEL = { puspresnas: "PUSPRESNAS", non_puspresnas: "Non PUSPRESNAS", publikasi: "Publikasi / Karya / HKI" };
+
+function RewardDetailModal({ claim, reward, onClose }) {
+  if (!claim || !reward) return null;
+  const filename = (path) => path ? path.split(/[\\/]/).pop() : null;
+  const fileUrl  = (path) => { const f = filename(path); return f ? `${API_URL}/uploads/${f}` : null; };
+
+  const docs = [
+    { label: "Buku Tabungan",        path: reward.foto_buku_tabungan_path },
+    { label: "KTM",                  path: reward.foto_ktm_path },
+    { label: "KTP",                  path: reward.foto_ktp_path },
+    { label: "Pakta Integritas",     path: reward.pakta_integritas_path },
+    { label: "Laporan Akhir",        path: reward.laporan_akhir_path },
+    { label: "Karya Publikasi",      path: reward.karya_publikasi_path },
+  ].filter(d => d.path);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-xl max-h-[90vh] overflow-y-auto"
+           onClick={e => e.stopPropagation()}>
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white z-10">
+          <div>
+            <h3 className="text-base font-bold text-gray-900">Detail Data Reward</h3>
+            <p className="text-xs text-gray-400 mt-0.5">{claim.nama_lomba}</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${REWARD_STYLE[reward.reward_status] ?? "bg-gray-100 text-gray-600"}`}>
+              {REWARD_LABEL[reward.reward_status] ?? reward.reward_status}
+            </span>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-5">
+
+          {/* Catatan operator jika dikembalikan */}
+          {reward.catatan_operator && (
+            <div className="bg-orange-50 border border-orange-200 rounded-xl px-4 py-3">
+              <p className="text-xs font-semibold text-orange-700 mb-0.5">Catatan dari Operator:</p>
+              <p className="text-sm text-orange-800">{reward.catatan_operator}</p>
+            </div>
+          )}
+
+          {/* Info Pengajuan */}
+          <div>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider border-b border-gray-100 pb-1 mb-3">Info Pengajuan</p>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <InfoRow label="Kategori"          value={KATEGORI_LABEL[reward.kategori_lomba] ?? reward.kategori_lomba} />
+              <InfoRow label="Periode"           value={reward.periode ? `Periode ${reward.periode}` : null} />
+              <InfoRow label="No. Urut Lampiran" value={reward.nomor_urut_lampiran} />
+              <InfoRow label="Tahun Klaim"       value={reward.tahun_klaim} />
+              <InfoRow label="Tahun Kegiatan"    value={reward.tahun_kegiatan} />
+              {reward.judul_lomba && <div className="col-span-2"><InfoRow label="Judul Lomba" value={reward.judul_lomba} /></div>}
+            </div>
+          </div>
+
+          {/* Data Diri */}
+          <div>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider border-b border-gray-100 pb-1 mb-3">Data Diri</p>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <InfoRow label="Nama Ketua" value={reward.nama_ketua} />
+              <InfoRow label="NIM"        value={reward.nim} />
+              <InfoRow label="Nomor WA"   value={reward.nomor_wa} />
+            </div>
+          </div>
+
+          {/* Data Rekening */}
+          <div>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider border-b border-gray-100 pb-1 mb-3">Data Rekening</p>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <InfoRow label="Nama Pemilik" value={reward.nama_pemilik_rekening} />
+              <InfoRow label="Bank"         value={reward.bank} />
+              <div className="col-span-2"><InfoRow label="Nomor Rekening" value={reward.nomor_rekening} /></div>
+            </div>
+          </div>
+
+          {/* Dokumen */}
+          {docs.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider border-b border-gray-100 pb-1 mb-3">Dokumen Terupload</p>
+              <div className="grid grid-cols-2 gap-3">
+                {docs.map(d => (
+                  <div key={d.label}>
+                    <p className="text-xs text-gray-400 uppercase">{d.label}</p>
+                    <a href={fileUrl(d.path)} target="_blank" rel="noopener noreferrer"
+                       className="text-sm text-blue-600 hover:underline mt-0.5 inline-block truncate max-w-full">
+                      {filename(d.path)} ↗
+                    </a>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Konten: Konfirmasi Reward ─────────────────────────────────────────────────
 function KonfirmasiReward({ session, initialClaimId = null, onClearInitial }) {
-  const [claims,          setClaims]          = useState([]);
-  const [rewardMap,       setRewardMap]       = useState({});
-  const [pengajuanMap,    setPengajuanMap]    = useState({});
-  const [loading,         setLoading]         = useState(true);
-  const [selectedClaimId, setSelectedClaimId] = useState(initialClaimId);
+  const [claims,               setClaims]               = useState([]);
+  const [rewardMap,            setRewardMap]            = useState({});
+  const [pengajuanMap,         setPengajuanMap]         = useState({});
+  const [loading,              setLoading]              = useState(true);
+  const [selectedClaimId,      setSelectedClaimId]      = useState(initialClaimId);
+  const [detailRewardClaim,    setDetailRewardClaim]    = useState(null);
 
   // Sync jika initialClaimId berubah dari luar (misal dari DaftarKlaim)
   useEffect(() => {
@@ -597,7 +718,7 @@ function KonfirmasiReward({ session, initialClaimId = null, onClearInitial }) {
   const dikembalikan    = claims.filter(c => rewardMap[c.id]?.reward_status === "dikembalikan");
   const sudahDiisi      = claims.filter(c => rewardMap[c.id] && rewardMap[c.id].reward_status !== "dikembalikan");
 
-  const ClaimTable = ({ items, mode }) => (
+  const ClaimTable = ({ items, mode, onDetail }) => (
     <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
       <table className="w-full text-sm text-left">
         <thead>
@@ -645,9 +766,17 @@ function KonfirmasiReward({ session, initialClaimId = null, onClearInitial }) {
                     </button>
                   )}
                   {mode === "status" && (
-                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${REWARD_STYLE[reward?.reward_status] ?? "bg-gray-100 text-gray-600"}`}>
-                      {REWARD_LABEL[reward?.reward_status] ?? "—"}
-                    </span>
+                    <div className="flex items-center justify-end gap-2">
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${REWARD_STYLE[reward?.reward_status] ?? "bg-gray-100 text-gray-600"}`}>
+                        {REWARD_LABEL[reward?.reward_status] ?? "—"}
+                      </span>
+                      <button
+                        onClick={() => onDetail?.(claim)}
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+                      >
+                        Detail
+                      </button>
+                    </div>
                   )}
                 </td>
               </tr>
@@ -738,10 +867,18 @@ function KonfirmasiReward({ session, initialClaimId = null, onClearInitial }) {
               <h3 className="text-sm font-semibold text-gray-500 mb-2">
                 Sudah Diisi ({sudahDiisi.length})
               </h3>
-              <ClaimTable items={sudahDiisi} mode="status" />
+              <ClaimTable items={sudahDiisi} mode="status" onDetail={c => setDetailRewardClaim(c)} />
             </div>
           )}
         </>
+      )}
+
+      {detailRewardClaim && (
+        <RewardDetailModal
+          claim={detailRewardClaim}
+          reward={rewardMap[detailRewardClaim.id]}
+          onClose={() => setDetailRewardClaim(null)}
+        />
       )}
     </div>
   );

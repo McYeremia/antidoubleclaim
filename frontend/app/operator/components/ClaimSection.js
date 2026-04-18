@@ -1,5 +1,7 @@
 "use client";
 
+import { formatTanggal, formatDatetime } from "./shared";
+
 export default function ClaimSection({
   title, color, items,
   showActions, showMirip, showVerified,
@@ -45,7 +47,7 @@ export default function ClaimSection({
                     {claim.peringkat}
                   </span>
                 </td>
-                <td className="px-6 py-4 text-[12px] text-gray-400 font-medium">{claim.tanggal}</td>
+                <td className="px-6 py-4 text-[12px] text-gray-400 font-medium">{formatTanggal(claim.tanggal)}</td>
                 {showMirip && (
                   <td className="px-6 py-4">
                     {claim.mirip_dengan_id ? (
@@ -63,7 +65,7 @@ export default function ClaimSection({
                     {claim.verified_by_nama ? (
                       <div>
                         <p className="font-bold text-gray-900 text-[13px]">{claim.verified_by_nama}</p>
-                        <p className="text-[11px] text-gray-400 mt-0.5 font-medium">{claim.verified_at ?? "—"}</p>
+                        <p className="text-[11px] text-gray-400 mt-0.5 font-medium">{formatDatetime(claim.verified_at)}</p>
                       </div>
                     ) : <span className="text-gray-200">—</span>}
                   </td>
