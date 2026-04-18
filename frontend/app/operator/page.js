@@ -1658,6 +1658,8 @@ function ArsipPeriode() {
   const [dataLoading,   setDataLoading]   = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [detailItem,    setDetailItem]    = useState(null);
+  const [searchQuery,   setSearchQuery]   = useState("");
+  const [periodeSearch, setPeriodeSearch]  = useState("");
 
   const fetchPeriode = async () => {
     setLoading(true);
@@ -1790,16 +1792,37 @@ function ArsipPeriode() {
           </div>
         )}
 
-        {/* Tabs */}
-        <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
-          {[{ key: "claims", label: `Klaim (${claims.length})` }, { key: "rewards", label: `Reward (${rewards.length})` }].map(tab => (
-            <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-              className={`px-5 py-2 rounded-lg text-[12px] font-black transition-all ${
-                activeTab === tab.key ? "bg-white shadow text-gray-900" : "text-gray-500 hover:text-gray-700"
-              }`}>
-              {tab.label}
-            </button>
-          ))}
+        {/* Tabs + Search */}
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+            {[{ key: "claims", label: `Klaim (${claims.length})` }, { key: "rewards", label: `Reward (${rewards.length})` }].map(tab => (
+              <button key={tab.key} onClick={() => { setActiveTab(tab.key); setSearchQuery(""); }}
+                className={`px-5 py-2 rounded-lg text-[12px] font-black transition-all ${
+                  activeTab === tab.key ? "bg-white shadow text-gray-900" : "text-gray-500 hover:text-gray-700"
+                }`}>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          <div className="relative">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder={activeTab === "claims" ? "Cari nama lomba, mahasiswa, email..." : "Cari nama lomba, rekening, bank..."}
+              className="pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-[13px] text-gray-900 w-[340px] focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all placeholder:text-gray-300"
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-600 transition-colors">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Tabel klaim */}
@@ -1812,9 +1835,22 @@ function ArsipPeriode() {
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                 </svg>
               </div>
-            ) : claims.length === 0 ? (
-              <p className="text-center text-gray-400 text-[13px] py-12">Tidak ada klaim pada periode ini.</p>
-            ) : (
+            ) : (() => {
+              const q = searchQuery.toLowerCase().trim();
+              const filtered = q ? claims.filter(c =>
+                (c.nama_lomba || "").toLowerCase().includes(q) ||
+                (c.nama_display || "").toLowerCase().includes(q) ||
+                (c.mahasiswa_email || "").toLowerCase().includes(q) ||
+                (c.tingkat || "").toLowerCase().includes(q) ||
+                (c.peringkat || "").toLowerCase().includes(q) ||
+                (c.status || "").toLowerCase().includes(q) ||
+                String(c.id).includes(q)
+              ) : claims;
+              return filtered.length === 0 ? (
+                <p className="text-center text-gray-400 text-[13px] py-12">
+                  {q ? `Tidak ada klaim yang cocok dengan "${searchQuery}".` : "Tidak ada klaim pada periode ini."}
+                </p>
+              ) : (
               <table className="w-full text-sm text-left">
                 <thead>
                   <tr className="border-b border-gray-50">
@@ -1827,7 +1863,7 @@ function ArsipPeriode() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {claims.map(c => (
+                  {filtered.map(c => (
                     <tr key={c.id} className="hover:bg-gray-50/60 transition-colors">
                       <td className="px-6 py-4 font-mono text-[12px] text-gray-300 font-bold">#{c.id}</td>
                       <td className="px-6 py-4">
@@ -1854,7 +1890,8 @@ function ArsipPeriode() {
                   ))}
                 </tbody>
               </table>
-            )}
+              );
+            })()}
           </div>
         )}
 
@@ -1868,9 +1905,23 @@ function ArsipPeriode() {
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                 </svg>
               </div>
-            ) : rewards.length === 0 ? (
-              <p className="text-center text-gray-400 text-[13px] py-12">Tidak ada data reward pada periode ini.</p>
-            ) : (
+            ) : (() => {
+              const q = searchQuery.toLowerCase().trim();
+              const filtered = q ? rewards.filter(r =>
+                (r.nama_lomba || "").toLowerCase().includes(q) ||
+                (r.nama_rekening || "").toLowerCase().includes(q) ||
+                (r.nama_ketua || "").toLowerCase().includes(q) ||
+                (r.bank || "").toLowerCase().includes(q) ||
+                (r.nomor_rekening || "").toLowerCase().includes(q) ||
+                (r.reward_status || "").toLowerCase().includes(q) ||
+                String(r.claim_id).includes(q) ||
+                String(r.estimasi_reward || "").includes(q)
+              ) : rewards;
+              return filtered.length === 0 ? (
+                <p className="text-center text-gray-400 text-[13px] py-12">
+                  {q ? `Tidak ada reward yang cocok dengan "${searchQuery}".` : "Tidak ada data reward pada periode ini."}
+                </p>
+              ) : (
               <table className="w-full text-sm text-left">
                 <thead>
                   <tr className="border-b border-gray-50">
@@ -1882,7 +1933,7 @@ function ArsipPeriode() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {rewards.map(r => {
+                  {filtered.map(r => {
                     const claimForReward = claims.find(c => c.id === r.claim_id);
                     return (
                       <tr key={r.id} className="hover:bg-gray-50/60 transition-colors">
@@ -1915,18 +1966,49 @@ function ArsipPeriode() {
                   })}
                 </tbody>
               </table>
-            )}
+              );
+            })()}
           </div>
         )}
       </div>
     );
   }
 
+  const pq = periodeSearch.toLowerCase().trim();
+  const filteredPeriode = pq ? periodeList.filter(p =>
+    (p.nama || "").toLowerCase().includes(pq) ||
+    (p.dibuat_oleh || "").toLowerCase().includes(pq) ||
+    (p.status || "").toLowerCase().includes(pq) ||
+    (p.tanggal_mulai || "").includes(pq) ||
+    (p.tanggal_selesai || "").includes(pq)
+  ) : periodeList;
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <div>
-        <h1 className="text-4xl font-black text-gray-900 leading-none tracking-tight">Arsip Periode</h1>
-        <p className="text-gray-400 mt-3 text-[14px]">Riwayat dan arsip periode klaim mahasiswa.</p>
+      <div className="flex items-start justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-4xl font-black text-gray-900 leading-none tracking-tight">Arsip Periode</h1>
+          <p className="text-gray-400 mt-3 text-[14px]">Riwayat dan arsip periode klaim mahasiswa.</p>
+        </div>
+        <div className="relative mt-1">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            type="text"
+            value={periodeSearch}
+            onChange={e => setPeriodeSearch(e.target.value)}
+            placeholder="Cari nama periode, pembuat..."
+            className="pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-[13px] text-gray-900 w-[300px] focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all placeholder:text-gray-300"
+          />
+          {periodeSearch && (
+            <button onClick={() => setPeriodeSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-600 transition-colors">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -1937,8 +2019,10 @@ function ArsipPeriode() {
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
           </div>
-        ) : periodeList.length === 0 ? (
-          <p className="text-center text-gray-400 text-[13px] py-12">Belum ada periode.</p>
+        ) : filteredPeriode.length === 0 ? (
+          <p className="text-center text-gray-400 text-[13px] py-12">
+            {pq ? `Tidak ada periode yang cocok dengan "${periodeSearch}".` : "Belum ada periode."}
+          </p>
         ) : (
           <table className="w-full text-[13px] text-left">
             <thead>
@@ -1952,7 +2036,7 @@ function ArsipPeriode() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {periodeList.map(p => {
+              {filteredPeriode.map(p => {
                 const style = ARSIP_STATUS_STYLE[p.status] ?? { badge: "bg-gray-100 text-gray-500", label: p.status };
                 return (
                   <tr key={p.id} className="hover:bg-gray-50/50 transition-colors">
