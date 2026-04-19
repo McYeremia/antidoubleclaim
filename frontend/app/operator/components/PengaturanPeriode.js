@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { API, formatTanggal } from "./shared";
+import { API, formatTanggal, ConfirmModal } from "./shared";
 
 const STATE_STYLE = {
   aktif:       { badge: "bg-green-100 text-green-700",   label: "Aktif" },
@@ -17,7 +17,8 @@ export default function PengaturanPeriode({ operatorNama }) {
   const [showForm,       setShowForm]       = useState(false);
   const [editingPeriode, setEditingPeriode] = useState(null);
   const [saving,         setSaving]         = useState(false);
-  const [form, setForm] = useState({ nama: "", tanggal_mulai: "", tanggal_selesai: "" });
+  const [form,         setForm]         = useState({ nama: "", tanggal_mulai: "", tanggal_selesai: "" });
+  const [confirmModal, setConfirmModal] = useState(null); // { title, message, variant, requireExactText, confirmLabel, onConfirm }
 
   const openCreate = () => {
     setEditingPeriode(null);
@@ -78,48 +79,68 @@ export default function PengaturanPeriode({ operatorNama }) {
     finally  { setSaving(false); }
   };
 
-  const handleToggle = async (p) => {
+  const handleToggle = (p) => {
     const newStatus = p.status === "aktif" ? "tutup" : "aktif";
     const label     = newStatus === "aktif" ? "membuka" : "menutup";
-    if (!confirm(`Yakin ingin ${label} periode "${p.nama}"?`)) return;
-    const res = await fetch(`${API}/periode/${p.id}?status=${newStatus}`, { method: "PUT" });
-    if (!res.ok) { alert("Gagal mengubah status periode."); return; }
-    fetchPeriode();
+    setConfirmModal({
+      title:        `${newStatus === "aktif" ? "Aktifkan" : "Tutup"} Periode?`,
+      message:      `Yakin ingin ${label} periode "${p.nama}"?`,
+      variant:      newStatus === "aktif" ? "default" : "warning",
+      confirmLabel: newStatus === "aktif" ? "YA, AKTIFKAN" : "YA, TUTUP",
+      onConfirm:    async () => {
+        setConfirmModal(null);
+        const res = await fetch(`${API}/periode/${p.id}?status=${newStatus}`, { method: "PUT" });
+        if (!res.ok) { alert("Gagal mengubah status periode."); return; }
+        fetchPeriode();
+      },
+    });
   };
 
-  const handleHapusPeriode = async (p) => {
-    if (!confirm(`Hapus periode "${p.nama}"?\nData reward yang sudah tercatat pada periode ini tidak akan terhapus.`)) return;
-    const opId = sessionStorage.getItem("operator_id");
-    const res  = await fetch(`${API}/periode/${p.id}`, {
-      method: "DELETE",
-      headers: opId ? { "x-operator-id": opId } : {},
+  const handleHapusPeriode = (p) => {
+    setConfirmModal({
+      title:        "Hapus Periode?",
+      message:      `Periode "${p.nama}" akan dihapus. Data reward yang sudah tercatat tidak akan terhapus.`,
+      variant:      "danger",
+      confirmLabel: "YA, HAPUS",
+      onConfirm:    async () => {
+        setConfirmModal(null);
+        const opId = sessionStorage.getItem("operator_id");
+        const res  = await fetch(`${API}/periode/${p.id}`, {
+          method: "DELETE",
+          headers: opId ? { "x-operator-id": opId } : {},
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          alert(err.detail || "Gagal menghapus periode.");
+          return;
+        }
+        fetchPeriode();
+      },
     });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      alert(err.detail || "Gagal menghapus periode.");
-      return;
-    }
-    fetchPeriode();
   };
 
-  const handleResetData = async () => {
-    const konfirmasi = prompt(
-      'Tindakan ini akan menghapus SEMUA data klaim, pengajuan, reward, profil, dan periode.\n' +
-      'Tabel akun operator TIDAK akan terhapus.\n\n' +
-      'Ketik "RESET" untuk melanjutkan:'
-    );
-    if (konfirmasi !== "RESET") { alert("Reset dibatalkan."); return; }
-    const opId = sessionStorage.getItem("operator_id");
-    const res  = await fetch(`${API}/admin/reset-data`, {
-      method: "POST",
-      headers: opId ? { "x-operator-id": opId } : {},
+  const handleResetData = () => {
+    setConfirmModal({
+      title:           "Reset Semua Data?",
+      message:         "Semua data klaim, pengajuan, reward, profil mahasiswa, dan periode akan dihapus permanen. Akun operator tetap utuh.",
+      variant:         "danger",
+      requireExactText: "RESET",
+      confirmLabel:    "RESET SEMUA DATA",
+      onConfirm:       async () => {
+        setConfirmModal(null);
+        const opId = sessionStorage.getItem("operator_id");
+        const res  = await fetch(`${API}/admin/reset-data`, {
+          method: "POST",
+          headers: opId ? { "x-operator-id": opId } : {},
+        });
+        if (res.ok) {
+          alert("Semua data berhasil dihapus.");
+          fetchPeriode();
+        } else {
+          alert("Gagal melakukan reset.");
+        }
+      },
     });
-    if (res.ok) {
-      alert("Semua data berhasil dihapus.");
-      fetchPeriode();
-    } else {
-      alert("Gagal melakukan reset.");
-    }
   };
 
   const today = new Date().toISOString().slice(0, 10);
@@ -300,6 +321,17 @@ export default function PengaturanPeriode({ operatorNama }) {
           </button>
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={!!confirmModal}
+        title={confirmModal?.title ?? ""}
+        message={confirmModal?.message ?? ""}
+        variant={confirmModal?.variant ?? "danger"}
+        requireExactText={confirmModal?.requireExactText ?? null}
+        confirmLabel={confirmModal?.confirmLabel ?? "Konfirmasi"}
+        onConfirm={() => confirmModal?.onConfirm?.()}
+        onCancel={() => setConfirmModal(null)}
+      />
     </div>
   );
 }

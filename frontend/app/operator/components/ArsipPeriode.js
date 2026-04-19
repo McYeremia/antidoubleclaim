@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { API, ARSIP_STATUS_STYLE, STATUS_BADGE, formatTanggal } from "./shared";
+import { API, ARSIP_STATUS_STYLE, STATUS_BADGE, formatTanggal, ConfirmModal } from "./shared";
 import ArsipDetailView from "./ArsipDetailView";
 
 export default function ArsipPeriode() {
@@ -16,6 +16,7 @@ export default function ArsipPeriode() {
   const [detailItem,    setDetailItem]    = useState(null);
   const [searchQuery,   setSearchQuery]   = useState("");
   const [periodeSearch, setPeriodeSearch] = useState("");
+  const [confirmModal,  setConfirmModal]  = useState(null);
 
   const fetchPeriode = async () => {
     setLoading(true);
@@ -45,31 +46,47 @@ export default function ArsipPeriode() {
     finally  { setDataLoading(false); }
   };
 
-  const handleTutup = async (p) => {
-    if (!confirm(`Tutup periode "${p.nama}"? Mahasiswa tidak dapat mengajukan klaim baru, namun proses reward dapat dilanjutkan.`)) return;
-    setActionLoading(true);
-    const res = await fetch(`${API}/periode/${p.id}?status=ditutup`, { method: "PUT" });
-    setActionLoading(false);
-    if (!res.ok) { alert("Gagal menutup periode."); return; }
-    fetchPeriode();
-    if (selected?.id === p.id) setSelected(prev => ({ ...prev, status: "ditutup" }));
+  const handleTutup = (p) => {
+    setConfirmModal({
+      title:        "Tutup Periode?",
+      message:      `Periode "${p.nama}" akan ditutup. Mahasiswa tidak dapat mengajukan klaim baru, namun proses reward dapat dilanjutkan.`,
+      variant:      "warning",
+      confirmLabel: "YA, TUTUP PERIODE",
+      onConfirm:    async () => {
+        setConfirmModal(null);
+        setActionLoading(true);
+        const res = await fetch(`${API}/periode/${p.id}?status=ditutup`, { method: "PUT" });
+        setActionLoading(false);
+        if (!res.ok) { alert("Gagal menutup periode."); return; }
+        fetchPeriode();
+        if (selected?.id === p.id) setSelected(prev => ({ ...prev, status: "ditutup" }));
+      },
+    });
   };
 
-  const handleArsip = async (p) => {
-    const opId = sessionStorage.getItem("operator_id");
-    if (!confirm(`Arsipkan periode "${p.nama}"? Pastikan semua proses reward sudah selesai.`)) return;
-    setActionLoading(true);
-    const res = await fetch(`${API}/periode/${p.id}/arsip`, {
-      method: "POST",
-      headers: opId ? { "x-operator-id": opId } : {},
+  const handleArsip = (p) => {
+    setConfirmModal({
+      title:        "Arsipkan Periode?",
+      message:      `Periode "${p.nama}" akan diarsipkan. Pastikan semua proses reward sudah selesai sebelum mengarsipkan.`,
+      variant:      "warning",
+      confirmLabel: "YA, ARSIPKAN",
+      onConfirm:    async () => {
+        setConfirmModal(null);
+        const opId = sessionStorage.getItem("operator_id");
+        setActionLoading(true);
+        const res = await fetch(`${API}/periode/${p.id}/arsip`, {
+          method: "POST",
+          headers: opId ? { "x-operator-id": opId } : {},
+        });
+        if (!res.ok) {
+          const d = await res.json().catch(() => ({}));
+          alert(d.detail || "Tidak dapat mengarsipkan periode ini.");
+        }
+        setActionLoading(false);
+        fetchPeriode();
+        if (selected?.id === p.id) openPeriode({ ...p, status: "diarsipkan" });
+      },
     });
-    if (!res.ok) {
-      const d = await res.json().catch(() => ({}));
-      alert(d.detail || "Tidak dapat mengarsipkan periode ini.");
-    }
-    setActionLoading(false);
-    fetchPeriode();
-    if (selected?.id === p.id) openPeriode({ ...p, status: "diarsipkan" });
   };
 
   const closable   = (p) => p.status === "aktif";
@@ -333,6 +350,15 @@ export default function ArsipPeriode() {
             })()}
           </div>
         )}
+      <ConfirmModal
+        isOpen={!!confirmModal}
+        title={confirmModal?.title ?? ""}
+        message={confirmModal?.message ?? ""}
+        variant={confirmModal?.variant ?? "warning"}
+        confirmLabel={confirmModal?.confirmLabel ?? "Konfirmasi"}
+        onConfirm={() => confirmModal?.onConfirm?.()}
+        onCancel={() => setConfirmModal(null)}
+      />
       </div>
     );
   }
@@ -452,6 +478,16 @@ export default function ArsipPeriode() {
           </table>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={!!confirmModal}
+        title={confirmModal?.title ?? ""}
+        message={confirmModal?.message ?? ""}
+        variant={confirmModal?.variant ?? "warning"}
+        confirmLabel={confirmModal?.confirmLabel ?? "Konfirmasi"}
+        onConfirm={() => confirmModal?.onConfirm?.()}
+        onCancel={() => setConfirmModal(null)}
+      />
     </div>
   );
 }
