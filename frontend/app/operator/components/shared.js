@@ -1,5 +1,7 @@
 "use client";
 
+import { useState, useEffect } from "react";
+
 export const API = "http://127.0.0.1:8000";
 
 const BULAN = [
@@ -119,6 +121,101 @@ export function ArsipFileLink({ label, path }) {
       >
         {filename} ↗
       </a>
+    </div>
+  );
+}
+
+export function ConfirmModal({
+  isOpen,
+  title,
+  message,
+  variant = "danger",
+  requireNote = false,
+  notePlaceholder = "Tulis alasan...",
+  noteLabel = "Alasan",
+  requireExactText = null,
+  confirmLabel = "Konfirmasi",
+  onConfirm,
+  onCancel,
+}) {
+  const [note,  setNote]  = useState("");
+  const [input, setInput] = useState("");
+
+  useEffect(() => {
+    if (!isOpen) { setNote(""); setInput(""); }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  const c = {
+    danger:  { btn: "bg-red-600 hover:bg-red-700 text-white",    iconBg: "bg-red-50",    icon: "text-red-500"    },
+    warning: { btn: "bg-orange-500 hover:bg-orange-600 text-white", iconBg: "bg-orange-50", icon: "text-orange-500" },
+    default: { btn: "bg-gray-900 hover:bg-gray-700 text-white",   iconBg: "bg-gray-100",  icon: "text-gray-500"   },
+  }[variant];
+
+  const canConfirm =
+    (!requireNote || note.trim().length > 0) &&
+    (!requireExactText || input === requireExactText);
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4" onClick={onCancel}>
+      <div className="bg-white rounded-[28px] shadow-2xl w-full max-w-md p-8" onClick={e => e.stopPropagation()}>
+        <div className={`w-12 h-12 rounded-2xl ${c.iconBg} flex items-center justify-center mb-5`}>
+          <svg className={`w-6 h-6 ${c.icon}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <h3 className="text-[16px] font-black text-gray-900 mb-2">{title}</h3>
+        {message && <p className="text-[13px] text-gray-500 leading-relaxed mb-5">{message}</p>}
+
+        {requireNote && (
+          <div className="mb-5">
+            <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2">
+              {noteLabel} <span className="text-red-400">*</span>
+            </p>
+            <textarea
+              rows={3}
+              value={note}
+              onChange={e => setNote(e.target.value)}
+              placeholder={notePlaceholder}
+              autoFocus
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-[14px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 resize-none transition-all"
+            />
+          </div>
+        )}
+
+        {requireExactText && (
+          <div className="mb-5">
+            <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-1.5">
+              Ketik <span className="font-mono font-black text-red-600">&ldquo;{requireExactText}&rdquo;</span> untuk melanjutkan{" "}
+              <span className="text-red-400">*</span>
+            </p>
+            <input
+              type="text"
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              autoFocus
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-[14px] font-mono text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-400 transition-all"
+            />
+          </div>
+        )}
+
+        <div className="flex items-center justify-end gap-3">
+          <button
+            onClick={onCancel}
+            className="px-5 py-2.5 text-[12px] font-bold text-gray-500 hover:text-gray-900 transition-colors"
+          >
+            Batal
+          </button>
+          <button
+            onClick={() => { if (canConfirm) onConfirm(requireNote ? note : undefined); }}
+            disabled={!canConfirm}
+            className={`px-6 py-2.5 rounded-xl text-[12px] font-black disabled:opacity-40 transition-colors ${c.btn}`}
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

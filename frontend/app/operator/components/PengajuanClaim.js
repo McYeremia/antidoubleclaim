@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { API } from "./shared";
+import { API, ConfirmModal } from "./shared";
 import ClaimSection from "./ClaimSection";
 
 export default function PengajuanClaim({ router }) {
-  const [claims,  setClaims]  = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [opId,    setOpId]    = useState(null);
+  const [claims,       setClaims]       = useState([]);
+  const [loading,      setLoading]      = useState(true);
+  const [opId,         setOpId]         = useState(null);
+  const [discardModal, setDiscardModal] = useState(null); // { id, name }
 
   useEffect(() => {
     setOpId(sessionStorage.getItem("operator_id"));
@@ -39,9 +40,15 @@ export default function PengajuanClaim({ router }) {
     fetchClaims();
   };
 
-  const handleDiscard = async (id, e) => {
+  const handleDiscard = (id, e) => {
     e.stopPropagation();
-    if (!confirm("Yakin ingin menghapus klaim ini?")) return;
+    const claim = claims.find(c => c.id === id);
+    setDiscardModal({ id, name: claim?.nama_lomba ?? `Klaim #${id}` });
+  };
+
+  const handleDiscardConfirm = async () => {
+    const { id } = discardModal;
+    setDiscardModal(null);
     const res = await fetch(`${API}/claims/${id}`, { method: "DELETE", headers: opHeaders() });
     if (!res.ok) { alert("Gagal menghapus klaim."); return; }
     fetchClaims();
@@ -113,6 +120,19 @@ export default function PengajuanClaim({ router }) {
           />
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={!!discardModal}
+        title="Discard Klaim?"
+        message={`Klaim "${discardModal?.name}" akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.`}
+        variant="danger"
+        requireNote
+        noteLabel="Alasan discard"
+        notePlaceholder="Contoh: Duplikat terdeteksi, sertifikat tidak valid..."
+        confirmLabel="YA, DISCARD"
+        onConfirm={handleDiscardConfirm}
+        onCancel={() => setDiscardModal(null)}
+      />
     </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { API } from "./shared";
+import { API, ConfirmModal } from "./shared";
 
 const ROLE_BADGE = {
   superadmin: "bg-purple-100 text-purple-700",
@@ -14,7 +14,8 @@ export default function KelolaOperator({ operatorId }) {
   const [showForm,  setShowForm]  = useState(false);
   const [saving,    setSaving]    = useState(false);
   const [formError, setFormError] = useState("");
-  const [form, setForm] = useState({ username: "", password: "", nama: "", email: "", role: "operator" });
+  const [form,        setForm]        = useState({ username: "", password: "", nama: "", email: "", role: "operator" });
+  const [deleteModal, setDeleteModal] = useState(null); // { id, nama }
 
   const headers = { "Content-Type": "application/json", "x-operator-id": String(operatorId) };
 
@@ -58,8 +59,13 @@ export default function KelolaOperator({ operatorId }) {
     }
   };
 
-  const handleDelete = async (id, nama) => {
-    if (!confirm(`Hapus akun "${nama}"? Tindakan ini tidak dapat dibatalkan.`)) return;
+  const handleDelete = (id, nama) => {
+    setDeleteModal({ id, nama });
+  };
+
+  const handleDeleteConfirm = async () => {
+    const { id } = deleteModal;
+    setDeleteModal(null);
     const res = await fetch(`${API}/operators/${id}`, { method: "DELETE", headers });
     if (!res.ok) {
       const d = await res.json().catch(() => ({}));
@@ -180,6 +186,16 @@ export default function KelolaOperator({ operatorId }) {
           </table>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={!!deleteModal}
+        title="Hapus Akun Operator?"
+        message={`Akun "${deleteModal?.nama}" akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.`}
+        variant="danger"
+        confirmLabel="YA, HAPUS"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteModal(null)}
+      />
     </div>
   );
 }
