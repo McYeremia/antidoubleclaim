@@ -79,16 +79,24 @@ def kirim_email_klaim_disetujui(email: str, nama_lomba: str):
 
 
 # ── Klaim tidak lolos ─────────────────────────────────────────────────────────
-def kirim_email_klaim_tidak_lolos(email: str, nama_lomba: str):
+def kirim_email_klaim_tidak_lolos(email: str, nama_lomba: str, catatan: str = None):
+    catatan_html = f"""
+      <div style="background:#fef2f2;border-left:4px solid #dc2626;padding:14px 18px;border-radius:6px;margin:16px 0;">
+        <p style="margin:0 0 6px;font-size:11px;font-weight:bold;color:#dc2626;text-transform:uppercase;letter-spacing:1px;">Alasan dari Operator:</p>
+        <p style="margin:0;font-size:14px;color:#111;line-height:1.6;">{catatan}</p>
+      </div>
+    """ if catatan else ""
+
     konten = f"""
       <p style="margin:0 0 20px;font-size:15px;font-weight:bold;color:#dc2626;">✗ Klaim Tidak Lolos Verifikasi</p>
       <p style="margin:0 0 12px;color:#374151;font-size:14px;">Yth. Mahasiswa UKDW,</p>
-      <p style="margin:0 0 20px;color:#374151;font-size:14px;line-height:1.6;">
+      <p style="margin:0 0 4px;color:#374151;font-size:14px;line-height:1.6;">
         Klaim sertifikat Anda berikut <strong>tidak lolos</strong> proses verifikasi:
       </p>
-      <div style="background:#f9fafb;border-left:4px solid #dc2626;padding:14px 18px;border-radius:6px;margin-bottom:20px;">
+      <div style="background:#f9fafb;border-left:4px solid #dc2626;padding:14px 18px;border-radius:6px;margin:16px 0;">
         <p style="margin:0;font-size:14px;font-weight:bold;color:#111;">{nama_lomba}</p>
       </div>
+      {catatan_html}
       <p style="margin:0;color:#374151;font-size:14px;line-height:1.6;">
         Jika ada pertanyaan atau keberatan, silakan hubungi Divisi Bakat Minat UKDW.
       </p>

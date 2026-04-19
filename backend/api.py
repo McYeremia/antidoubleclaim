@@ -189,12 +189,16 @@ async def approve(claim_id: int, background_tasks: BackgroundTasks, x_operator_i
     background_tasks.add_task(kirim_email_klaim_disetujui, claim["mahasiswa_email"], claim["nama_lomba"])
     return {"message": "Klaim disetujui", "id": claim_id}
 
+class DiscardBody(BaseModel):
+    catatan: Optional[str] = None
+
 @app.delete("/claims/{claim_id}")
-async def discard(claim_id: int, background_tasks: BackgroundTasks):
+async def discard(claim_id: int, background_tasks: BackgroundTasks, body: Optional[DiscardBody] = None):
     claim = get_claim_by_id(claim_id)
     if not claim:
         raise HTTPException(status_code=404, detail="Klaim tidak ditemukan")
-    background_tasks.add_task(kirim_email_klaim_tidak_lolos, claim["mahasiswa_email"], claim["nama_lomba"])
+    catatan = body.catatan if body else None
+    background_tasks.add_task(kirim_email_klaim_tidak_lolos, claim["mahasiswa_email"], claim["nama_lomba"], catatan)
     discard_claim(claim_id)
     return {"message": "Klaim dihapus", "id": claim_id}
 

@@ -46,10 +46,14 @@ export default function PengajuanClaim({ router }) {
     setDiscardModal({ id, name: claim?.nama_lomba ?? `Klaim #${id}` });
   };
 
-  const handleDiscardConfirm = async () => {
+  const handleDiscardConfirm = async (note) => {
     const { id } = discardModal;
     setDiscardModal(null);
-    const res = await fetch(`${API}/claims/${id}`, { method: "DELETE", headers: opHeaders() });
+    const res = await fetch(`${API}/claims/${id}`, {
+      method: "DELETE",
+      headers: opHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ catatan: note || null }),
+    });
     if (!res.ok) { alert("Gagal menghapus klaim."); return; }
     fetchClaims();
   };

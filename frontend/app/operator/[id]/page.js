@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import OperatorSidebar, { OperatorTopbar } from "../_sidebar";
+import { ConfirmModal } from "../components/shared";
 
 const STATUS_STYLE = {
   "belum dicek":    "bg-blue-100 text-blue-700",
@@ -570,6 +571,7 @@ export default function DetailKlaim() {
   const [loading,       setLoading]       = useState(true);
   const [notFound,      setNotFound]      = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [discardModal,  setDiscardModal]  = useState(false);
 
   const fetchAll = async () => {
     setLoading(true);
@@ -608,11 +610,17 @@ export default function DetailKlaim() {
     }
   };
 
-  const handleDiscard = async () => {
-    if (!confirm("Yakin ingin menghapus klaim ini?")) return;
+  const handleDiscard = () => setDiscardModal(true);
+
+  const handleDiscardConfirm = async (note) => {
+    setDiscardModal(false);
     setActionLoading(true);
     try {
-      const res = await fetch(`http://127.0.0.1:8000/claims/${id}`, { method: "DELETE", headers: opHeaders });
+      const res = await fetch(`http://127.0.0.1:8000/claims/${id}`, {
+        method: "DELETE",
+        headers: { ...opHeaders, "Content-Type": "application/json" },
+        body: JSON.stringify({ catatan: note || null }),
+      });
       if (!res.ok) throw new Error(`Server error ${res.status}`);
       router.push("/operator");
     } catch (err) {
@@ -762,6 +770,19 @@ export default function DetailKlaim() {
       </div>
     </main>
     </div>
+
+    <ConfirmModal
+      isOpen={discardModal}
+      title="Discard Klaim?"
+      message={`Klaim sertifikat #${id} akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.`}
+      variant="danger"
+      requireNote
+      noteLabel="Alasan discard"
+      notePlaceholder="Contoh: Duplikat terdeteksi, sertifikat tidak valid..."
+      confirmLabel="YA, DISCARD"
+      onConfirm={handleDiscardConfirm}
+      onCancel={() => setDiscardModal(false)}
+    />
     </div>
   );
 }
