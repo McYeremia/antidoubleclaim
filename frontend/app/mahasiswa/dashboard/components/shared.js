@@ -4,13 +4,17 @@ export const BULAN = ["Januari","Februari","Maret","April","Mei","Juni","Juli","
 export const API_URL = "http://127.0.0.1:8000";
 export const KATEGORI_LABEL = { puspresnas: "PUSPRESNAS", non_puspresnas: "Non PUSPRESNAS", publikasi: "Publikasi / Karya / HKI" };
 
-export const STATUS_LABEL = (status) =>
-  status === "sudah dicek" ? "Selesai" : "Dalam Proses";
+export const STATUS_LABEL = (status) => {
+  if (status === "sudah dicek") return "Selesai";
+  if (status === "ditolak")     return "Ditolak";
+  return "Dalam Proses";
+};
 
-export const STATUS_STYLE = (status) =>
-  status === "sudah dicek"
-    ? "bg-green-100 text-green-700"
-    : "bg-blue-100 text-blue-700";
+export const STATUS_STYLE = (status) => {
+  if (status === "sudah dicek") return "bg-green-100 text-green-700";
+  if (status === "ditolak")     return "bg-red-100 text-red-700";
+  return "bg-blue-100 text-blue-700";
+};
 
 export const REWARD_LABEL = {
   menunggu:     "Sedang Diproses",

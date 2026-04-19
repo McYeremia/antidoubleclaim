@@ -11,7 +11,7 @@ import traceback
 from backend.database import (
     insert_claim, create_database,
     get_all_claims, get_claims_by_email, get_claim_by_id,
-    approve_claim, discard_claim,
+    approve_claim, reject_claim, get_ditolak_claims,
     insert_pengajuan, get_pengajuan_by_email, get_pengajuan_by_claim_id,
     update_pengajuan,
     insert_reward_konfirmasi, get_reward_konfirmasi_by_claim_id,
@@ -172,6 +172,10 @@ async def list_claims(email: str = None):
         return get_claims_by_email(email)
     return get_all_claims()
 
+@app.get("/claims/ditolak")
+async def get_claims_ditolak():
+    return get_ditolak_claims()
+
 @app.get("/claims/{claim_id}")
 async def detail_claim(claim_id: int):
     claim = get_claim_by_id(claim_id)
@@ -193,14 +197,15 @@ class DiscardBody(BaseModel):
     catatan: Optional[str] = None
 
 @app.delete("/claims/{claim_id}")
-async def discard(claim_id: int, background_tasks: BackgroundTasks, body: Optional[DiscardBody] = None):
+async def discard(claim_id: int, background_tasks: BackgroundTasks, body: Optional[DiscardBody] = None, x_operator_id: Optional[str] = Header(None)):
     claim = get_claim_by_id(claim_id)
     if not claim:
         raise HTTPException(status_code=404, detail="Klaim tidak ditemukan")
-    catatan = body.catatan if body else None
+    catatan   = body.catatan if body else None
+    op_id     = int(x_operator_id) if x_operator_id and x_operator_id.isdigit() else None
+    reject_claim(claim_id, operator_id=op_id, catatan=catatan)
     background_tasks.add_task(kirim_email_klaim_tidak_lolos, claim["mahasiswa_email"], claim["nama_lomba"], catatan)
-    discard_claim(claim_id)
-    return {"message": "Klaim dihapus", "id": claim_id}
+    return {"message": "Klaim ditolak", "id": claim_id}
 
 # ── Upload ───────────────────────────────────────────────────────────────────
 @app.post("/upload")
