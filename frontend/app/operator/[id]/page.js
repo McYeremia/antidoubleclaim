@@ -648,7 +648,7 @@ export default function DetailKlaim() {
   );
 
   const fileUrl = `http://127.0.0.1:8000/uploads/${claim.sertifikat_filename}`;
-  const canAct  = claim.status !== "sudah dicek";
+  const canAct  = claim.status !== "sudah dicek" && claim.status !== "ditolak";
 
   return (
     <div className="min-h-screen bg-[#f7f7f8] flex" style={{ fontFamily: "var(--font-poppins, sans-serif)" }}>
@@ -687,6 +687,28 @@ export default function DetailKlaim() {
             )}
           </div>
         </div>
+
+        {claim.status === "ditolak" && (
+          <div className="bg-red-50 border border-red-200 rounded-2xl px-6 py-5 flex items-start gap-4">
+            <div className="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center shrink-0 mt-0.5">
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-[13px] font-black text-red-800 uppercase tracking-wide">Klaim Telah Ditolak</p>
+              {claim.catatan_penolakan && (
+                <>
+                  <p className="text-[11px] font-bold text-red-500 uppercase tracking-widest mt-2 mb-1">Alasan:</p>
+                  <p className="text-[13px] text-red-700 leading-relaxed">{claim.catatan_penolakan}</p>
+                </>
+              )}
+              {claim.verified_by_nama && (
+                <p className="text-[11px] text-red-400 mt-2">Ditolak oleh <strong>{claim.verified_by_nama}</strong></p>
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
           {/* Sertifikat Column */}

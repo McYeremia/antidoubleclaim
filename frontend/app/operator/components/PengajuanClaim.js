@@ -5,10 +5,11 @@ import { API, ConfirmModal } from "./shared";
 import ClaimSection from "./ClaimSection";
 
 export default function PengajuanClaim({ router }) {
-  const [claims,       setClaims]       = useState([]);
-  const [loading,      setLoading]      = useState(true);
-  const [opId,         setOpId]         = useState(null);
-  const [discardModal, setDiscardModal] = useState(null); // { id, name }
+  const [claims,        setClaims]        = useState([]);
+  const [ditolakClaims, setDitolakClaims] = useState([]);
+  const [loading,       setLoading]       = useState(true);
+  const [opId,          setOpId]          = useState(null);
+  const [discardModal,  setDiscardModal]  = useState(null); // { id, name }
 
   useEffect(() => {
     setOpId(sessionStorage.getItem("operator_id"));
@@ -18,11 +19,15 @@ export default function PengajuanClaim({ router }) {
   const fetchClaims = async () => {
     setLoading(true);
     try {
-      const res  = await fetch(`${API}/claims`);
-      const data = await res.json();
-      setClaims(data);
+      const [res, resDitolak] = await Promise.all([
+        fetch(`${API}/claims`),
+        fetch(`${API}/claims/ditolak`),
+      ]);
+      setClaims(res.ok ? await res.json() : []);
+      setDitolakClaims(resDitolak.ok ? await resDitolak.json() : []);
     } catch {
       setClaims([]);
+      setDitolakClaims([]);
     } finally {
       setLoading(false);
     }
@@ -80,7 +85,7 @@ export default function PengajuanClaim({ router }) {
         </button>
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-4 gap-6">
         <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
           <p className="text-[10px] font-black text-orange-400 uppercase tracking-[0.2em]">Perlu Ditinjau</p>
           <p className="text-5xl font-black text-gray-900 mt-3 leading-none">{perluDitinjau.length}</p>
@@ -92,6 +97,10 @@ export default function PengajuanClaim({ router }) {
         <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
           <p className="text-[10px] font-black text-green-400 uppercase tracking-[0.2em]">Sudah Dicek</p>
           <p className="text-5xl font-black text-gray-900 mt-3 leading-none">{sudahDicek.length}</p>
+        </div>
+        <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+          <p className="text-[10px] font-black text-red-400 uppercase tracking-[0.2em]">Ditolak</p>
+          <p className="text-5xl font-black text-gray-900 mt-3 leading-none">{ditolakClaims.length}</p>
         </div>
       </div>
 
@@ -122,6 +131,56 @@ export default function PengajuanClaim({ router }) {
             items={sudahDicek} showVerified
             router={router} onApprove={handleApprove} onDiscard={handleDiscard}
           />
+
+          {/* Riwayat Ditolak */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-8">
+            <div className="px-6 py-4 border-b border-gray-50 flex items-center justify-between bg-red-50/30">
+              <h2 className="font-bold text-[11px] uppercase tracking-widest text-red-600">Riwayat Ditolak</h2>
+              <span className="text-[11px] font-black bg-white/50 px-2 py-0.5 rounded-full text-red-600">{ditolakClaims.length}</span>
+            </div>
+            {ditolakClaims.length === 0 ? (
+              <p className="text-center text-gray-400 text-[13px] py-12">Belum ada klaim yang ditolak.</p>
+            ) : (
+              <table className="w-full text-sm text-left">
+                <thead>
+                  <tr className="border-b border-gray-50">
+                    <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest w-16">ID</th>
+                    <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Nama Lomba</th>
+                    <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Mahasiswa</th>
+                    <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Ditolak Oleh</th>
+                    <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Alasan</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ditolakClaims.map(claim => (
+                    <tr key={claim.id}
+                        onClick={() => router.push(`/operator/${claim.id}`)}
+                        className="hover:bg-gray-50/60 cursor-pointer transition-colors border-b border-gray-50 last:border-0">
+                      <td className="px-6 py-4 font-mono text-[12px] text-gray-300 font-bold tabular-nums">#{claim.id}</td>
+                      <td className="px-6 py-4">
+                        <p className="font-bold text-gray-900 text-[13px]">{claim.nama_lomba}</p>
+                        <p className="text-[11px] text-gray-400 mt-0.5">{claim.tingkat} · {claim.peringkat}</p>
+                      </td>
+                      <td className="px-6 py-4">
+                        <p className="font-medium text-gray-900 text-[13px]">{claim.nama_display}</p>
+                        <p className="text-[11px] font-mono text-gray-400 mt-0.5">{claim.mahasiswa_email}</p>
+                      </td>
+                      <td className="px-6 py-4">
+                        {claim.verified_by_nama
+                          ? <p className="text-[13px] text-gray-600 font-medium">{claim.verified_by_nama}</p>
+                          : <span className="text-gray-200">—</span>}
+                      </td>
+                      <td className="px-6 py-4 max-w-xs">
+                        {claim.catatan_penolakan
+                          ? <p className="text-[12px] text-gray-500 italic leading-relaxed line-clamp-2">{claim.catatan_penolakan}</p>
+                          : <span className="text-gray-200">—</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         </div>
       )}
 

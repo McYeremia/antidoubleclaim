@@ -71,6 +71,19 @@ function DetailModal({ claim, onClose }) {
         </div>
 
         <div className="p-6 space-y-1">
+          {claim.status === "ditolak" && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
+              <p className="text-sm font-bold text-red-700 mb-1">Klaim Tidak Lolos Verifikasi</p>
+              {claim.catatan_penolakan ? (
+                <>
+                  <p className="text-xs text-red-500 font-semibold uppercase tracking-wide mb-1">Alasan dari Operator:</p>
+                  <p className="text-sm text-red-800 leading-relaxed">{claim.catatan_penolakan}</p>
+                </>
+              ) : (
+                <p className="text-xs text-red-500">Hubungi Divisi Bakat Minat UKDW untuk informasi lebih lanjut.</p>
+              )}
+            </div>
+          )}
           <SectionTitle>Preview Sertifikat</SectionTitle>
           {isPdf
             ? <iframe src={fileUrl} className="w-full h-60 rounded-lg border border-gray-200" title="Preview" />
@@ -312,11 +325,8 @@ export default function DaftarKlaim({ session, search, onOpenForm, onTambahKlaim
                     </td>
                     <td className="px-5 py-4 text-[12px] text-gray-400">{formatTanggal(claim.tanggal)}</td>
                     <td className="px-5 py-4">
-                      <span className="inline-flex items-center gap-1.5 text-[12px] font-medium uppercase tracking-wide">
-                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${claim.status === "sudah dicek" ? "bg-green-500" : "bg-gray-300"}`} />
-                        <span className={claim.status === "sudah dicek" ? "text-green-600" : "text-gray-400"}>
-                          {STATUS_LABEL(claim.status)}
-                        </span>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${STATUS_STYLE(claim.status)}`}>
+                        {STATUS_LABEL(claim.status)}
                       </span>
                     </td>
                     <td className="px-5 py-4 text-[13px]" onClick={(e) => e.stopPropagation()}>

@@ -68,12 +68,19 @@ def create_database():
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_claims_status   ON CLAIMS (status)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_claims_verified ON CLAIMS (verified_by)")
 
+    try:
+        cursor.execute("ALTER TABLE CLAIMS ADD COLUMN catatan_penolakan TEXT")
+    except Exception:
+        pass
+
+    cursor.execute("DROP TRIGGER IF EXISTS trg_claims_status_check")
+    cursor.execute("DROP TRIGGER IF EXISTS trg_claims_status_update_check")
     cursor.execute("""
     CREATE TRIGGER IF NOT EXISTS trg_claims_status_check
     BEFORE INSERT ON CLAIMS
     BEGIN
         SELECT RAISE(ABORT, 'Status tidak valid.')
-        WHERE NEW.status NOT IN ('belum dicek', 'perlu ditinjau', 'sudah dicek');
+        WHERE NEW.status NOT IN ('belum dicek', 'perlu ditinjau', 'sudah dicek', 'ditolak');
     END
     """)
     cursor.execute("""
@@ -81,7 +88,7 @@ def create_database():
     BEFORE UPDATE OF status ON CLAIMS
     BEGIN
         SELECT RAISE(ABORT, 'Status tidak valid.')
-        WHERE NEW.status NOT IN ('belum dicek', 'perlu ditinjau', 'sudah dicek');
+        WHERE NEW.status NOT IN ('belum dicek', 'perlu ditinjau', 'sudah dicek', 'ditolak');
     END
     """)
     cursor.execute("""
@@ -360,20 +367,12 @@ def approve_claim(claim_id, operator_id=None):
     conn.commit()
     conn.close()
 
-def discard_claim(claim_id):
+def reject_claim(claim_id: int, operator_id: int = None, catatan: str = None):
     conn = _get_conn()
-    # Hapus child records terlebih dahulu sesuai urutan FK:
-    # 1. PENGAJUAN_ANGGOTA → 2. PENGAJUAN → 3. REWARD_KONFIRMASI → 4. CLAIMS
-    pengajuan_ids = [
-        row[0] for row in
-        conn.execute("SELECT id FROM PENGAJUAN WHERE claim_id = ?", (claim_id,)).fetchall()
-    ]
-    if pengajuan_ids:
-        placeholders = ",".join("?" * len(pengajuan_ids))
-        conn.execute(f"DELETE FROM PENGAJUAN_ANGGOTA WHERE pengajuan_id IN ({placeholders})", pengajuan_ids)
-    conn.execute("DELETE FROM PENGAJUAN WHERE claim_id = ?", (claim_id,))
-    conn.execute("DELETE FROM REWARD_KONFIRMASI WHERE claim_id = ?", (claim_id,))
-    conn.execute("DELETE FROM CLAIMS WHERE id = ?", (claim_id,))
+    conn.execute(
+        "UPDATE CLAIMS SET status = 'ditolak', verified_by = ?, catatan_penolakan = ? WHERE id = ?",
+        (operator_id, catatan, claim_id),
+    )
     conn.commit()
     conn.close()
 
@@ -396,6 +395,7 @@ def _row_to_dict(row):
         "verified_at":         row[11],
         "verified_by_nama":    row[12] if len(row) > 12 else None,
         "flag_alasan":         row[13] if len(row) > 13 else None,
+        "catatan_penolakan":   row[14] if len(row) > 14 else None,
     }
 
 # ---------------------------------------------------------------------------
@@ -409,12 +409,33 @@ def get_all_claims():
         SELECT c.id, c.nama_lomba, c.tingkat, c.tanggal, c.peringkat,
                c.sertifikat_path, c.status, c.mahasiswa_email, c.nama_display,
                c.mirip_dengan_id, c.verified_by, c.verified_at,
-               u.nama AS verified_by_nama, c.flag_alasan
+               u.nama AS verified_by_nama, c.flag_alasan, c.catatan_penolakan
         FROM CLAIMS c
         LEFT JOIN USERS u ON u.id = c.verified_by
         LEFT JOIN PERIODE_KLAIM pk ON pk.id = c.periode_id
         WHERE (pk.status IS NULL OR pk.status != 'diarsipkan')
+          AND c.status != 'ditolak'
         ORDER BY c.id DESC
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+    return [_row_to_dict(row) for row in rows]
+
+def get_ditolak_claims():
+    """Kembalikan semua klaim berstatus ditolak (untuk riwayat operator)."""
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT c.id, c.nama_lomba, c.tingkat, c.tanggal, c.peringkat,
+               c.sertifikat_path, c.status, c.mahasiswa_email, c.nama_display,
+               c.mirip_dengan_id, c.verified_by, c.verified_at,
+               u.nama AS verified_by_nama, c.flag_alasan, c.catatan_penolakan
+        FROM CLAIMS c
+        LEFT JOIN USERS u ON u.id = c.verified_by
+        LEFT JOIN PERIODE_KLAIM pk ON pk.id = c.periode_id
+        WHERE c.status = 'ditolak'
+          AND (pk.status IS NULL OR pk.status != 'diarsipkan')
+        ORDER BY c.verified_at DESC
     """)
     rows = cursor.fetchall()
     conn.close()
@@ -557,7 +578,7 @@ def get_claims_by_email(email):
         SELECT c.id, c.nama_lomba, c.tingkat, c.tanggal, c.peringkat,
                c.sertifikat_path, c.status, c.mahasiswa_email, c.nama_display,
                c.mirip_dengan_id, c.verified_by, c.verified_at,
-               u.nama AS verified_by_nama, c.flag_alasan
+               u.nama AS verified_by_nama, c.flag_alasan, c.catatan_penolakan
         FROM CLAIMS c
         LEFT JOIN USERS u ON u.id = c.verified_by
         WHERE c.mahasiswa_email = ? ORDER BY c.id DESC
@@ -573,7 +594,7 @@ def get_claim_by_id(claim_id):
         SELECT c.id, c.nama_lomba, c.tingkat, c.tanggal, c.peringkat,
                c.sertifikat_path, c.status, c.mahasiswa_email, c.nama_display,
                c.mirip_dengan_id, c.verified_by, c.verified_at,
-               u.nama AS verified_by_nama, c.flag_alasan
+               u.nama AS verified_by_nama, c.flag_alasan, c.catatan_penolakan
         FROM CLAIMS c
         LEFT JOIN USERS u ON u.id = c.verified_by
         WHERE c.id = ?
@@ -1076,7 +1097,7 @@ def get_claims_by_periode_id(periode_id: int) -> list:
         SELECT c.id, c.nama_lomba, c.tingkat, c.tanggal, c.peringkat,
                c.sertifikat_path, c.status, c.mahasiswa_email, c.nama_display,
                c.mirip_dengan_id, c.verified_by, c.verified_at,
-               u.nama AS verified_by_nama, c.flag_alasan
+               u.nama AS verified_by_nama, c.flag_alasan, c.catatan_penolakan
         FROM CLAIMS c
         LEFT JOIN USERS u ON u.id = c.verified_by
         WHERE c.periode_id = ?
