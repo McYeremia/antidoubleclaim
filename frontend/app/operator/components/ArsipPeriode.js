@@ -132,13 +132,12 @@ export default function ArsipPeriode() {
           </div>
         </div>
 
-        <div className="grid grid-cols-5 gap-4">
+        <div className="grid grid-cols-4 gap-4">
           {[
             { label: "Total Klaim",     value: selected.jumlah_klaim ?? 0,    color: "text-gray-900" },
             { label: "Klaim Disetujui", value: selected.klaim_disetujui ?? 0, color: "text-green-600" },
-            { label: "Klaim Pending",   value: selected.klaim_pending ?? 0,   color: "text-red-500" },
+            { label: "Klaim Ditolak",   value: selected.klaim_ditolak ?? 0,   color: "text-red-600" },
             { label: "Reward Selesai",  value: selected.reward_selesai ?? 0,  color: "text-blue-600" },
-            { label: "Reward Pending",  value: selected.reward_pending ?? 0,  color: "text-orange-600" },
           ].map(s => (
             <div key={s.label} className="bg-white rounded-2xl shadow-sm p-5 border border-gray-100">
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">{s.label}</p>
@@ -436,15 +435,12 @@ export default function ArsipPeriode() {
                     <td className="px-4 py-4">
                       <p className="font-black text-gray-900">{p.jumlah_klaim ?? 0}</p>
                       <p className="text-[11px] text-gray-400">{p.klaim_disetujui ?? 0} disetujui</p>
-                      {(p.klaim_pending ?? 0) > 0 && (
-                        <p className="text-[11px] text-red-500">{p.klaim_pending} belum dicek</p>
+                      {(p.klaim_ditolak ?? 0) > 0 && (
+                        <p className="text-[11px] text-red-500">{p.klaim_ditolak} ditolak</p>
                       )}
                     </td>
                     <td className="px-4 py-4">
                       <p className="font-black text-green-700">{p.reward_selesai ?? 0} selesai</p>
-                      {(p.reward_pending ?? 0) > 0 && (
-                        <p className="text-[11px] text-orange-500">{p.reward_pending} pending</p>
-                      )}
                     </td>
                     <td className="px-4 py-4">
                       <span className={`inline-block px-2.5 py-1 rounded-lg text-[11px] font-bold ${style.badge}`}>
