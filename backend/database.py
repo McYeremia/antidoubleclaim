@@ -982,10 +982,11 @@ def get_all_periode():
     cursor = conn.cursor()
     cursor.execute("""
         SELECT p.*,
-               COUNT(c.id)                                          AS jumlah_klaim,
-               SUM(CASE WHEN c.status = 'sudah dicek' THEN 1 ELSE 0 END) AS klaim_disetujui,
-               SUM(CASE WHEN c.status IN ('belum dicek', 'perlu ditinjau') THEN 1 ELSE 0 END) AS klaim_pending,
+               COUNT(c.id)                                               AS jumlah_klaim,
+               SUM(CASE WHEN c.status = 'sudah dicek' THEN 1 ELSE 0 END)  AS klaim_disetujui,
+               SUM(CASE WHEN c.status = 'ditolak'     THEN 1 ELSE 0 END)  AS klaim_ditolak,
                SUM(CASE WHEN rk.reward_status = 'selesai' THEN 1 ELSE 0 END) AS reward_selesai,
+               SUM(CASE WHEN c.status IN ('belum dicek', 'perlu ditinjau') THEN 1 ELSE 0 END) AS klaim_pending,
                SUM(CASE WHEN rk.id IS NOT NULL AND rk.reward_status != 'selesai' THEN 1 ELSE 0 END) AS reward_pending
         FROM PERIODE_KLAIM p
         LEFT JOIN CLAIMS c ON c.periode_id = p.id
