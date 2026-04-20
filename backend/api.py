@@ -18,7 +18,7 @@ from backend.database import (
     get_reward_konfirmasi_by_email, update_reward_status, update_reward_konfirmasi,
     authenticate_operator, get_all_operators, get_operator_by_id,
     create_operator, delete_operator,
-    get_stats_visualisasi,
+    get_stats_visualisasi, get_export_data,
     get_profil_mahasiswa, upsert_profil_mahasiswa,
     get_periode_aktif, get_periode_terkini, get_all_periode, create_periode,
     update_periode_status, update_periode_data, delete_periode, reset_semua_data,
@@ -61,8 +61,41 @@ async def root():
 
 # ── Statistik Visualisasi ────────────────────────────────────────────────────
 @app.get("/stats/visualisasi")
-async def stats_visualisasi():
-    return get_stats_visualisasi()
+async def stats_visualisasi(
+    fakultas:    Optional[str] = None,
+    prodi:       Optional[str] = None,
+    tahun:       Optional[str] = None,
+    tingkatan:   Optional[str] = None,
+    kategori:    Optional[str] = None,
+    kepesertaan: Optional[str] = None,
+):
+    return get_stats_visualisasi(
+        filter_fakultas=fakultas,
+        filter_prodi=prodi,
+        filter_tahun=tahun,
+        filter_tingkatan=tingkatan,
+        filter_kategori=kategori,
+        filter_kepesertaan=kepesertaan,
+    )
+
+# ── Export Data ─────────────────────────────────────────────────────────────
+@app.get("/stats/export")
+async def export_data(
+    fakultas:    Optional[str] = None,
+    prodi:       Optional[str] = None,
+    tahun:       Optional[str] = None,
+    tingkatan:   Optional[str] = None,
+    kategori:    Optional[str] = None,
+    kepesertaan: Optional[str] = None,
+):
+    return get_export_data(
+        filter_fakultas=fakultas,
+        filter_prodi=prodi,
+        filter_tahun=tahun,
+        filter_tingkatan=tingkatan,
+        filter_kategori=kategori,
+        filter_kepesertaan=kepesertaan,
+    )
 
 # ── Profil Mahasiswa ──────────────────────────────────────────────────────────
 class ProfilUpdate(BaseModel):

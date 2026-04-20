@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import PengajuanClaim   from "./components/PengajuanClaim";
-import PengajuanReward  from "./components/PengajuanReward";
-import KelolaOperator   from "./components/KelolaOperator";
-import PengaturanPeriode from "./components/PengaturanPeriode";
-import ArsipPeriode     from "./components/ArsipPeriode";
+import PengajuanClaim          from "./components/PengajuanClaim";
+import PengajuanReward          from "./components/PengajuanReward";
+import KelolaOperator            from "./components/KelolaOperator";
+import PengaturanPeriode         from "./components/PengaturanPeriode";
+import ArsipPeriode              from "./components/ArsipPeriode";
+import VisualisasiDataOperator   from "./components/VisualisasiDataOperator";
 
 const IconClaim = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -31,6 +32,11 @@ const IconCalendar = () => (
 const IconArchive = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+  </svg>
+);
+const IconChart = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
   </svg>
 );
 
@@ -77,12 +83,13 @@ export default function OperatorDashboard() {
   const isSuperAdmin = operatorRole === "superadmin";
 
   const menus = [
-    { key: "claim",  label: "Pengajuan Claim",  icon: <IconClaim /> },
-    { key: "reward", label: "Pengajuan Reward",  icon: <IconReward /> },
+    { key: "claim",       label: "Pengajuan Claim",   icon: <IconClaim />    },
+    { key: "reward",      label: "Pengajuan Reward",  icon: <IconReward />   },
+    { key: "visualisasi", label: "Visualisasi Data",  icon: <IconChart />    },
     ...(isSuperAdmin ? [
-      { key: "operators", label: "Kelola Operator",    icon: <IconUsers /> },
+      { key: "operators", label: "Kelola Operator",    icon: <IconUsers />    },
       { key: "periode",   label: "Pengaturan Periode", icon: <IconCalendar /> },
-      { key: "arsip",     label: "Arsip Periode",      icon: <IconArchive /> },
+      { key: "arsip",     label: "Arsip Periode",      icon: <IconArchive />  },
     ] : []),
   ];
 
@@ -166,11 +173,12 @@ export default function OperatorDashboard() {
         </header>
 
         <main className="flex-1 px-10 py-10 overflow-y-auto">
-          {activeMenu === "claim"      && <PengajuanClaim router={router} />}
-          {activeMenu === "reward"     && <PengajuanReward />}
-          {activeMenu === "operators"  && isSuperAdmin && <KelolaOperator operatorId={operatorId} />}
-          {activeMenu === "periode"    && isSuperAdmin && <PengaturanPeriode operatorNama={operatorNama} />}
-          {activeMenu === "arsip"      && isSuperAdmin && <ArsipPeriode />}
+          {activeMenu === "claim"       && <PengajuanClaim router={router} />}
+          {activeMenu === "reward"      && <PengajuanReward />}
+          {activeMenu === "visualisasi" && <VisualisasiDataOperator />}
+          {activeMenu === "operators"   && isSuperAdmin && <KelolaOperator operatorId={operatorId} />}
+          {activeMenu === "periode"     && isSuperAdmin && <PengaturanPeriode operatorNama={operatorNama} />}
+          {activeMenu === "arsip"       && isSuperAdmin && <ArsipPeriode />}
         </main>
       </div>
     </div>
