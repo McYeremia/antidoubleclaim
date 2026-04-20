@@ -87,7 +87,7 @@ export default function ProfilPanel({ session, onBack }) {
 
           <div className="col-span-2 space-y-4">
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col items-center text-center">
-              <div className="w-20 h-20 rounded-full bg-gray-900 flex items-center justify-center flex-shrink-0 overflow-hidden mb-4">
+              <div className="w-20 h-20 rounded-full bg-[#046137] flex items-center justify-center flex-shrink-0 overflow-hidden mb-4">
                 {session.user.image
                   ? <img src={session.user.image} alt="avatar" className="w-20 h-20 rounded-full object-cover" />
                   : <span className="text-2xl font-black text-white">
@@ -266,7 +266,7 @@ export default function ProfilPanel({ session, onBack }) {
               <button
                 type="submit"
                 disabled={saving}
-                className="px-6 py-3 bg-gray-900 text-white text-[14px] font-semibold rounded-xl hover:bg-gray-700 disabled:opacity-50 transition-colors"
+                className="px-6 py-3 bg-[#046137] text-white text-[14px] font-semibold rounded-xl hover:bg-[#035230] disabled:opacity-50 transition-colors"
               >
                 {saving ? "Menyimpan..." : "Simpan Perubahan"}
               </button>

@@ -70,6 +70,7 @@ export default function MahasiswaDashboard() {
 
   const navigateTo = (key) => {
     setActiveMenu(key);
+    if (key !== "daftar") setSearch("");
     const url = key === "daftar"
       ? window.location.pathname
       : `${window.location.pathname}?menu=${key}`;
@@ -81,22 +82,22 @@ export default function MahasiswaDashboard() {
   };
 
   const menus = [
-    { key: "daftar",      label: "Daftar Klaim",     icon: <IconList />   },
-    { key: "reward",      label: "Konfirmasi Reward", icon: <IconReward /> },
-    { key: "visualisasi", label: "Visualisasi Data",  icon: <IconChart />  },
-    { key: "sk-rektor",   label: "SK Rektor",         icon: <IconDoc />    },
+    { key: "daftar",      label: "Daftar Klaim",      icon: <IconList />,   desc: "Riwayat klaim sertifikat prestasi"      },
+    { key: "reward",      label: "Konfirmasi Reward",  icon: <IconReward />, desc: "Pengajuan pencairan dana penghargaan"   },
+    { key: "visualisasi", label: "Visualisasi Data",   icon: <IconChart />,  desc: "Statistik klaim sertifikat"             },
+    { key: "sk-rektor",   label: "SK Rektor",          icon: <IconDoc />,    desc: "Peraturan pemberian penghargaan UKDW"   },
   ];
 
   return (
     <div className="min-h-screen bg-[#f7f7f8] flex" style={{ fontFamily: "var(--font-poppins, sans-serif)" }}>
 
       {/* Sidebar */}
-      <aside className="w-[240px] bg-white flex flex-col flex-shrink-0">
+      <aside className="w-[240px] bg-[#046137] flex flex-col flex-shrink-0 h-screen sticky top-0">
         <div className="px-7 pt-9 pb-8">
-          <p className="text-[22px] font-black text-gray-900 leading-none tracking-tight uppercase">
+          <p className="text-[22px] font-black text-white leading-none tracking-tight uppercase">
             ANTI<br />DOUBLE<br />CLAIM
           </p>
-          <p className="text-[10px] font-semibold text-gray-400 mt-2.5 tracking-widest uppercase">Portal Mahasiswa</p>
+          <p className="text-[10px] font-semibold text-white/50 mt-2.5 tracking-widest uppercase">Portal Mahasiswa</p>
         </div>
 
         <nav className="flex-1 px-4 space-y-0.5">
@@ -104,44 +105,58 @@ export default function MahasiswaDashboard() {
             <button
               key={m.key}
               onClick={() => navigateTo(m.key)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] text-left transition-colors ${
+              className={`relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] text-left transition-colors overflow-hidden ${
                 activeMenu === m.key
-                  ? "text-gray-900 font-bold"
-                  : "text-gray-400 font-normal hover:text-gray-700 hover:bg-gray-50"
+                  ? "text-white font-bold bg-white/10"
+                  : "text-white/70 font-medium hover:text-white hover:bg-white/10"
               }`}
             >
+              {activeMenu === m.key && (
+                <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] bg-white rounded-full" />
+              )}
               {m.icon}
               {m.label}
             </button>
           ))}
         </nav>
+
+        {/* Sidebar footer */}
+        <div className="px-7 py-6 border-t border-white/10">
+          <p className="text-[11px] font-bold text-white/80 uppercase tracking-widest leading-none">UKDW</p>
+          <p className="text-[10px] text-white/40 mt-1 leading-snug">Universitas Kristen<br />Duta Wacana</p>
+          <p className="text-[10px] text-white/30 mt-3 tabular-nums">© {new Date().getFullYear()}</p>
+        </div>
       </aside>
 
       {/* Area Kanan */}
       <div className="flex-1 flex flex-col overflow-hidden">
 
         {/* Top bar */}
-        <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-8 flex-shrink-0">
-          <div className="flex items-center gap-2.5 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 w-80">
-            <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Cari aktivitas..."
-              className="flex-1 bg-transparent text-sm text-gray-700 placeholder-gray-400 focus:outline-none"
-            />
+        <header className="h-16 bg-[#f0f7f3] border-b border-[#d4ebe0] flex items-center justify-between px-8 flex-shrink-0">
+          <div className="flex-1">
+            {activeMenu === "daftar" && (
+              <div className="flex items-center gap-2.5 bg-white border border-[#d4ebe0] rounded-xl px-4 py-2.5 w-[480px]">
+                <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Cari klaim..."
+                  className="flex-1 bg-transparent text-sm text-gray-700 placeholder-gray-400 focus:outline-none"
+                />
+              </div>
+            )}
           </div>
 
           {/* User dropdown */}
           <div className="relative">
             <button
               onClick={() => setShowUserMenu(v => !v)}
-              className="flex items-center gap-3 px-3 py-1.5 rounded-xl hover:bg-gray-50 transition-colors"
+              className="flex items-center gap-3 px-3 py-1.5 rounded-xl hover:bg-[#d4ebe0] transition-colors"
             >
-              <div className="w-9 h-9 rounded-full bg-gray-900 flex items-center justify-center flex-shrink-0">
+              <div className="w-9 h-9 rounded-full bg-[#046137] flex items-center justify-center flex-shrink-0">
                 {session.user.image ? (
                   <img src={session.user.image} alt="avatar" className="w-9 h-9 rounded-full object-cover" />
                 ) : (
