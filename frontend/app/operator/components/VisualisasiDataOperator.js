@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { API_URL } from "./shared";
+import * as XLSX from "xlsx";
+
+const API_URL = "http://127.0.0.1:8000";
 
 // ── Konstanta ────────────────────────────────────────────────────────────────
 
@@ -18,6 +20,14 @@ const CHART_COLORS = [
   "bg-blue-500", "bg-violet-500", "bg-emerald-500", "bg-amber-400",
   "bg-rose-400",  "bg-sky-400",   "bg-fuchsia-400", "bg-teal-500",
 ];
+
+const STATUS_CONFIG = {
+  "Disetujui":      { bg: "bg-emerald-50", border: "border-emerald-100", text: "text-emerald-700", num: "text-emerald-800", dot: "bg-emerald-500" },
+  "Dalam Proses":   { bg: "bg-blue-50",    border: "border-blue-100",    text: "text-blue-700",    num: "text-blue-800",    dot: "bg-blue-400"    },
+  "Perlu Ditinjau": { bg: "bg-amber-50",   border: "border-amber-100",   text: "text-amber-700",   num: "text-amber-800",   dot: "bg-amber-500"   },
+  "Ditolak":        { bg: "bg-red-50",     border: "border-red-100",     text: "text-red-600",     num: "text-red-700",     dot: "bg-red-400"     },
+};
+const STATUS_ORDER = ["Disetujui", "Ditolak"];
 
 // ── Bar Chart ────────────────────────────────────────────────────────────────
 
@@ -54,9 +64,9 @@ function BarChart({ data, formatLabel }) {
 function ProgressList({ data, total }) {
   if (!data || data.length === 0)
     return <p className="text-sm text-gray-400 text-center py-8">Belum ada data.</p>;
-  const defaultBar  = ["bg-blue-500",   "bg-violet-500",  "bg-emerald-500", "bg-amber-400",  "bg-gray-300"];
-  const defaultDot  = ["bg-blue-500",   "bg-violet-500",  "bg-emerald-500", "bg-amber-400",  "bg-gray-300"];
-  const defaultText = ["text-blue-600", "text-violet-600","text-emerald-600","text-amber-600","text-gray-400"];
+  const bars  = ["bg-blue-500",   "bg-violet-500",  "bg-emerald-500", "bg-amber-400",  "bg-gray-300"];
+  const dots  = ["bg-blue-500",   "bg-violet-500",  "bg-emerald-500", "bg-amber-400",  "bg-gray-300"];
+  const texts = ["text-blue-600", "text-violet-600","text-emerald-600","text-amber-600","text-gray-400"];
   return (
     <div className="space-y-3.5">
       {data.map((item, i) => {
@@ -64,17 +74,14 @@ function ProgressList({ data, total }) {
         return (
           <div key={item.name} className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 min-w-0">
-              <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${defaultDot[i] ?? "bg-gray-300"}`} />
+              <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${dots[i] ?? "bg-gray-300"}`} />
               <p className="text-[13px] text-gray-700 truncate">{item.name}</p>
             </div>
             <div className="flex items-center gap-3 flex-shrink-0">
               <div className="w-28 bg-gray-100 rounded-full h-2 overflow-hidden">
-                <div
-                  className={`h-full rounded-full ${defaultBar[i] ?? "bg-gray-300"}`}
-                  style={{ width: `${pct}%` }}
-                />
+                <div className={`h-full rounded-full ${bars[i] ?? "bg-gray-300"}`} style={{ width: `${pct}%` }} />
               </div>
-              <span className={`text-[12px] font-semibold w-16 text-right tabular-nums ${defaultText[i] ?? "text-gray-500"}`}>
+              <span className={`text-[12px] font-semibold w-16 text-right tabular-nums ${texts[i] ?? "text-gray-500"}`}>
                 {item.count} <span className="font-normal text-gray-400">({pct}%)</span>
               </span>
             </div>
@@ -85,12 +92,11 @@ function ProgressList({ data, total }) {
   );
 }
 
-// ── Line Chart (SVG) ─────────────────────────────────────────────────────────
+// ── Line Chart ───────────────────────────────────────────────────────────────
 
 function LineChart({ data }) {
   if (!data || data.length === 0)
     return <p className="text-sm text-gray-400 text-center py-8">Belum ada data.</p>;
-
   if (data.length === 1)
     return (
       <div className="flex flex-col items-center justify-center py-6 gap-1">
@@ -115,57 +121,38 @@ function LineChart({ data }) {
   const linePath = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
   const areaPath = `${linePath} L${pts.at(-1).x},${PAD.t + plotH} L${pts[0].x},${PAD.t + plotH}Z`;
 
-  // Y-axis ticks (4 levels)
-  const yTicks = [0, 0.33, 0.66, 1];
-
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full overflow-visible">
       <defs>
-        <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id="areaGradOp" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%"   stopColor="#8b5cf6" stopOpacity="0.18" />
           <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0"    />
         </linearGradient>
       </defs>
-
-      {/* Horizontal grid lines + Y labels */}
-      {yTicks.map((t) => {
-        const y   = PAD.t + (1 - t) * plotH;
-        const val = Math.round(t * maxVal);
+      {[0, 0.33, 0.66, 1].map((t) => {
+        const y = PAD.t + (1 - t) * plotH;
         return (
           <g key={t}>
-            <line x1={PAD.l} y1={y} x2={W - PAD.r} y2={y}
-              stroke="#f3f4f6" strokeWidth="1" />
-            <text x={PAD.l - 5} y={y + 4} textAnchor="end"
-              fontSize="9" fill="#d1d5db" fontFamily="inherit">
-              {val}
+            <line x1={PAD.l} y1={y} x2={W - PAD.r} y2={y} stroke="#f3f4f6" strokeWidth="1" />
+            <text x={PAD.l - 5} y={y + 4} textAnchor="end" fontSize="9" fill="#d1d5db" fontFamily="inherit">
+              {Math.round(t * maxVal)}
             </text>
           </g>
         );
       })}
-
-      {/* Area */}
-      <path d={areaPath} fill="url(#areaGrad)" />
-
-      {/* Line */}
-      <path d={linePath} fill="none" stroke="#8b5cf6" strokeWidth="2"
-        strokeLinecap="round" strokeLinejoin="round" />
-
-      {/* Dots + count labels */}
+      <path d={areaPath} fill="url(#areaGradOp)" />
+      <path d={linePath} fill="none" stroke="#8b5cf6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
       {pts.map((p) => (
         <g key={p.label}>
           <circle cx={p.x} cy={p.y} r="4.5" fill="#8b5cf6" />
           <circle cx={p.x} cy={p.y} r="2"   fill="white" />
-          <text x={p.x} y={p.y - 9} textAnchor="middle"
-            fontSize="10" fill="#7c3aed" fontWeight="700" fontFamily="inherit">
+          <text x={p.x} y={p.y - 9} textAnchor="middle" fontSize="10" fill="#7c3aed" fontWeight="700" fontFamily="inherit">
             {p.count}
           </text>
         </g>
       ))}
-
-      {/* X axis labels */}
       {pts.map((p) => (
-        <text key={p.label} x={p.x} y={H - 2} textAnchor="middle"
-          fontSize="10" fill="#9ca3af" fontFamily="inherit">
+        <text key={p.label} x={p.x} y={H - 2} textAnchor="middle" fontSize="10" fill="#9ca3af" fontFamily="inherit">
           {p.label}
         </text>
       ))}
@@ -178,28 +165,20 @@ function LineChart({ data }) {
 function HeatmapChart({ data }) {
   if (!data || !data.rows || data.rows.length === 0)
     return <p className="text-sm text-gray-400 text-center py-8">Belum ada data.</p>;
-
   const { rows, cols, cells, max } = data;
-
   return (
     <div className="overflow-x-auto">
       <table className="w-full border-collapse text-[12px]">
         <thead>
           <tr>
-            <th className="text-left pb-3 pr-4 font-semibold text-gray-400 text-[11px] uppercase tracking-wider w-36">
-              Fakultas
-            </th>
+            <th className="text-left pb-3 pr-4 font-semibold text-gray-400 text-[11px] uppercase tracking-wider w-36">Fakultas</th>
             {cols.map((c) => (
-              <th key={c} className="pb-3 px-1 text-center font-semibold text-gray-600 text-[12px]">
-                {c}
-              </th>
+              <th key={c} className="pb-3 px-1 text-center font-semibold text-gray-600 text-[12px]">{c}</th>
             ))}
-            <th className="pb-3 pl-3 text-center font-semibold text-gray-400 text-[11px] uppercase tracking-wider">
-              Total
-            </th>
+            <th className="pb-3 pl-3 text-center font-semibold text-gray-400 text-[11px] uppercase tracking-wider">Total</th>
           </tr>
         </thead>
-        <tbody className="space-y-1">
+        <tbody>
           {rows.map((fak) => {
             const rowTotal = cols.reduce((s, c) => s + (cells[fak]?.[c] ?? 0), 0);
             return (
@@ -217,7 +196,7 @@ function HeatmapChart({ data }) {
                   return (
                     <td key={c} className="px-1 py-1 align-middle">
                       <div
-                        className="rounded-xl flex items-center justify-center h-9 font-bold tabular-nums transition-colors text-[13px]"
+                        className="rounded-xl flex items-center justify-center h-9 font-bold tabular-nums text-[13px]"
                         style={{ backgroundColor: bg, color: fg, minWidth: "2.5rem" }}
                         title={`${FAK_SHORT[fak] ?? fak} · ${c}: ${count} klaim`}
                       >
@@ -238,7 +217,43 @@ function HeatmapChart({ data }) {
   );
 }
 
-// ── Card wrapper ─────────────────────────────────────────────────────────────
+// ── Status Breakdown Card ────────────────────────────────────────────────────
+
+function StatusBreakdown({ data, total }) {
+  const dataMap = Object.fromEntries((data ?? []).map((d) => [d.name, d.count]));
+  return (
+    <div className="grid grid-cols-3 gap-3">
+      {/* Total */}
+      <div className="rounded-2xl border bg-gray-50 border-gray-100 px-5 py-4">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="w-2 h-2 rounded-full flex-shrink-0 bg-gray-400" />
+          <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500">Total Klaim</p>
+        </div>
+        <p className="text-3xl font-black tabular-nums leading-none text-gray-800">{total}</p>
+        <p className="text-[12px] text-gray-400 mt-1.5">keseluruhan data</p>
+      </div>
+
+      {/* Disetujui & Ditolak */}
+      {STATUS_ORDER.map((name) => {
+        const count = dataMap[name] ?? 0;
+        const pct   = total > 0 ? Math.round((count / total) * 100) : 0;
+        const cfg   = STATUS_CONFIG[name];
+        return (
+          <div key={name} className={`rounded-2xl border ${cfg.bg} ${cfg.border} px-5 py-4`}>
+            <div className="flex items-center gap-2 mb-3">
+              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${cfg.dot}`} />
+              <p className={`text-[11px] font-bold uppercase tracking-widest ${cfg.text}`}>{name}</p>
+            </div>
+            <p className={`text-3xl font-black tabular-nums leading-none ${cfg.num}`}>{count}</p>
+            <p className="text-[12px] text-gray-400 mt-1.5">{pct}% dari total</p>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Chart Card ───────────────────────────────────────────────────────────────
 
 function ChartCard({ label, title, children, fullWidth = false }) {
   return (
@@ -270,29 +285,28 @@ function FilterSelect({ label, value, onChange, options, disabled }) {
       >
         <option value="">Semua</option>
         {options.map((o) => (
-          <option key={o.value ?? o} value={o.value ?? o}>
-            {o.label ?? o}
-          </option>
+          <option key={o.value ?? o} value={o.value ?? o}>{o.label ?? o}</option>
         ))}
       </select>
     </div>
   );
 }
 
-// ── Komponen utama ───────────────────────────────────────────────────────────
+// ── Komponen Utama ───────────────────────────────────────────────────────────
 
 const EMPTY_FILTERS = {
   fakultas: "", prodi: "", tahun: "", tingkatan: "", kategori: "", kepesertaan: "",
 };
 
-export default function VisualisasiData() {
+export default function VisualisasiDataOperator() {
   const [stats,      setStats]      = useState(null);
   const [loading,    setLoading]    = useState(true);
   const [error,      setError]      = useState(null);
   const [filters,    setFilters]    = useState(EMPTY_FILTERS);
   const [filterOpts, setFilterOpts] = useState(null);
+  const [exporting,  setExporting]  = useState(false);
 
-  const buildUrl = useCallback((f) => {
+  const buildParams = useCallback((f) => {
     const p = new URLSearchParams();
     if (f.fakultas)    p.set("fakultas",    f.fakultas);
     if (f.prodi)       p.set("prodi",       f.prodi);
@@ -300,22 +314,21 @@ export default function VisualisasiData() {
     if (f.tingkatan)   p.set("tingkatan",   f.tingkatan);
     if (f.kategori)    p.set("kategori",    f.kategori);
     if (f.kepesertaan) p.set("kepesertaan", f.kepesertaan);
-    const qs = p.toString();
-    return `${API_URL}/stats/visualisasi${qs ? "?" + qs : ""}`;
+    return p.toString();
   }, []);
 
   const fetchStats = useCallback((f) => {
     setLoading(true);
-    fetch(buildUrl(f))
+    const qs = buildParams(f);
+    fetch(`${API_URL}/stats/visualisasi${qs ? "?" + qs : ""}`)
       .then((r) => (r.ok ? r.json() : Promise.reject("Gagal memuat data")))
       .then((data) => {
         setStats(data);
-        const noFilter = !Object.values(f).some(Boolean);
-        if (noFilter) setFilterOpts(data.filter_options);
+        if (!Object.values(f).some(Boolean)) setFilterOpts(data.filter_options);
         setLoading(false);
       })
       .catch((e) => { setError(String(e)); setLoading(false); });
-  }, [buildUrl]);
+  }, [buildParams]);
 
   useEffect(() => { fetchStats(EMPTY_FILTERS); }, [fetchStats]);
 
@@ -328,6 +341,42 @@ export default function VisualisasiData() {
 
   const resetFilters = () => { setFilters(EMPTY_FILTERS); fetchStats(EMPTY_FILTERS); };
 
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const qs  = buildParams(filters);
+      const res = await fetch(`${API_URL}/stats/export${qs ? "?" + qs : ""}`);
+      const data = await res.json();
+
+      if (!data || data.length === 0) {
+        alert("Tidak ada data untuk diekspor.");
+        return;
+      }
+
+      const ws = XLSX.utils.json_to_sheet(data);
+
+      // Lebar kolom otomatis
+      const keys = Object.keys(data[0]);
+      ws["!cols"] = keys.map((k) => ({
+        wch: Math.max(k.length + 2, 16),
+      }));
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Data Klaim");
+
+      const filterLabel = Object.entries(filters)
+        .filter(([, v]) => v)
+        .map(([k, v]) => `${k}-${v}`)
+        .join("_") || "semua";
+      const tanggal = new Date().toISOString().slice(0, 10);
+      XLSX.writeFile(wb, `klaim_${filterLabel}_${tanggal}.xlsx`);
+    } catch (e) {
+      alert("Gagal mengekspor data: " + e);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const activeCount  = Object.values(filters).filter(Boolean).length;
   const prodiOptions = filters.fakultas
     ? (filterOpts?.prodi_by_fakultas?.[filters.fakultas] ?? [])
@@ -336,13 +385,33 @@ export default function VisualisasiData() {
   return (
     <div>
       {/* Header */}
-      <div className="mb-7">
-        <h1 className="text-4xl font-black text-gray-900 leading-none tracking-tight">
-          Visualisasi Data
-        </h1>
-        <p className="text-gray-400 mt-3 text-[14px]">
-          Statistik klaim sertifikat — gunakan filter untuk menelusuri data spesifik.
-        </p>
+      <div className="flex items-start justify-between mb-7">
+        <div>
+          <h1 className="text-4xl font-black text-gray-900 leading-none tracking-tight">
+            Visualisasi Data
+          </h1>
+          <p className="text-gray-400 mt-3 text-[14px]">
+            Statistik klaim sertifikat — filter data lalu export ke Excel jika diperlukan.
+          </p>
+        </div>
+        <button
+          onClick={handleExport}
+          disabled={exporting || loading}
+          className="flex items-center gap-2.5 px-5 py-2.5 bg-gray-900 text-white text-[13px] font-semibold rounded-xl hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex-shrink-0 mt-1"
+        >
+          {exporting ? (
+            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+          ) : (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+          )}
+          {exporting ? "Mengekspor..." : "Export Excel"}
+        </button>
       </div>
 
       {/* Filter Panel */}
@@ -362,16 +431,16 @@ export default function VisualisasiData() {
           )}
         </div>
         <div className="grid grid-cols-3 gap-4 lg:grid-cols-6">
-          <FilterSelect label="Tahun"         value={filters.tahun}       onChange={(v) => setFilter("tahun", v)}       options={filterOpts?.tahun ?? []} />
-          <FilterSelect label="Fakultas"      value={filters.fakultas}    onChange={(v) => setFilter("fakultas", v)}    options={(filterOpts?.fakultas ?? []).map((f) => ({ value: f, label: FAK_SHORT[f] ?? f }))} />
-          <FilterSelect label="Prodi"         value={filters.prodi}       onChange={(v) => setFilter("prodi", v)}       options={prodiOptions} disabled={prodiOptions.length === 0} />
-          <FilterSelect label="Tingkatan"     value={filters.tingkatan}   onChange={(v) => setFilter("tingkatan", v)}   options={filterOpts?.tingkatan ?? []} />
-          <FilterSelect label="Jenis Kegiatan" value={filters.kategori}   onChange={(v) => setFilter("kategori", v)}   options={[
+          <FilterSelect label="Tahun"          value={filters.tahun}       onChange={(v) => setFilter("tahun", v)}        options={filterOpts?.tahun ?? []} />
+          <FilterSelect label="Fakultas"       value={filters.fakultas}    onChange={(v) => setFilter("fakultas", v)}     options={(filterOpts?.fakultas ?? []).map((f) => ({ value: f, label: FAK_SHORT[f] ?? f }))} />
+          <FilterSelect label="Prodi"          value={filters.prodi}       onChange={(v) => setFilter("prodi", v)}        options={prodiOptions} disabled={prodiOptions.length === 0} />
+          <FilterSelect label="Tingkatan"      value={filters.tingkatan}   onChange={(v) => setFilter("tingkatan", v)}    options={filterOpts?.tingkatan ?? []} />
+          <FilterSelect label="Jenis Kegiatan" value={filters.kategori}    onChange={(v) => setFilter("kategori", v)}     options={[
                 { value: "lomba_mandiri_puspresnas",     label: "Lomba Mandiri Puspresnas"     },
                 { value: "lomba_mandiri_non_puspresnas", label: "Lomba Mandiri Non-Puspresnas" },
                 { value: "rekognisi",                    label: "Rekognisi Non-Lomba"          },
               ]} />
-          <FilterSelect label="Kepesertaan"   value={filters.kepesertaan} onChange={(v) => setFilter("kepesertaan", v)} options={filterOpts?.kepesertaan ?? []} />
+          <FilterSelect label="Kepesertaan"    value={filters.kepesertaan} onChange={(v) => setFilter("kepesertaan", v)}  options={filterOpts?.kepesertaan ?? []} />
         </div>
       </div>
 
@@ -391,37 +460,46 @@ export default function VisualisasiData() {
           <p className="text-xs text-gray-400 mt-1">{error}</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-5">
+        <div className="space-y-5">
 
-          {/* Row 1: Fakultas | Prodi */}
-          <ChartCard label="Berdasarkan" title="Fakultas">
-            <BarChart data={stats.by_fakultas} formatLabel={(n) => FAK_SHORT[n] ?? n} />
-          </ChartCard>
-          <ChartCard label="Berdasarkan" title="Program Studi">
-            <BarChart data={stats.by_prodi} />
-          </ChartCard>
+          {/* Status Breakdown — full width */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+            <div className="mb-5">
+              <p className="text-[11px] font-bold text-gray-300 uppercase tracking-widest">Ringkasan</p>
+              <h2 className="text-base font-bold text-gray-900 mt-0.5">Status Klaim</h2>
+            </div>
+            <StatusBreakdown data={stats.by_status} total={stats.total} />
+          </div>
 
-          {/* Row 2: Trend Tahun (line) | Tingkatan */}
-          <ChartCard label="Tren" title="Klaim per Tahun">
-            <LineChart data={stats.by_tahun} />
-          </ChartCard>
-          <ChartCard label="Berdasarkan" title="Tingkatan Lomba">
-            <BarChart data={stats.by_tingkatan} />
-          </ChartCard>
+          {/* Chart grid */}
+          <div className="grid grid-cols-2 gap-5">
 
-          {/* Row 3: Jenis Kegiatan | Kepesertaan */}
-          <ChartCard label="Berdasarkan" title="Jenis Kegiatan">
-            <ProgressList data={stats.by_jenis} total={stats.total} />
-          </ChartCard>
-          <ChartCard label="Berdasarkan" title="Jenis Kepesertaan">
-            <ProgressList data={stats.by_kepesertaan} total={stats.total} />
-          </ChartCard>
+            <ChartCard label="Berdasarkan" title="Fakultas">
+              <BarChart data={stats.by_fakultas} formatLabel={(n) => FAK_SHORT[n] ?? n} />
+            </ChartCard>
+            <ChartCard label="Berdasarkan" title="Program Studi">
+              <BarChart data={stats.by_prodi} />
+            </ChartCard>
 
-          {/* Row 4: Heatmap full-width */}
-          <ChartCard label="Sebaran" title="Klaim per Fakultas × Tahun" fullWidth>
-            <HeatmapChart data={stats.heatmap} />
-          </ChartCard>
+            <ChartCard label="Tren" title="Klaim per Tahun">
+              <LineChart data={stats.by_tahun} />
+            </ChartCard>
+            <ChartCard label="Berdasarkan" title="Tingkatan Lomba">
+              <BarChart data={stats.by_tingkatan} />
+            </ChartCard>
 
+            <ChartCard label="Berdasarkan" title="Jenis Kegiatan">
+              <ProgressList data={stats.by_jenis} total={stats.total} />
+            </ChartCard>
+            <ChartCard label="Berdasarkan" title="Jenis Kepesertaan">
+              <ProgressList data={stats.by_kepesertaan} total={stats.total} />
+            </ChartCard>
+
+            <ChartCard label="Sebaran" title="Klaim per Fakultas × Tahun" fullWidth>
+              <HeatmapChart data={stats.heatmap} />
+            </ChartCard>
+
+          </div>
         </div>
       )}
     </div>

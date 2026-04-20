@@ -850,23 +850,22 @@ def upsert_profil_mahasiswa(email: str, data: dict):
 # ---------------------------------------------------------------------------
 # Statistik Visualisasi
 # ---------------------------------------------------------------------------
-def get_stats_visualisasi() -> dict:
-    """
-    Mengembalikan statistik klaim berdasarkan:
-    - by_fakultas  : dari kode NIM di email mahasiswa
-    - by_prodi     : dari kode NIM di email mahasiswa
-    - by_jenis     : dari kategori_simkatmawa di PENGAJUAN
-    - by_tahun     : dari tahun_kegiatan di PENGAJUAN (fallback: tahun tanggal CLAIMS)
-    """
-    from backend.nim_parser import parse_nim, FAKULTAS, PRODI
+def get_stats_visualisasi(
+    filter_fakultas:    str = None,
+    filter_prodi:       str = None,
+    filter_tahun:       str = None,
+    filter_tingkatan:   str = None,
+    filter_kategori:    str = None,
+    filter_kepesertaan: str = None,
+) -> dict:
+    from backend.nim_parser import parse_nim
 
     conn = _get_conn()
     cursor = conn.cursor()
 
-    # Ambil semua klaim (hanya yang sudah diproses/disetujui)
     cursor.execute("""
-        SELECT c.mahasiswa_email, c.tanggal,
-               p.kategori_simkatmawa, p.tahun_kegiatan
+        SELECT c.mahasiswa_email, c.tanggal, c.tingkat, c.status,
+               p.kategori_simkatmawa, p.tahun_kegiatan, p.jenis_kepesertaan
         FROM CLAIMS c
         LEFT JOIN PENGAJUAN p ON p.claim_id = c.id
         ORDER BY c.id
@@ -874,54 +873,128 @@ def get_stats_visualisasi() -> dict:
     rows = cursor.fetchall()
     conn.close()
 
+    # Normalisasi semua baris ke dict terlebih dahulu
+    all_rows = []
+    for (email, tanggal, tingkat, status, kat_simkat, tahun_keg, kepesertaan) in rows:
+        parsed     = parse_nim(email)
+        row_fak    = parsed["fakultas"] if parsed.get("valid") else "Lainnya"
+        row_prodi  = parsed["prodi"]    if parsed.get("valid") else "Lainnya"
+        row_tahun  = tahun_keg or (tanggal[:4] if tanggal and len(tanggal) >= 4 else None)
+        all_rows.append({
+            "fakultas":    row_fak,
+            "prodi":       row_prodi,
+            "tahun":       row_tahun,
+            "tingkatan":   tingkat       or "Tidak Diketahui",
+            "status":      status        or "Tidak Diketahui",
+            "kategori":    kat_simkat    or "tidak_diketahui",
+            "kepesertaan": kepesertaan   or "Tidak Diketahui",
+        })
+
+    # Bangun filter_options dari data PENUH (tidak terpengaruh filter aktif)
+    def unique_sorted(vals):
+        return sorted(v for v in set(vals) if v and v not in ("Lainnya", "Tidak Diketahui", "tidak_diketahui"))
+
+    prodi_by_fak = {}
+    for d in all_rows:
+        prodi_by_fak.setdefault(d["fakultas"], set())
+        if d["prodi"] not in ("Lainnya", "Tidak Diketahui"):
+            prodi_by_fak[d["fakultas"]].add(d["prodi"])
+    prodi_by_fak = {k: sorted(v) for k, v in prodi_by_fak.items()}
+
+    filter_options = {
+        "fakultas":          unique_sorted(d["fakultas"]    for d in all_rows),
+        "prodi_by_fakultas": prodi_by_fak,
+        "tahun":             unique_sorted(d["tahun"]       for d in all_rows if d["tahun"]),
+        "tingkatan":         unique_sorted(d["tingkatan"]   for d in all_rows),
+        "kepesertaan":       unique_sorted(d["kepesertaan"] for d in all_rows),
+    }
+
+    # Terapkan filter
+    filtered = all_rows
+    if filter_fakultas:
+        filtered = [d for d in filtered if d["fakultas"]    == filter_fakultas]
+    if filter_prodi:
+        filtered = [d for d in filtered if d["prodi"]       == filter_prodi]
+    if filter_tahun:
+        filtered = [d for d in filtered if d["tahun"]       == filter_tahun]
+    if filter_tingkatan:
+        filtered = [d for d in filtered if d["tingkatan"]   == filter_tingkatan]
+    if filter_kategori:
+        filtered = [d for d in filtered if d["kategori"]    == filter_kategori]
+    if filter_kepesertaan:
+        filtered = [d for d in filtered if d["kepesertaan"] == filter_kepesertaan]
+
+    # Agregasi
     from collections import defaultdict
-    fakultas_count = defaultdict(int)
-    prodi_count    = defaultdict(int)
-    jenis_count    = defaultdict(int)
-    tahun_count    = defaultdict(int)
+    fak_count  = defaultdict(int)
+    prod_count = defaultdict(int)
+    jenis_count  = defaultdict(int)
+    tahun_count  = defaultdict(int)
+    tingkat_count = defaultdict(int)
+    kp_count   = defaultdict(int)
+    status_count = defaultdict(int)
 
-    for (email, tanggal, kategori, tahun_kegiatan) in rows:
-        # Fakultas & Prodi dari NIM
-        parsed = parse_nim(email)
-        if parsed.get("valid"):
-            fak  = parsed["fakultas"]
-            prod = parsed["prodi"]
-        else:
-            fak  = "Lainnya"
-            prod = "Lainnya"
-        fakultas_count[fak]  += 1
-        prodi_count[prod]    += 1
+    for d in filtered:
+        fak_count[d["fakultas"]]   += 1
+        prod_count[d["prodi"]]     += 1
+        tahun_count[d["tahun"] or "—"] += 1
+        tingkat_count[d["tingkatan"]]  += 1
+        kp_count[d["kepesertaan"]]     += 1
 
-        # Jenis kegiatan
-        if kategori == "lomba_mandiri":
-            jenis_count["Lomba Mandiri"] += 1
-        elif kategori == "rekognisi_non_lomba":
+        k = d["kategori"]
+        if k == "lomba_mandiri_puspresnas":
+            jenis_count["Lomba Mandiri Puspresnas"] += 1
+        elif k == "lomba_mandiri_non_puspresnas":
+            jenis_count["Lomba Mandiri Non-Puspresnas"] += 1
+        elif k == "rekognisi":
             jenis_count["Rekognisi Non-Lomba"] += 1
         else:
             jenis_count["Tidak Diketahui"] += 1
 
-        # Tahun kegiatan (pakai tahun_kegiatan dari pengajuan, fallback ke tahun tanggal klaim)
-        tahun = tahun_kegiatan or (tanggal[:4] if tanggal and len(tanggal) >= 4 else "—")
-        tahun_count[tahun] += 1
+        st = d["status"]
+        if st == "sudah dicek":
+            status_count["Disetujui"] += 1
+        elif st == "ditolak":
+            status_count["Ditolak"] += 1
+        elif st == "perlu ditinjau":
+            status_count["Perlu Ditinjau"] += 1
+        else:
+            status_count["Dalam Proses"] += 1
 
     def to_list(d):
-        return sorted(
-            [{"name": k, "count": v} for k, v in d.items()],
-            key=lambda x: -x["count"]
-        )
+        return sorted([{"name": k, "count": v} for k, v in d.items()], key=lambda x: -x["count"])
 
-    def to_list_sorted_key(d):
-        return sorted(
-            [{"name": k, "count": v} for k, v in d.items()],
-            key=lambda x: x["name"]
-        )
+    def to_list_key(d):
+        return sorted([{"name": k, "count": v} for k, v in d.items()], key=lambda x: x["name"])
+
+    # Heatmap: Fakultas × Tahun
+    heatmap_cells: dict = {}
+    for d in filtered:
+        fak   = d["fakultas"]
+        tahun = d["tahun"] or "—"
+        heatmap_cells.setdefault(fak, {})
+        heatmap_cells[fak][tahun] = heatmap_cells[fak].get(tahun, 0) + 1
+
+    heatmap_cols = sorted({t for cells in heatmap_cells.values() for t in cells})
+    heatmap_rows = sorted(heatmap_cells.keys(), key=lambda f: -sum(heatmap_cells[f].values()))
+    heatmap_max  = max((v for cells in heatmap_cells.values() for v in cells.values()), default=1)
 
     return {
-        "total":        sum(v for v in tahun_count.values()),
-        "by_fakultas":  to_list(fakultas_count),
-        "by_prodi":     to_list(prodi_count),
-        "by_jenis":     to_list(jenis_count),
-        "by_tahun":     to_list_sorted_key(tahun_count),
+        "total":          len(filtered),
+        "by_status":      to_list(status_count),
+        "by_fakultas":    to_list(fak_count),
+        "by_prodi":       to_list(prod_count),
+        "by_jenis":       to_list(jenis_count),
+        "by_tahun":       to_list_key(tahun_count),
+        "by_tingkatan":   to_list(tingkat_count),
+        "by_kepesertaan": to_list(kp_count),
+        "filter_options": filter_options,
+        "heatmap": {
+            "rows":  heatmap_rows,
+            "cols":  heatmap_cols,
+            "cells": heatmap_cells,
+            "max":   heatmap_max,
+        },
     }
 
 
@@ -1155,6 +1228,98 @@ def delete_periode(periode_id: int) -> bool:
     conn.commit()
     conn.close()
     return True
+
+
+def get_export_data(
+    filter_fakultas:    str = None,
+    filter_prodi:       str = None,
+    filter_tahun:       str = None,
+    filter_tingkatan:   str = None,
+    filter_kategori:    str = None,
+    filter_kepesertaan: str = None,
+) -> list:
+    from backend.nim_parser import parse_nim
+
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT c.id, c.nama_lomba, c.tingkat, c.tanggal, c.peringkat, c.status,
+               c.mahasiswa_email, c.nama_display, c.verified_at, c.catatan_penolakan,
+               u.nama  AS verified_by_nama,
+               p.kategori_simkatmawa, p.jenis_kepesertaan, p.tahun_kegiatan,
+               p.nama_kegiatan, p.tingkatan AS tingkatan_p, p.capaian
+        FROM CLAIMS c
+        LEFT JOIN USERS u    ON u.id       = c.verified_by
+        LEFT JOIN PENGAJUAN p ON p.claim_id = c.id
+        ORDER BY c.id DESC
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+
+    result = []
+    for row in rows:
+        (cid, nama_lomba, tingkat, tanggal, peringkat, status,
+         email, nama_display, verified_at, catatan,
+         verified_by_nama,
+         kat_simkat, kepesertaan, tahun_keg, nama_keg, tingkatan_p, capaian) = row
+
+        parsed    = parse_nim(email)
+        nim       = parsed.get("nim", email.split("@")[0]) if parsed.get("valid") else email.split("@")[0]
+        fakultas  = parsed.get("fakultas", "Lainnya")       if parsed.get("valid") else "Lainnya"
+        prodi     = parsed.get("prodi",    "Lainnya")        if parsed.get("valid") else "Lainnya"
+        angkatan  = parsed.get("angkatan", "")               if parsed.get("valid") else ""
+
+        tahun_final    = tahun_keg or (tanggal[:4] if tanggal and len(tanggal) >= 4 else "")
+        nama_keg_final = nama_keg or nama_lomba
+        tingkat_final  = tingkatan_p or tingkat
+        capaian_final  = capaian or peringkat
+
+        # Terapkan filter
+        if filter_fakultas    and fakultas      != filter_fakultas:    continue
+        if filter_prodi       and prodi         != filter_prodi:       continue
+        if filter_tahun       and tahun_final   != filter_tahun:       continue
+        if filter_tingkatan   and tingkat_final != filter_tingkatan:   continue
+        if filter_kategori    and (kat_simkat or "") != filter_kategori: continue
+        if filter_kepesertaan and (kepesertaan or "") != filter_kepesertaan: continue
+
+        if status == "sudah dicek":
+            status_label = "Disetujui"
+        elif status == "ditolak":
+            status_label = "Ditolak"
+        elif status == "perlu ditinjau":
+            status_label = "Perlu Ditinjau"
+        else:
+            status_label = "Dalam Proses"
+
+        if kat_simkat == "lomba_mandiri_puspresnas":
+            kat_label = "Lomba Mandiri Puspresnas"
+        elif kat_simkat == "lomba_mandiri_non_puspresnas":
+            kat_label = "Lomba Mandiri Non-Puspresnas"
+        elif kat_simkat == "rekognisi":
+            kat_label = "Rekognisi Non-Lomba"
+        else:
+            kat_label = ""
+
+        result.append({
+            "NIM":                 nim,
+            "Nama Mahasiswa":      nama_display or "",
+            "Email":               email,
+            "Fakultas":            fakultas,
+            "Program Studi":       prodi,
+            "Angkatan":            angkatan,
+            "Nama Kegiatan":       nama_keg_final or "",
+            "Tingkatan":           tingkat_final or "",
+            "Tahun Kegiatan":      tahun_final,
+            "Jenis Kepesertaan":   kepesertaan or "",
+            "Kategori SIMKATMAWA": kat_label,
+            "Capaian / Peringkat": capaian_final or "",
+            "Status Klaim":        status_label,
+            "Diverifikasi Oleh":   verified_by_nama or "",
+            "Tanggal Verifikasi":  verified_at or "",
+            "Catatan Penolakan":   catatan or "",
+        })
+
+    return result
 
 
 def reset_semua_data() -> None:
