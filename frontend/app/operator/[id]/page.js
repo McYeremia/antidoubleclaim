@@ -219,7 +219,6 @@ function PengajuanDetail({ p, onSaved }) {
       setAutoEstimasi(false);
       const updated = { ...form, estimasi_reward: value === "" ? null : Number(value) };
       setForm(updated);
-      onFormChange?.(updated);
       return;
     }
     const updated = { ...form, [name]: value };
@@ -362,6 +361,13 @@ function PengajuanDetail({ p, onSaved }) {
                 {!isLomba && <EditSelect label="Tingkatan" name="tingkatan"
                   value={d.tingkatan} options={OPT_TINGKATAN} onChange={set} />}
 
+                {!isLomba && <>
+                  <EditInput label="Tanggal Mulai"   name="tanggal_mulai"
+                    value={d.tanggal_mulai}   onChange={set} type="date" />
+                  <EditInput label="Tanggal Selesai" name="tanggal_selesai"
+                    value={d.tanggal_selesai} onChange={set} type="date" />
+                </>}
+
                 {isLomba && <>
                   <EditSelect label="Model Pelaksanaan" name="model_pelaksanaan"
                     value={d.model_pelaksanaan} options={OPT_MODEL_PELAKSANAAN} onChange={set} />
@@ -398,6 +404,11 @@ function PengajuanDetail({ p, onSaved }) {
                   <InfoRow label="Kategori Kegiatan"  value={p.kategori_kegiatan} />
                 </div>
                 {!isLomba && <InfoRow label="Tingkatan" value={p.tingkatan} />}
+
+                {!isLomba && <>
+                  <InfoRow label="Tanggal Mulai"   value={p.tanggal_mulai} />
+                  <InfoRow label="Tanggal Selesai" value={p.tanggal_selesai} />
+                </>}
 
                 {isLomba && <>
                   <InfoRow label="Model Pelaksanaan" value={p.model_pelaksanaan} />

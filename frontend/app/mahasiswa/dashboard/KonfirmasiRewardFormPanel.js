@@ -31,7 +31,7 @@ function Input({ error, ...props }) {
   return (
     <>
       <input
-        className={`block w-full px-3 py-2 border rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500
+        className={`block w-full px-3 py-2 border rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-[#046137] disabled:bg-gray-50 disabled:text-gray-500
           ${error ? "border-red-400 bg-red-50" : "border-gray-300"}`}
         {...props}
       />
@@ -44,7 +44,7 @@ function Select({ children, error, ...props }) {
   return (
     <>
       <select
-        className={`block w-full px-3 py-2 border rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500
+        className={`block w-full px-3 py-2 border rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-[#046137]
           ${error ? "border-red-400 bg-red-50" : "border-gray-300"}`}
         {...props}
       >
@@ -72,7 +72,7 @@ function FileInput({ label, name, onChange, required, hint, currentFile, existin
           </svg>
           <span className="text-xs text-green-700 flex-1 truncate">File tersimpan: {existingFilename}</span>
           <a href={existingUrl} target="_blank" rel="noopener noreferrer"
-             className="text-xs text-blue-600 hover:underline flex-shrink-0">Lihat ↗</a>
+             className="text-xs text-[#046137] hover:underline flex-shrink-0">Lihat ↗</a>
         </div>
       )}
       <input
@@ -121,7 +121,7 @@ function RadioGroup({ label, name, options, value, onChange, required, error, di
               checked={value === opt.value}
               onChange={onChange}
               disabled={disabled}
-              className="accent-blue-600"
+              className="accent-[#046137]"
             />
             <span className="text-sm text-gray-700">{opt.label}</span>
           </label>
@@ -134,7 +134,7 @@ function RadioGroup({ label, name, options, value, onChange, required, error, di
 
 function PrefilledBadge() {
   return (
-    <span className="inline-flex items-center gap-1 ml-2 px-1.5 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-600 border border-indigo-100">
+    <span className="inline-flex items-center gap-1 ml-2 px-1.5 py-0.5 rounded text-xs font-medium bg-[#f0f7f3] text-[#046137] border border-[#d4ebe0]">
       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
           d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -410,34 +410,62 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
   if (notFound) return (
     <div className="text-center py-16">
       <p className="text-gray-500">Klaim tidak ditemukan.</p>
-      <button onClick={onBack} className="mt-2 text-sm text-blue-600 hover:underline">← Kembali</button>
+      <button onClick={onBack} className="mt-2 text-sm text-[#046137] hover:underline">← Kembali</button>
     </div>
   );
 
 
   // ── Sukses ────────────────────────────────────────────────────────────────
   if (submitted) return (
-    <div className="max-w-lg mx-auto text-center space-y-4 py-16">
-      <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-        <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-        </svg>
+    <div className="max-w-lg mx-auto py-12 px-4">
+      <div className="bg-white rounded-2xl shadow-sm border border-[#d4ebe0] overflow-hidden">
+        {/* Green header bar */}
+        <div className="bg-[#046137] px-6 pt-8 pb-10 text-center">
+          <div className="relative w-20 h-20 mx-auto mb-4">
+            <span className="absolute inset-0 rounded-full bg-white/20 animate-ping" />
+            <div className="relative w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-lg">
+              <svg className="w-10 h-10 text-[#046137]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+          </div>
+          <h2 className="text-2xl font-bold text-white">
+            {isReturned ? "Data Berhasil Diperbaiki!" : "Data Berhasil Dikirim!"}
+          </h2>
+          <p className="text-green-100 text-sm mt-1">Universitas Kristen Duta Wacana</p>
+        </div>
+
+        {/* Body */}
+        <div className="px-6 py-6 text-center space-y-4">
+          <p className="text-gray-600 text-sm leading-relaxed">
+            {isReturned
+              ? <>Data reward untuk <span className="font-semibold text-gray-800">&ldquo;{claim?.nama_lomba}&rdquo;</span> telah diperbaiki. Operator akan meninjau kembali data Anda.</>
+              : <>Data rekening untuk <span className="font-semibold text-gray-800">&ldquo;{claim?.nama_lomba}&rdquo;</span> telah dikirimkan. Divisi Bakat Minat akan segera memproses reward.</>
+            }
+          </p>
+
+          <div className="flex items-center gap-3 bg-[#f0f7f3] border border-[#d4ebe0] rounded-xl px-4 py-3 text-left">
+            <svg className="w-5 h-5 text-[#046137] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-xs text-[#046137]">
+              {isReturned
+                ? "Status klaim akan diperbarui setelah operator menyelesaikan peninjauan."
+                : "Pantau status reward melalui halaman daftar klaim Anda."}
+            </p>
+          </div>
+
+          <button
+            onClick={onSuccess}
+            className="w-full py-3 bg-[#046137] hover:bg-[#035230] text-white text-sm font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+            Kembali ke Daftar Klaim
+          </button>
+        </div>
       </div>
-      <h2 className="text-xl font-bold text-gray-900">
-        {isReturned ? "Data Berhasil Diperbaiki!" : "Data Berhasil Dikirim!"}
-      </h2>
-      <p className="text-gray-500 text-sm">
-        {isReturned
-          ? `Data reward untuk "${claim?.nama_lomba}" telah diperbaiki. Operator akan meninjau kembali.`
-          : `Data rekening untuk "${claim?.nama_lomba}" telah dikirimkan. Divisi Bakat Minat akan segera memproses reward.`
-        }
-      </p>
-      <button
-        onClick={onSuccess}
-        className="mt-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors"
-      >
-        Kembali ke Daftar
-      </button>
     </div>
   );
 
@@ -491,13 +519,13 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
       )}
 
       {/* Info banner */}
-      <div className="bg-blue-50 border border-blue-200 rounded-xl px-5 py-4 text-sm text-blue-800 space-y-1">
+      <div className="bg-[#f0f7f3] border border-[#d4ebe0] rounded-xl px-5 py-4 text-sm text-[#046137] space-y-1">
         <p className="font-semibold">Pengumpulan Data Rekening Penerima Prestasi</p>
         <p>Kategori Kelompok hanya diisi oleh <span className="font-medium">Ketua Kelompok</span> sesuai data yang terlampir di surat.</p>
         <p>
           📣 Konsultasi:{" "}
           <a href="https://wa.me/6281336660839" target="_blank" rel="noopener noreferrer"
-             className="underline hover:text-blue-600">
+             className="underline hover:text-[#035230]">
             Divisi Bakat Minat
           </a>
         </p>

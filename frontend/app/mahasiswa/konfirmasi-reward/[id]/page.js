@@ -68,7 +68,7 @@ function FileInput({ label, name, onChange, required, hint, currentFile, existin
           </svg>
           <span className="text-[12px] text-green-700 font-bold flex-1 truncate uppercase tracking-tight">Tersimpan: {existingFilename}</span>
           <a href={existingUrl} target="_blank" rel="noopener noreferrer"
-             className="text-[11px] font-black text-blue-600 hover:underline flex-shrink-0">LIHAT ↗</a>
+             className="text-[11px] font-black text-[#046137] hover:underline flex-shrink-0">LIHAT ↗</a>
         </div>
       )}
 
@@ -86,7 +86,7 @@ function FileInput({ label, name, onChange, required, hint, currentFile, existin
         <p className="mt-2 text-[10px] text-gray-300 font-bold uppercase tracking-widest ml-1">Kosongkan jika tidak ingin mengganti file.</p>
       )}
       {currentFile && (
-        <p className="mt-2 text-[11px] text-blue-600 font-bold flex items-center gap-1 ml-1 animate-in fade-in">
+        <p className="mt-2 text-[11px] text-[#046137] font-bold flex items-center gap-1 ml-1 animate-in fade-in">
           <span>✓</span>
           <span className="truncate">{currentFile.name} (akan mengganti file lama)</span>
         </p>
@@ -140,7 +140,7 @@ function RadioGroup({ label, name, options, value, onChange, required, error, di
 
 function PrefilledBadge() {
   return (
-    <span className="inline-flex items-center gap-1 ml-3 px-2 py-0.5 rounded-lg text-[10px] font-black bg-blue-50 text-blue-600 uppercase tracking-widest border border-blue-100">
+    <span className="inline-flex items-center gap-1 ml-3 px-2 py-0.5 rounded-lg text-[10px] font-black bg-[#f0f7f3] text-[#046137] uppercase tracking-widest border border-[#d4ebe0]">
       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3}
           d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -335,24 +335,43 @@ export default function KonfirmasiRewardForm() {
   );
 
   if (submitted || alreadyFilled) return (
-    <main className="min-h-screen bg-[#f7f7f8] flex items-center justify-center p-4" style={{ fontFamily: "var(--font-poppins, sans-serif)" }}>
-      <div className="max-w-md w-full bg-white rounded-[40px] shadow-2xl shadow-gray-200/50 p-12 text-center border border-gray-100 animate-in zoom-in-95 duration-500">
-        <div className="w-20 h-20 bg-green-500 rounded-[24px] flex items-center justify-center mx-auto mb-8 shadow-lg shadow-green-200">
-          <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-          </svg>
+    <main className="min-h-screen bg-[#f0f7f3] flex items-center justify-center p-4" style={{ fontFamily: "var(--font-poppins, sans-serif)" }}>
+      <div className="max-w-md w-full bg-white rounded-[40px] shadow-2xl shadow-[#046137]/10 p-12 text-center border border-[#d4ebe0] animate-in zoom-in-95 duration-500">
+        {/* Icon lingkaran berlapis */}
+        <div className="relative w-24 h-24 mx-auto mb-8">
+          <div className="absolute inset-0 rounded-full bg-[#046137]/10 animate-ping" style={{ animationDuration: "2s" }} />
+          <div className="relative w-24 h-24 rounded-full bg-[#046137] flex items-center justify-center shadow-xl shadow-[#046137]/30">
+            <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
         </div>
-        <h1 className="text-[24px] font-black text-gray-900 leading-tight uppercase tracking-tight mb-4">
-          {alreadyFilled && !submitted ? "DATA SUDAH<br/>DIKIRIM" : "PENGIRIMAN<br/>BERHASIL"}
+
+        <p className="text-[11px] font-black text-[#046137]/60 uppercase tracking-[0.25em] mb-2">
+          {alreadyFilled && !submitted ? "Status Pengajuan" : "Konfirmasi Reward"}
+        </p>
+        <h1 className="text-[26px] font-black text-gray-900 leading-tight tracking-tight mb-4">
+          {alreadyFilled && !submitted ? "Data Sudah Dikirim" : "Pengiriman Berhasil!"}
         </h1>
-        <p className="text-[13px] text-gray-400 font-medium leading-relaxed mb-10">
+        <p className="text-[13px] text-gray-400 font-medium leading-relaxed mb-3">
           {alreadyFilled && !submitted
             ? "Anda telah menyelesaikan proses pengisian data reward untuk klaim prestasi ini."
-            : "Data rekening telah kami terima dan akan segera diproses oleh Divisi Bakat Minat."
+            : "Data rekening telah kami terima dan akan segera diproses oleh Divisi Bakat Minat UKDW."
           }
         </p>
-        <Link href="/mahasiswa/dashboard" className="w-full inline-block py-4 bg-[#046137] text-white rounded-2xl text-[12px] font-black uppercase tracking-widest hover:bg-[#035230] transition-all">
-          KEMBALI KE DASHBOARD
+
+        <div className="flex items-center justify-center gap-2 mb-10">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#046137]" />
+          <p className="text-[11px] font-semibold text-[#046137]">Universitas Kristen Duta Wacana</p>
+          <span className="w-1.5 h-1.5 rounded-full bg-[#046137]" />
+        </div>
+
+        <Link href="/mahasiswa/dashboard"
+          className="w-full inline-flex items-center justify-center gap-2 py-4 bg-[#046137] text-white rounded-2xl text-[13px] font-black uppercase tracking-widest hover:bg-[#035230] active:scale-95 transition-all shadow-lg shadow-[#046137]/25">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+          </svg>
+          Kembali ke Dashboard
         </Link>
       </div>
     </main>
@@ -478,14 +497,14 @@ export default function KonfirmasiRewardForm() {
               <div className="bg-[#046137] rounded-[32px] p-8 text-white space-y-4">
                 <label className="flex items-start gap-4 cursor-pointer group">
                   <input type="checkbox" checked={bersedia} onChange={e => { setBersedia(e.target.checked); setErrors(prev => ({ ...prev, bersedia: "" })); }} className="hidden" />
-                  <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all ${bersedia ? "bg-blue-500 border-blue-500 shadow-lg shadow-blue-500/30" : "border-gray-700"}`}>
+                  <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all ${bersedia ? "bg-[#046137] border-[#046137] shadow-lg shadow-[#046137]/30" : "border-gray-700"}`}>
                     {bersedia && <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>}
                   </div>
                   <span className="text-[13px] font-bold text-gray-300 group-hover:text-white transition-colors">Saya bersedia mengikuti prosedur administrasi yang ditetapkan.</span>
                 </label>
                 <label className="flex items-start gap-4 cursor-pointer group">
                   <input type="checkbox" checked={dataBenar} onChange={e => { setDataBenar(e.target.checked); setErrors(prev => ({ ...prev, data_benar: "" })); }} className="hidden" />
-                  <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all ${dataBenar ? "bg-blue-500 border-blue-500 shadow-lg shadow-blue-500/30" : "border-gray-700"}`}>
+                  <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all ${dataBenar ? "bg-[#046137] border-[#046137] shadow-lg shadow-[#046137]/30" : "border-gray-700"}`}>
                     {dataBenar && <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>}
                   </div>
                   <span className="text-[13px] font-bold text-gray-300 group-hover:text-white transition-colors">Data yang saya kirimkan adalah benar dan dapat dipertanggungjawabkan.</span>

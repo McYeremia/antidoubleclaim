@@ -243,8 +243,11 @@ function validateStep(step, data, files, showKelompok, totalSteps) {
       }
     } else {
       // rekognisi
-      if (!data.tingkatan)      e.tingkatan = "Tingkatan kegiatan wajib dipilih.";
-      if (!data.tahun_kegiatan) e.tahun_kegiatan = "Tahun kegiatan wajib dipilih.";
+      if (!data.tingkatan)       e.tingkatan = "Tingkatan kegiatan wajib dipilih.";
+      if (!data.tanggal_mulai)   e.tanggal_mulai = "Tanggal mulai wajib diisi.";
+      if (!data.tanggal_selesai) e.tanggal_selesai = "Tanggal selesai wajib diisi.";
+      else if (data.tanggal_mulai && data.tanggal_selesai < data.tanggal_mulai)
+        e.tanggal_selesai = "Tanggal selesai harus sama atau setelah tanggal mulai.";
 
       // Karya Mahasiswa
       const isKarya = data.kategori_kegiatan ===
@@ -784,24 +787,27 @@ function Step4Rekognisi({ data, onChange, onBlur, onFileChange, files, errors })
         onBlur={() => onBlur("nama_kegiatan")}
         hint="5–200 karakter" error={errors?.nama_kegiatan} maxLength={200} />
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
-        <FSelect id="tingkatan" label="Tingkatan Kegiatan" required
-          value={data.tingkatan} onChange={(e) => onChange("tingkatan", e.target.value)}
-          onBlur={() => onBlur("tingkatan")}
-          error={errors?.tingkatan}>
-          <option value="">Pilih tingkatan</option>
-          <option>Internasional</option>
-          <option>Nasional</option>
-          <option>Provinsi</option>
-        </FSelect>
+      <FSelect id="tingkatan" label="Tingkatan Kegiatan" required
+        value={data.tingkatan} onChange={(e) => onChange("tingkatan", e.target.value)}
+        onBlur={() => onBlur("tingkatan")}
+        error={errors?.tingkatan}>
+        <option value="">Pilih tingkatan</option>
+        <option>Internasional</option>
+        <option>Nasional</option>
+        <option>Provinsi</option>
+      </FSelect>
 
-        <FSelect id="tahun_kegiatan" label="Tahun Kegiatan" required
-          value={data.tahun_kegiatan} onChange={(e) => onChange("tahun_kegiatan", e.target.value)}
-          onBlur={() => onBlur("tahun_kegiatan")}
-          error={errors?.tahun_kegiatan} hint={`Pengajuan maks. ${TAHUN_INI}`}>
-          <option value="">Pilih tahun</option>
-          {TAHUN_OPSI.map((t) => <option key={t}>{t}</option>)}
-        </FSelect>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+        <FInput id="tanggal_mulai_rek" label="Tanggal Mulai" required
+          type="date"
+          value={data.tanggal_mulai} onChange={(e) => onChange("tanggal_mulai", e.target.value)}
+          onBlur={() => onBlur("tanggal_mulai")}
+          error={errors?.tanggal_mulai} />
+        <FInput id="tanggal_selesai_rek" label="Tanggal Selesai" required
+          type="date"
+          value={data.tanggal_selesai} onChange={(e) => onChange("tanggal_selesai", e.target.value)}
+          onBlur={() => onBlur("tanggal_selesai")}
+          error={errors?.tanggal_selesai} />
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
@@ -1144,9 +1150,7 @@ function Step6({ data, onChange, nimInfo, errors }) {
     ["Kegiatan",    data.nama_kegiatan],
     ["Kepesertaan", data.jenis_kepesertaan],
     ["Capaian / Tingkatan", data.capaian || data.tingkatan],
-    data.kategori_simkatmawa === "lomba_mandiri"
-      ? ["Tanggal", `${data.tanggal_mulai} s/d ${data.tanggal_selesai}`]
-      : ["Tahun",   data.tahun_kegiatan],
+    ["Tanggal", data.tanggal_mulai && data.tanggal_selesai ? `${data.tanggal_mulai} s/d ${data.tanggal_selesai}` : data.tanggal_mulai || data.tahun_kegiatan],
   ].filter(([, v]) => v);
 
   const hasil = hitungReward(data);
@@ -1166,34 +1170,34 @@ function Step6({ data, onChange, nimInfo, errors }) {
       </div>
 
       {hasil ? (
-        <div style={{ background: "#fdf8ed", border: "1px solid #f0d99a", borderRadius: "10px", padding: "14px 16px" }}>
+        <div style={{ background: "#f0f7f3", border: "1px solid #d4ebe0", borderRadius: "10px", padding: "14px 16px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
             <div>
-              <p style={{ fontSize: "13px", fontWeight: 600, color: "#8c6200" }}>Estimasi Dana Penghargaan</p>
-              <p style={{ fontSize: "11px", color: "#b5900a", marginTop: "2px" }}>SK Rektor 078/B.02/UKDW/2023 · {data.kategori_simkatmawa === "lomba_mandiri_puspresnas" ? "PUSPRESNAS (DIKTI)" : "Non PUSPRESNAS"}</p>
+              <p style={{ fontSize: "13px", fontWeight: 600, color: "#046137" }}>Estimasi Dana Penghargaan</p>
+              <p style={{ fontSize: "11px", color: "#046137", opacity: 0.6, marginTop: "2px" }}>SK Rektor 078/B.02/UKDW/2023 · {data.kategori_simkatmawa === "lomba_mandiri_puspresnas" ? "PUSPRESNAS (DIKTI)" : "Non PUSPRESNAS"}</p>
             </div>
-            <p style={{ fontSize: "22px", fontWeight: 800, color: "#8c6200", fontFamily: "'Syne', sans-serif" }}>{formatRupiah(hasil.total)}</p>
+            <p style={{ fontSize: "22px", fontWeight: 800, color: "#046137" }}>{formatRupiah(hasil.total)}</p>
           </div>
-          <div style={{ background: "rgba(140,98,0,0.06)", borderRadius: "8px", padding: "10px 12px" }}>
-            <p style={{ fontSize: "10px", fontWeight: 700, color: "#8c6200", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "6px" }}>Rincian Poin Kumulatif</p>
+          <div style={{ background: "rgba(4,97,55,0.06)", borderRadius: "8px", padding: "10px 12px" }}>
+            <p style={{ fontSize: "10px", fontWeight: 700, color: "#046137", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "6px" }}>Rincian Poin Kumulatif</p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", alignItems: "center" }}>
               {hasil.rincian.map((r, i) => (
                 <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                  {i > 0 && <span style={{ fontSize: "12px", color: "#b5900a", fontWeight: 700 }}>+</span>}
+                  {i > 0 && <span style={{ fontSize: "12px", color: "#046137", fontWeight: 700 }}>+</span>}
                   <span style={{ fontSize: "12px", color: "#1c1a17", fontWeight: 600 }}>{r.poin}</span>
-                  <span style={{ fontSize: "10px", color: "#8c6200" }}>({r.label})</span>
+                  <span style={{ fontSize: "10px", color: "#046137" }}>({r.label})</span>
                 </span>
               ))}
-              <span style={{ fontSize: "12px", color: "#b5900a", fontWeight: 700, marginLeft: "4px" }}>=</span>
-              <span style={{ fontSize: "13px", color: "#8c6200", fontWeight: 800 }}>{hasil.poinDasar} poin</span>
+              <span style={{ fontSize: "12px", color: "#046137", fontWeight: 700, marginLeft: "4px" }}>=</span>
+              <span style={{ fontSize: "13px", color: "#046137", fontWeight: 800 }}>{hasil.poinDasar} poin</span>
             </div>
           </div>
           {hasil.bonusFactor > 1 ? (
-            <p style={{ fontSize: "11px", color: "#b5900a", marginTop: "8px" }}>
+            <p style={{ fontSize: "11px", color: "#046137", opacity: 0.7, marginTop: "8px" }}>
               {hasil.poinDasar} poin × Rp 225.000 × {hasil.bonusFactor === 1.5 ? "1,50 (bonus &gt;10 anggota)" : "1,25 (bonus 6–10 anggota)"} = {formatRupiah(hasil.total)}
             </p>
           ) : (
-            <p style={{ fontSize: "11px", color: "#b5900a", marginTop: "8px" }}>{hasil.poinDasar} poin × Rp 225.000 = {formatRupiah(hasil.total)}</p>
+            <p style={{ fontSize: "11px", color: "#046137", opacity: 0.7, marginTop: "8px" }}>{hasil.poinDasar} poin × Rp 225.000 = {formatRupiah(hasil.total)}</p>
           )}
         </div>
       ) : (
@@ -1203,9 +1207,9 @@ function Step6({ data, onChange, nimInfo, errors }) {
         </div>
       )}
 
-      <div style={{ background: "#fdf8ed", border: "1px solid #f0d99a", borderRadius: "10px", padding: "14px 16px" }}>
-        <p style={{ fontSize: "12px", fontWeight: 700, color: "#8c6200", marginBottom: "8px" }}>Persetujuan Pengajuan</p>
-        <p style={{ fontSize: "11px", color: "#8c6200", lineHeight: 1.6, marginBottom: "8px" }}>
+      <div style={{ background: "#f0f7f3", border: "1px solid #d4ebe0", borderRadius: "10px", padding: "14px 16px" }}>
+        <p style={{ fontSize: "12px", fontWeight: 700, color: "#046137", marginBottom: "8px" }}>Persetujuan Pengajuan</p>
+        <p style={{ fontSize: "11px", color: "#046137", opacity: 0.7, lineHeight: 1.6, marginBottom: "8px" }}>
           Link pengiriman data rekening akan dibuka setelah perhitungan penghargaan selesai. Jika tidak mengirimkan data rekening hingga batas waktu, pengajuan dinyatakan gugur pada periode tersebut.
         </p>
         <label style={{ display: "flex", alignItems: "flex-start", gap: "10px", cursor: "pointer" }}>
@@ -1330,7 +1334,7 @@ export default function TambahKlaimWizard({ session, onClose, onSuccess }) {
       const uploadPayload = new FormData();
       uploadPayload.append("nama_lomba",      data.nama_kegiatan);
       uploadPayload.append("tingkat",         isLomba ? data.kategori_kegiatan : data.tingkatan);
-      uploadPayload.append("tanggal",         isLomba ? data.tanggal_selesai   : data.tahun_kegiatan);
+      uploadPayload.append("tanggal",         data.tanggal_selesai || data.tahun_kegiatan);
       uploadPayload.append("peringkat",       isLomba ? data.capaian           : data.kategori_kegiatan);
       uploadPayload.append("mahasiswa_email", session.user.email);
       uploadPayload.append("nama_display",    session.user.name ?? session.user.email);
@@ -1353,7 +1357,7 @@ export default function TambahKlaimWizard({ session, onClose, onSuccess }) {
       ap("nama_kegiatan",       data.nama_kegiatan);
       ap("kategori_kegiatan",   data.kategori_kegiatan);
       ap("tingkatan",           data.tingkatan);
-      ap("tahun_kegiatan",      data.tahun_kegiatan);
+      ap("tahun_kegiatan",      data.tahun_kegiatan || data.tanggal_mulai?.substring(0, 4));
       ap("model_pelaksanaan",   data.model_pelaksanaan);
       ap("jumlah_peserta",      data.jumlah_peserta);
       ap("capaian",             data.capaian);

@@ -278,8 +278,8 @@ def insert_claim(nama_lomba, tingkat, tanggal, peringkat, sertifikat_path,
 
     new_hash = generate_phash(sertifikat_path)
 
-    # Bandingkan dengan semua klaim lama
-    cursor.execute("SELECT id, nama_lomba, peringkat, phash FROM CLAIMS")
+    # Bandingkan dengan klaim aktif (exclude ditolak agar mahasiswa bisa re-submit)
+    cursor.execute("SELECT id, nama_lomba, peringkat, phash FROM CLAIMS WHERE status != 'ditolak'")
     rows = cursor.fetchall()
 
     flagged         = False
@@ -551,17 +551,25 @@ def update_pengajuan(pengajuan_id: int, data: dict):
     )
 
     # Sync field terkait ke tabel CLAIMS
-    cursor.execute("SELECT claim_id, nama_kegiatan, kategori_kegiatan, tingkatan, capaian, tanggal_mulai, tahun_kegiatan FROM PENGAJUAN WHERE id = ?", (pengajuan_id,))
+    cursor.execute("""
+        SELECT claim_id, nama_kegiatan, kategori_kegiatan, tingkatan,
+               capaian, tanggal_mulai, tahun_kegiatan, kategori_simkatmawa
+        FROM PENGAJUAN WHERE id = ?
+    """, (pengajuan_id,))
     row = cursor.fetchone()
     if row:
-        claim_id, nama_kegiatan, kategori_kegiatan, tingkatan, capaian, tanggal_mulai, tahun_kegiatan = row
-        tingkat_baru  = kategori_kegiatan or tingkatan
-        tanggal_baru  = tanggal_mulai or tahun_kegiatan
+        claim_id, nama_kegiatan, kategori_kegiatan, tingkatan, capaian, tanggal_mulai, tahun_kegiatan, kategori_simkatmawa = row
+        is_lomba = kategori_simkatmawa in ("lomba_mandiri_puspresnas", "lomba_mandiri_non_puspresnas")
+        # Lomba: tingkat=kategori_kegiatan, peringkat=capaian
+        # Rekognisi: tingkat=tingkatan, peringkat=kategori_kegiatan
+        tingkat_baru   = kategori_kegiatan if is_lomba else tingkatan
+        peringkat_baru = capaian if is_lomba else kategori_kegiatan
+        tanggal_baru   = tanggal_mulai or tahun_kegiatan
         claim_updates = {}
-        if nama_kegiatan: claim_updates["nama_lomba"] = nama_kegiatan
-        if tingkat_baru:  claim_updates["tingkat"]    = tingkat_baru
-        if capaian:       claim_updates["peringkat"]  = capaian
-        if tanggal_baru:  claim_updates["tanggal"]    = tanggal_baru
+        if nama_kegiatan:  claim_updates["nama_lomba"] = nama_kegiatan
+        if tingkat_baru:   claim_updates["tingkat"]    = tingkat_baru
+        if peringkat_baru: claim_updates["peringkat"]  = peringkat_baru
+        if tanggal_baru:   claim_updates["tanggal"]    = tanggal_baru
         if claim_updates and claim_id:
             c_sets   = [f"{k} = ?" for k in claim_updates]
             c_values = list(claim_updates.values())
