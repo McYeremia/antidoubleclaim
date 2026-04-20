@@ -301,14 +301,14 @@ function validateStep(step, data, files, showKelompok, totalSteps) {
 // ─────────────────────────────────────────────────────────────────────────────
 const T = {
   border:  "#e2ddd4",
-  accent:  "#c8820f",
+  accent:  "#046137",
   errBg:   "#fff5f5",
   errBor:  "#f5c0c0",
   errText: "#b72b2b",
   hintText:"#9a9490",
   labelCol:"#4a4540",
   inputBg: "#fdfcfa",
-  focusRing:"0 0 0 2px rgba(200,130,15,0.25)",
+  focusRing:"0 0 0 2px rgba(4,97,55,0.25)",
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -532,9 +532,9 @@ function ProgressBar({ steps, current }) {
               width: "26px", height: "26px", borderRadius: "50%", flexShrink: 0,
               display: "flex", alignItems: "center", justifyContent: "center",
               fontSize: "11px", fontWeight: 700,
-              background: done ? T.accent : active ? "#1c1a17" : "#f2efe8",
+              background: done ? T.accent : active ? T.accent : "#f2efe8",
               color: done || active ? "#fff" : T.hintText,
-              border: `2px solid ${done ? T.accent : active ? "#1c1a17" : T.border}`,
+              border: `2px solid ${done ? T.accent : active ? T.accent : T.border}`,
               transition: "all 0.2s",
             }}>
               {done ? "✓" : idx}
@@ -678,7 +678,7 @@ function Step3({ data, onChange, errors }) {
     padding: "16px",
     borderRadius: "10px",
     border: `2px solid ${active ? T.accent : T.border}`,
-    background: active ? "rgba(200,130,15,0.05)" : "#fff",
+    background: active ? "rgba(4,97,55,0.05)" : "#fff",
     cursor: "pointer",
     transition: "border-color 0.15s, background 0.15s",
     width: "100%",
@@ -697,7 +697,7 @@ function Step3({ data, onChange, errors }) {
 
       {/* Lomba Mandiri group */}
       <div style={{ border: `2px solid ${isLomba ? T.accent : T.border}`, borderRadius: "12px", overflow: "hidden", transition: "border-color 0.15s" }}>
-        <div style={{ padding: "12px 16px", background: isLomba ? "rgba(200,130,15,0.05)" : "#fafaf9", borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: "10px" }}>
+        <div style={{ padding: "12px 16px", background: isLomba ? "rgba(4,97,55,0.05)" : "#fafaf9", borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: "10px" }}>
           <span style={{ fontSize: "20px" }}>🏆</span>
           <div>
             <p style={{ fontWeight: 700, fontSize: "13px", color: isLomba ? T.accent : "#1c1a17" }}>Lomba Mandiri</p>
@@ -718,7 +718,7 @@ function Step3({ data, onChange, errors }) {
                 style={{
                   textAlign: "left",
                   padding: "14px 16px",
-                  background: active ? "rgba(200,130,15,0.08)" : "#fff",
+                  background: active ? "rgba(4,97,55,0.08)" : "#fff",
                   border: "none",
                   borderLeft: i === 1 ? `1px solid ${T.border}` : "none",
                   cursor: "pointer",
@@ -1420,7 +1420,7 @@ export default function TambahKlaimWizard({ session, onClose, onSuccess }) {
           Saat ini tidak ada periode klaim yang sedang dibuka.<br />
           Silakan hubungi pengelola atau coba lagi nanti.
         </p>
-        <button onClick={onClose} style={{ padding: "10px 24px", background: "#111827", color: "#fff", border: "none", borderRadius: "10px", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
+        <button onClick={onClose} style={{ padding: "10px 24px", background: "#046137", color: "#fff", border: "none", borderRadius: "10px", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
           Tutup
         </button>
       </div>
@@ -1485,9 +1485,9 @@ export default function TambahKlaimWizard({ session, onClose, onSuccess }) {
               type="button"
               onClick={handleSubmit}
               disabled={loading}
-              style={{ padding: "9px 24px", fontSize: "13px", fontWeight: 600, color: "#fff", background: loading ? "#c8c3bc" : "#1c1a17", border: "none", borderRadius: "8px", cursor: loading ? "not-allowed" : "pointer", fontFamily: "inherit", transition: "background 0.15s" }}
-              onMouseEnter={e => { if (!loading) e.currentTarget.style.background = T.accent; }}
-              onMouseLeave={e => { if (!loading) e.currentTarget.style.background = "#1c1a17"; }}
+              style={{ padding: "9px 24px", fontSize: "13px", fontWeight: 600, color: "#fff", background: loading ? "#c8c3bc" : "#046137", border: "none", borderRadius: "8px", cursor: loading ? "not-allowed" : "pointer", fontFamily: "inherit", transition: "background 0.15s" }}
+              onMouseEnter={e => { if (!loading) e.currentTarget.style.background = "#035230"; }}
+              onMouseLeave={e => { if (!loading) e.currentTarget.style.background = "#046137"; }}
             >
               {loading ? "Mengirim..." : "Kirim Pengajuan"}
             </button>
@@ -1495,9 +1495,9 @@ export default function TambahKlaimWizard({ session, onClose, onSuccess }) {
             <button
               type="button"
               onClick={handleNext}
-              style={{ padding: "9px 24px", fontSize: "13px", fontWeight: 600, color: "#fff", background: "#1c1a17", border: "none", borderRadius: "8px", cursor: "pointer", fontFamily: "inherit", transition: "background 0.15s" }}
-              onMouseEnter={e => e.currentTarget.style.background = T.accent}
-              onMouseLeave={e => e.currentTarget.style.background = "#1c1a17"}
+              style={{ padding: "9px 24px", fontSize: "13px", fontWeight: 600, color: "#fff", background: "#046137", border: "none", borderRadius: "8px", cursor: "pointer", fontFamily: "inherit", transition: "background 0.15s" }}
+              onMouseEnter={e => e.currentTarget.style.background = "#035230"}
+              onMouseLeave={e => e.currentTarget.style.background = "#046137"}
             >
               Selanjutnya →
             </button>

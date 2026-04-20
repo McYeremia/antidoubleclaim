@@ -177,12 +177,12 @@ function DetailModal({ claim, onClose }) {
               </div>
 
               {pengajuan.estimasi_reward != null && (
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-center justify-between mt-2">
+                <div className="bg-[#f0f7f3] border border-[#d4ebe0] rounded-xl p-4 flex items-center justify-between mt-2">
                   <div>
-                    <p className="text-sm font-semibold text-blue-700">Estimasi Dana Penghargaan</p>
-                    <p className="text-xs text-blue-400 mt-0.5">SK Rektor No. 078/B.02/UKDW/2023 · Non PUSPRESNAS</p>
+                    <p className="text-sm font-semibold text-[#046137]">Estimasi Dana Penghargaan</p>
+                    <p className="text-xs text-[#046137]/60 mt-0.5">SK Rektor No. 078/B.02/UKDW/2023 · Non PUSPRESNAS</p>
                   </div>
-                  <p className="text-xl font-bold text-blue-700">
+                  <p className="text-xl font-bold text-[#046137]">
                     {"Rp " + Number(pengajuan.estimasi_reward).toLocaleString("id-ID")}
                   </p>
                 </div>
@@ -338,7 +338,7 @@ export default function DaftarKlaim({ session, search, onOpenForm, onTambahKlaim
                         ) : (
                           <button
                             onClick={() => onOpenForm?.(claim.id)}
-                            className="text-[13px] font-semibold text-gray-900 hover:text-blue-600 transition-colors underline underline-offset-2"
+                            className="text-[13px] font-semibold text-[#046137] hover:text-[#035230] transition-colors underline underline-offset-2"
                           >
                             Isi Data Reward
                           </button>

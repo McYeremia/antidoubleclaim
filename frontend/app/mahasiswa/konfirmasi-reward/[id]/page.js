@@ -78,7 +78,7 @@ function FileInput({ label, name, onChange, required, hint, currentFile, existin
           name={name}
           onChange={onChange}
           accept=".pdf"
-          className="block w-full text-[12px] text-gray-400 file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-[11px] file:font-black file:bg-gray-900 file:text-white hover:file:bg-gray-700 cursor-pointer"
+          className="block w-full text-[12px] text-gray-400 file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-[11px] file:font-black file:bg-[#046137] file:text-white hover:file:bg-[#035230] cursor-pointer"
         />
       </div>
       
@@ -114,7 +114,7 @@ function RadioGroup({ label, name, options, value, onChange, required, error, di
       <div className="grid grid-cols-1 gap-3 mt-2">
         {options.map((opt) => (
           <label key={opt.value} className={`flex items-center gap-3 p-4 rounded-2xl border transition-all cursor-pointer
-            ${value === opt.value ? "bg-gray-900 border-gray-900 text-white" : "bg-gray-50 border-gray-100 text-gray-600 hover:bg-gray-100"}
+            ${value === opt.value ? "bg-[#046137] border-[#046137] text-white" : "bg-gray-50 border-gray-100 text-gray-600 hover:bg-gray-100"}
             ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}>
             <input
               type="radio"
@@ -329,7 +329,7 @@ export default function KonfirmasiRewardForm() {
       <div className="bg-white p-12 rounded-[32px] shadow-xl text-center border border-gray-100 max-w-sm">
         <p className="text-[16px] font-black text-gray-900 mb-2 uppercase tracking-tight">Klaim Tidak Ditemukan</p>
         <p className="text-[13px] text-gray-400 font-medium mb-8">Data tidak valid atau sudah dihapus.</p>
-        <Link href="/mahasiswa/dashboard" className="inline-block px-8 py-3 bg-gray-900 text-white rounded-xl text-[12px] font-black">← KEMBALI</Link>
+        <Link href="/mahasiswa/dashboard" className="inline-block px-8 py-3 bg-[#046137] text-white rounded-xl text-[12px] font-black">← KEMBALI</Link>
       </div>
     </div>
   );
@@ -351,7 +351,7 @@ export default function KonfirmasiRewardForm() {
             : "Data rekening telah kami terima dan akan segera diproses oleh Divisi Bakat Minat."
           }
         </p>
-        <Link href="/mahasiswa/dashboard" className="w-full inline-block py-4 bg-gray-900 text-white rounded-2xl text-[12px] font-black uppercase tracking-widest hover:bg-gray-700 transition-all">
+        <Link href="/mahasiswa/dashboard" className="w-full inline-block py-4 bg-[#046137] text-white rounded-2xl text-[12px] font-black uppercase tracking-widest hover:bg-[#035230] transition-all">
           KEMBALI KE DASHBOARD
         </Link>
       </div>
@@ -475,7 +475,7 @@ export default function KonfirmasiRewardForm() {
 
           {kategoriDipilih && (
             <div className="space-y-6">
-              <div className="bg-gray-900 rounded-[32px] p-8 text-white space-y-4">
+              <div className="bg-[#046137] rounded-[32px] p-8 text-white space-y-4">
                 <label className="flex items-start gap-4 cursor-pointer group">
                   <input type="checkbox" checked={bersedia} onChange={e => { setBersedia(e.target.checked); setErrors(prev => ({ ...prev, bersedia: "" })); }} className="hidden" />
                   <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all ${bersedia ? "bg-blue-500 border-blue-500 shadow-lg shadow-blue-500/30" : "border-gray-700"}`}>
@@ -491,7 +491,7 @@ export default function KonfirmasiRewardForm() {
                   <span className="text-[13px] font-bold text-gray-300 group-hover:text-white transition-colors">Data yang saya kirimkan adalah benar dan dapat dipertanggungjawabkan.</span>
                 </label>
               </div>
-              <button type="submit" disabled={submitting} className="w-full py-5 bg-gray-900 hover:bg-gray-700 disabled:opacity-50 text-white rounded-[24px] text-[14px] font-black uppercase tracking-[0.2em] transition-all hover:scale-[1.02] active:scale-95 shadow-2xl shadow-gray-200">
+              <button type="submit" disabled={submitting} className="w-full py-5 bg-[#046137] hover:bg-[#035230] disabled:opacity-50 text-white rounded-[24px] text-[14px] font-black uppercase tracking-[0.2em] transition-all hover:scale-[1.02] active:scale-95 shadow-2xl shadow-gray-200">
                 {submitting ? "PROSES PENGIRIMAN..." : "KIRIM KONFIRMASI REWARD"}
               </button>
             </div>
