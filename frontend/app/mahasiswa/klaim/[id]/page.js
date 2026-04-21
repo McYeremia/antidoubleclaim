@@ -147,6 +147,12 @@ export default function KlaimDetailPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editForm),
       });
+      if (res.status === 409) {
+        const err = await res.json();
+        setSaveMsg(`Gagal: ${err.detail}`);
+        setClaim(prev => ({ ...prev, status: "disetujui" }));
+        return;
+      }
       if (!res.ok) throw new Error("Gagal menyimpan");
       setPengajuan(prev => ({ ...prev, ...editForm }));
       setSaveMsg("Perubahan berhasil disimpan.");

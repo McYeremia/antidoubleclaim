@@ -532,6 +532,17 @@ def get_pengajuan_by_email(email: str) -> list:
     return [dict(zip(cols, row)) for row in rows]
 
 
+def get_pengajuan_by_id(pengajuan_id: int):
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM PENGAJUAN WHERE id = ?", (pengajuan_id,))
+    row = cursor.fetchone()
+    if not row:
+        return None
+    cols = [d[0] for d in cursor.description]
+    return dict(zip(cols, row))
+
+
 def get_pengajuan_by_claim_id(claim_id: int):
     conn = _get_conn()
     cursor = conn.cursor()
