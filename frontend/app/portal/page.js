@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 const API        = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-const SESSION_MS = 8 * 60 * 60 * 1000;
+const SESSION_MS = 3 * 60 * 60 * 1000;
 
 function isOperatorSessionValid() {
   const loginAt = localStorage.getItem("operator_login_at");

@@ -222,6 +222,39 @@ export function ConfirmModal({
   );
 }
 
+export function AlertModal({ isOpen, title, message, variant = "warning", onClose }) {
+  if (!isOpen) return null;
+
+  const c = {
+    warning: { btn: "bg-orange-500 hover:bg-orange-600 text-white", iconBg: "bg-orange-50", icon: "text-orange-500" },
+    danger:  { btn: "bg-red-600 hover:bg-red-700 text-white",        iconBg: "bg-red-50",    icon: "text-red-500"    },
+    info:    { btn: "bg-gray-900 hover:bg-gray-700 text-white",       iconBg: "bg-blue-50",   icon: "text-blue-500"   },
+  }[variant];
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4" onClick={onClose}>
+      <div className="bg-white rounded-[28px] shadow-2xl w-full max-w-md p-8" onClick={e => e.stopPropagation()}>
+        <div className={`w-12 h-12 rounded-2xl ${c.iconBg} flex items-center justify-center mb-5`}>
+          <svg className={`w-6 h-6 ${c.icon}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <h3 className="text-[16px] font-black text-gray-900 mb-2">{title}</h3>
+        {message && <p className="text-[13px] text-gray-500 leading-relaxed mb-6">{message}</p>}
+        <div className="flex justify-end">
+          <button
+            onClick={onClose}
+            autoFocus
+            className={`px-6 py-2.5 rounded-xl text-[12px] font-black transition-colors ${c.btn}`}
+          >
+            Mengerti
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ArsipCertPreview({ url, filename }) {
   if (!url || !filename) return null;
   const isPdf = filename.toLowerCase().endsWith(".pdf");
