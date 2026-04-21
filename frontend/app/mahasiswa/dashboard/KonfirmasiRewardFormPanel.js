@@ -558,39 +558,23 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
           <div>
             <Label>Periode Klaim</Label>
             {periodeAktif ? (
-              <div className={`flex items-center gap-3 px-4 py-3 rounded-lg border mt-1 ${
-                periodeAktif.status === "tersimpan" ? "bg-indigo-50 border-indigo-200"
-                : periodeAktif.status === "aktif"   ? "bg-green-50 border-green-200"
-                :                                     "bg-blue-50 border-blue-200"
-              }`}>
-                <svg className={`w-4 h-4 flex-shrink-0 ${
-                  periodeAktif.status === "tersimpan" ? "text-indigo-500"
-                  : periodeAktif.status === "aktif"   ? "text-green-600"
-                  :                                     "text-blue-500"
-                }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="flex items-center gap-3 px-4 py-3 rounded-lg border mt-1 bg-[#f0f7f3] border-[#d4ebe0]">
+                <svg className="w-4 h-4 flex-shrink-0 text-[#046137]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-semibold truncate ${
-                    periodeAktif.status === "tersimpan" ? "text-indigo-800"
-                    : periodeAktif.status === "aktif"   ? "text-green-800"
-                    :                                     "text-blue-800"
-                  }`}>{periodeAktif.nama}</p>
+                  <p className="text-sm font-semibold truncate text-[#035230]">{periodeAktif.nama}</p>
                   {periodeAktif.tanggal_mulai && (
-                    <p className={`text-xs mt-0.5 ${
-                      periodeAktif.status === "aktif" ? "text-green-600" : "text-blue-600"
-                    }`}>
+                    <p className="text-xs mt-0.5 text-[#046137]">
                       {formatTanggal(periodeAktif.tanggal_mulai)} s/d {formatTanggal(periodeAktif.tanggal_selesai)}
                     </p>
                   )}
                   {periodeAktif.status === "tersimpan" && (
-                    <p className="text-xs text-indigo-500 mt-0.5">Dicatat saat pengajuan pertama</p>
+                    <p className="text-xs text-[#046137] mt-0.5">Dicatat saat pengajuan pertama</p>
                   )}
                 </div>
                 <span className={`flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ${
-                  periodeAktif.status === "tersimpan" ? "bg-indigo-100 text-indigo-700"
-                  : periodeAktif.status === "aktif"   ? "bg-green-100 text-green-700"
-                  :                                     "bg-blue-100 text-blue-700"
+                  periodeAktif.status === "aktif" ? "bg-green-100 text-green-700" : "bg-[#d4ebe0] text-[#046137]"
                 }`}>
                   {periodeAktif.status === "tersimpan" ? "Tercatat" : periodeAktif.status === "aktif" ? "Aktif" : "Tutup"}
                 </span>
@@ -624,7 +608,7 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
               ]}
             />
             {prefilledFields.has("kategori_lomba") && (
-              <p className="mt-1 text-xs text-indigo-500">Diisi otomatis berdasarkan kategori SimKatmawa pada pengajuan klaim.</p>
+              <p className="mt-1 text-xs text-[#046137]">Diisi otomatis berdasarkan kategori SimKatmawa pada pengajuan klaim.</p>
             )}
           </div>
         </SectionCard>
@@ -785,7 +769,7 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
                   existingPath={existingReward?.pakta_integritas_path}
                   error={errors.pakta_integritas}
                 />
-                <p className="mt-1 text-xs text-blue-600">
+                <p className="mt-1 text-xs text-[#046137]">
                   Unduh template:{" "}
                   <span className="underline cursor-pointer">Template Pakta Integritas Kelompok/Individu</span>
                 </p>
@@ -827,7 +811,7 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
                   type="checkbox"
                   checked={bersedia}
                   onChange={e => { setBersedia(e.target.checked); setErrors(p => ({ ...p, bersedia: "" })); }}
-                  className="mt-0.5 accent-blue-600 w-4 h-4 flex-shrink-0"
+                  className="mt-0.5 accent-[#046137] w-4 h-4 flex-shrink-0"
                 />
                 <span className="text-sm text-gray-700">Saya bersedia mengikuti proses yang ada.</span>
               </label>
@@ -838,7 +822,7 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
                   type="checkbox"
                   checked={dataBenar}
                   onChange={e => { setDataBenar(e.target.checked); setErrors(p => ({ ...p, data_benar: "" })); }}
-                  className="mt-0.5 accent-blue-600 w-4 h-4 flex-shrink-0"
+                  className="mt-0.5 accent-[#046137] w-4 h-4 flex-shrink-0"
                 />
                 <span className="text-sm text-gray-700">
                   Saya sudah mengisi data dengan <span className="font-medium">sadar dan benar</span>.
@@ -850,7 +834,7 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors"
+                className="w-full py-3 bg-[#046137] hover:bg-[#035230] disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors"
               >
                 {submitting ? "Mengirim..." : isReturned ? "Kirim Ulang Data Reward" : "Kirim Data Reward"}
               </button>

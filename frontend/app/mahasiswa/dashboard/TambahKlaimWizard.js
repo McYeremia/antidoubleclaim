@@ -349,7 +349,7 @@ const baseInput = (hasError) => ({
   padding: "8px 12px",
   fontSize: "13px",
   color: "#1c1a17",
-  background: hasError ? T.errBg : T.inputBg,
+  backgroundColor: hasError ? T.errBg : T.inputBg,
   borderWidth: "1px",
   borderStyle: "solid",
   borderColor: hasError ? T.errBor : T.border,
@@ -757,7 +757,7 @@ function Step3({ data, onChange, errors }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Step 4A — Detail Rekognisi
 // ─────────────────────────────────────────────────────────────────────────────
-function Step4Rekognisi({ data, onChange, onBlur, onFileChange, files, errors }) {
+function Step4Rekognisi({ data, onChange, onBlur, onFileChange, files, errors, periodeTanggalSelesai }) {
   const isKarya = data.kategori_kegiatan ===
     "Karya Mahasiswa berupa teknologi tepat guna/seni budaya/produk kreatif untuk UMKM dan Industri";
 
@@ -800,11 +800,14 @@ function Step4Rekognisi({ data, onChange, onBlur, onFileChange, files, errors })
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
         <FInput id="tanggal_mulai_rek" label="Tanggal Mulai" required
           type="date"
+          max={periodeTanggalSelesai || undefined}
           value={data.tanggal_mulai} onChange={(e) => onChange("tanggal_mulai", e.target.value)}
           onBlur={() => onBlur("tanggal_mulai")}
           error={errors?.tanggal_mulai} />
         <FInput id="tanggal_selesai_rek" label="Tanggal Selesai" required
           type="date"
+          min={data.tanggal_mulai || undefined}
+          max={periodeTanggalSelesai || undefined}
           value={data.tanggal_selesai} onChange={(e) => onChange("tanggal_selesai", e.target.value)}
           onBlur={() => onBlur("tanggal_selesai")}
           error={errors?.tanggal_selesai} />
@@ -1255,7 +1258,8 @@ export default function TambahKlaimWizard({ session, onClose, onSuccess }) {
   const [nimInfo,      setNimInfo]      = useState(null);
   const [fieldErrors,  setFieldErrors]  = useState({});
   const [loading,      setLoading]      = useState(false);
-  const [periodeCheck, setPeriodeCheck] = useState("loading"); // "loading" | "aktif" | "tutup"
+  const [periodeCheck,    setPeriodeCheck]    = useState("loading"); // "loading" | "aktif" | "tutup"
+  const [periodeTanggalSelesai, setPeriodeTanggalSelesai] = useState(null);
 
   useEffect(() => {
     Promise.all([
@@ -1265,6 +1269,7 @@ export default function TambahKlaimWizard({ session, onClose, onSuccess }) {
       nimRes.ok && setNimInfo(await nimRes.json());
       const p = periodeRes.ok ? await periodeRes.json() : { aktif: false };
       setPeriodeCheck(p.aktif ? "aktif" : "tutup");
+      if (p.aktif && p.periode?.tanggal_selesai) setPeriodeTanggalSelesai(p.periode.tanggal_selesai);
     }).catch(() => setPeriodeCheck("tutup"));
   }, []);
 
@@ -1454,7 +1459,7 @@ export default function TambahKlaimWizard({ session, onClose, onSuccess }) {
           {step === 1 && <Step1 data={data} onChange={onChange} onBlur={handleBlur} nimInfo={nimInfo} errors={fieldErrors} />}
           {step === 2 && <Step2 data={data} onChange={onChange} onBlur={handleBlur} onFileChange={onFileChange} files={files} errors={fieldErrors} />}
           {step === 3 && <Step3 data={data} onChange={onChange} errors={fieldErrors} />}
-          {step === 4 && data.kategori_simkatmawa === "rekognisi"          && <Step4Rekognisi data={data} onChange={onChange} onBlur={handleBlur} onFileChange={onFileChange} files={files} errors={fieldErrors} />}
+          {step === 4 && data.kategori_simkatmawa === "rekognisi"          && <Step4Rekognisi data={data} onChange={onChange} onBlur={handleBlur} onFileChange={onFileChange} files={files} errors={fieldErrors} periodeTanggalSelesai={periodeTanggalSelesai} />}
           {step === 4 && isLombaMandiri(data.kategori_simkatmawa)          && <Step4Lomba     data={data} onChange={onChange} onBlur={handleBlur} onFileChange={onFileChange} files={files} errors={fieldErrors} />}
           {step === 5 && showKelompok && <Step5 data={data} onChange={onChange} onBlur={handleBlur} errors={fieldErrors} />}
           {isLastStep && <Step6 data={data} onChange={onChange} nimInfo={nimInfo} errors={fieldErrors} />}
