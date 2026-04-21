@@ -7,6 +7,7 @@ import shutil
 import os
 import json
 import traceback
+import uuid
 
 from backend.database import (
     insert_claim, create_database,
@@ -254,7 +255,8 @@ async def upload_certificate(
     try:
         print(f"--- Menerima upload: {nama_lomba} dari {mahasiswa_email} ---")
 
-        file_location = os.path.join(UPLOAD_FOLDER, file.filename)
+        unique_name   = f"{uuid.uuid4().hex}_{file.filename}"
+        file_location = os.path.join(UPLOAD_FOLDER, unique_name)
         with open(file_location, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
         print(f"File disimpan di: {file_location}")
@@ -323,7 +325,7 @@ async def submit_pengajuan(
         def save_file(upload: Optional[UploadFile], prefix: str) -> Optional[str]:
             if not upload or not upload.filename:
                 return None
-            fname    = f"{prefix}_{upload.filename}"
+            fname    = f"{prefix}_{uuid.uuid4().hex}_{upload.filename}"
             fpath    = os.path.join(UPLOAD_FOLDER, fname)
             with open(fpath, "wb") as buf:
                 shutil.copyfileobj(upload.file, buf)
@@ -463,7 +465,7 @@ async def submit_reward_konfirmasi(
         def save_file(upload: Optional[UploadFile], prefix: str) -> Optional[str]:
             if not upload or not upload.filename:
                 return None
-            fname = f"{prefix}_{upload.filename}"
+            fname = f"{prefix}_{uuid.uuid4().hex}_{upload.filename}"
             fpath = os.path.join(UPLOAD_FOLDER, fname)
             with open(fpath, "wb") as buf:
                 shutil.copyfileobj(upload.file, buf)
@@ -582,7 +584,7 @@ async def resubmit_reward(
     def save_file(upload: Optional[UploadFile]) -> Optional[str]:
         if not upload or not upload.filename:
             return None
-        path = os.path.join(UPLOAD_FOLDER, upload.filename)
+        path = os.path.join(UPLOAD_FOLDER, f"{uuid.uuid4().hex}_{upload.filename}")
         with open(path, "wb") as f:
             shutil.copyfileobj(upload.file, f)
         return path

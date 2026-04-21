@@ -3,7 +3,7 @@ import imagehash
 import os
 from pdf2image import convert_from_path
 
-POPPLER_PATH = r"C:\poppler\Library\bin"
+POPPLER_PATH = os.getenv("POPPLER_PATH", r"C:\poppler\Library\bin")
 
 def generate_phash(file_path):
 
