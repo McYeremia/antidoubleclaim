@@ -879,18 +879,29 @@ def insert_audit_log(operator_id: int, operator_nama: str, aksi: str,
     conn.close()
 
 
-def get_audit_log(limit: int = 200) -> list:
+def get_audit_log(date_from: str = None, date_to: str = None, limit: int = 1000) -> list:
     conn = _get_conn()
     cursor = conn.cursor()
-    cursor.execute("""
+    conditions = []
+    params = []
+    if date_from:
+        conditions.append("DATE(a.created_at) >= DATE(?)")
+        params.append(date_from)
+    if date_to:
+        conditions.append("DATE(a.created_at) <= DATE(?)")
+        params.append(date_to)
+    where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+    params.append(limit)
+    cursor.execute(f"""
         SELECT a.id, a.operator_id, a.operator_nama, a.aksi,
                a.target_tipe, a.target_id, a.detail, a.created_at,
                u.nama AS op_nama_saat_ini
         FROM AUDIT_LOG a
         LEFT JOIN USERS u ON u.id = a.operator_id
+        {where}
         ORDER BY a.created_at DESC
         LIMIT ?
-    """, (limit,))
+    """, params)
     rows = cursor.fetchall()
     cols = [d[0] for d in cursor.description]
     conn.close()

@@ -203,9 +203,13 @@ async def reset_data(x_operator_id: Optional[str] = Header(None)):
 
 # ── Audit Log ──────────────────────────────────────────────────────────────────────────
 @app.get("/audit-log")
-async def list_audit_log(x_operator_id: Optional[str] = Header(None)):
+async def list_audit_log(
+    date_from: Optional[str] = None,
+    date_to:   Optional[str] = None,
+    x_operator_id: Optional[str] = Header(None),
+):
     _require_superadmin(x_operator_id)
-    return get_audit_log()
+    return get_audit_log(date_from=date_from, date_to=date_to)
 
 # ── NIM Info ─────────────────────────────────────────────────────────────────
 @app.get("/nim-info")

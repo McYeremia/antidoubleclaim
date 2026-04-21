@@ -203,7 +203,7 @@ export default function OperatorDashboard() {
           {activeMenu === "reward"      && <PengajuanReward />}
           {activeMenu === "visualisasi" && <VisualisasiDataOperator />}
           {activeMenu === "operators"   && isSuperAdmin && <KelolaOperator operatorId={operatorId} />}
-          {activeMenu === "periode"     && isSuperAdmin && <PengaturanPeriode operatorNama={operatorNama} />}
+          {activeMenu === "periode"     && isSuperAdmin && <PengaturanPeriode operatorNama={operatorNama} operatorId={operatorId} />}
           {activeMenu === "arsip"       && isSuperAdmin && <ArsipPeriode />}
           {activeMenu === "log"         && isSuperAdmin && <LogAktivitas operatorId={operatorId} />}
         </main>
