@@ -251,6 +251,23 @@ def create_database():
     )
     """)
 
+    # ── Tabel AUDIT_LOG ───────────────────────────────────────────────────────
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS AUDIT_LOG (
+        id            INTEGER PRIMARY KEY AUTOINCREMENT,
+        operator_id   INTEGER,
+        operator_nama TEXT,
+        aksi          TEXT    NOT NULL,
+        target_tipe   TEXT,
+        target_id     INTEGER,
+        detail        TEXT,
+        created_at    TEXT    NOT NULL DEFAULT (DATETIME('now', 'localtime')),
+        FOREIGN KEY (operator_id) REFERENCES USERS (id)
+    )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_operator ON AUDIT_LOG (operator_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_created  ON AUDIT_LOG (created_at)")
+
     # Seed akun superadmin default jika belum ada
     cursor.execute("SELECT id FROM USERS WHERE username = 'admin'")
     if not cursor.fetchone():
@@ -834,6 +851,39 @@ def create_operator(username: str, password: str, nama: str, email: str, role: s
         return False
     finally:
         conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Audit Log
+# ---------------------------------------------------------------------------
+def insert_audit_log(operator_id: int, operator_nama: str, aksi: str,
+                     target_tipe: str = None, target_id: int = None, detail: str = None):
+    conn = _get_conn()
+    conn.execute(
+        """INSERT INTO AUDIT_LOG (operator_id, operator_nama, aksi, target_tipe, target_id, detail)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (operator_id, operator_nama, aksi, target_tipe, target_id, detail),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_audit_log(limit: int = 200) -> list:
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT a.id, a.operator_id, a.operator_nama, a.aksi,
+               a.target_tipe, a.target_id, a.detail, a.created_at,
+               u.nama AS op_nama_saat_ini
+        FROM AUDIT_LOG a
+        LEFT JOIN USERS u ON u.id = a.operator_id
+        ORDER BY a.created_at DESC
+        LIMIT ?
+    """, (limit,))
+    rows = cursor.fetchall()
+    cols = [d[0] for d in cursor.description]
+    conn.close()
+    return [dict(zip(cols, row)) for row in rows]
 
 
 # ---------------------------------------------------------------------------
