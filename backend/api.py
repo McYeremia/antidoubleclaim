@@ -14,7 +14,7 @@ from backend.database import (
     get_all_claims, get_claims_by_email, get_claim_by_id,
     approve_claim, reject_claim, get_ditolak_claims,
     insert_pengajuan, get_pengajuan_by_email, get_pengajuan_by_claim_id,
-    update_pengajuan,
+    get_pengajuan_by_id, update_pengajuan,
     insert_reward_konfirmasi, get_reward_konfirmasi_by_claim_id,
     get_reward_konfirmasi_by_email, update_reward_status, update_reward_konfirmasi,
     authenticate_operator, get_all_operators, get_operator_by_id,
@@ -447,8 +447,19 @@ class PengajuanUpdate(BaseModel):
     keterangan_kelompok: Optional[str] = None
     estimasi_reward:     Optional[int] = None
 
+EDITABLE_STATUSES = {"belum dicek", "perlu ditinjau"}
+
 @app.patch("/pengajuan/{pengajuan_id}")
 async def edit_pengajuan(pengajuan_id: int, body: PengajuanUpdate):
+    pengajuan = get_pengajuan_by_id(pengajuan_id)
+    if not pengajuan:
+        raise HTTPException(status_code=404, detail="Pengajuan tidak ditemukan")
+    claim = get_claim_by_id(pengajuan["claim_id"])
+    if not claim or claim.get("status") not in EDITABLE_STATUSES:
+        raise HTTPException(
+            status_code=409,
+            detail="Klaim ini sudah diproses operator, perubahan tidak dapat disimpan"
+        )
     data = {k: v for k, v in body.model_dump().items() if v is not None}
     if not data:
         raise HTTPException(status_code=400, detail="Tidak ada data yang diubah")
