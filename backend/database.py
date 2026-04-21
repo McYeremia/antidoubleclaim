@@ -1190,17 +1190,33 @@ def create_periode(data: dict) -> int:
     return periode_id
 
 
-def update_periode_status(periode_id: int, status: str) -> bool:
+def update_periode_status(periode_id: int, status: str) -> dict:
     """Ubah status periode: 'aktif', 'tutup', atau 'ditutup'. Hanya 1 periode aktif sekaligus."""
     if status not in ("aktif", "tutup", "ditutup"):
-        return False
+        return {"ok": False, "alasan": "Status tidak valid. Gunakan 'aktif', 'tutup', atau 'ditutup'."}
     conn = _get_conn()
+    cursor = conn.cursor()
+
+    # Saat menutup periode, cek apakah masih ada klaim yang belum diverifikasi
+    if status == "ditutup":
+        cursor.execute("""
+            SELECT COUNT(*) FROM CLAIMS
+            WHERE periode_id = ? AND status IN ('belum dicek', 'perlu ditinjau')
+        """, (periode_id,))
+        klaim_pending = cursor.fetchone()[0]
+        if klaim_pending > 0:
+            conn.close()
+            return {
+                "ok": False,
+                "alasan": f"Masih ada {klaim_pending} klaim yang belum diverifikasi (belum dicek / perlu ditinjau). Selesaikan semua klaim terlebih dahulu sebelum menutup periode.",
+            }
+
     if status == "aktif":
         conn.execute("UPDATE PERIODE_KLAIM SET status = 'tutup' WHERE status = 'aktif'")
     conn.execute("UPDATE PERIODE_KLAIM SET status = ? WHERE id = ?", (status, periode_id))
     conn.commit()
     conn.close()
-    return True
+    return {"ok": True}
 
 
 def arsipkan_periode(periode_id: int) -> dict:
@@ -1237,7 +1253,23 @@ def arsipkan_periode(periode_id: int) -> dict:
             "klaim_pending": klaim_pending,
         }
 
-    # Hitung reward yang belum selesai pada periode ini
+    # Cek klaim yang sudah disetujui tapi mahasiswa belum mengisi data reward sama sekali
+    cursor.execute("""
+        SELECT COUNT(*) FROM CLAIMS c
+        LEFT JOIN REWARD_KONFIRMASI rk ON rk.claim_id = c.id
+        WHERE c.periode_id = ? AND c.status = 'sudah dicek' AND rk.id IS NULL
+    """, (periode_id,))
+    reward_belum_diisi = cursor.fetchone()[0]
+
+    if reward_belum_diisi > 0:
+        conn.close()
+        return {
+            "ok": False,
+            "alasan": f"Masih ada {reward_belum_diisi} klaim yang sudah disetujui namun mahasiswa belum mengisi data reward.",
+            "reward_belum_diisi": reward_belum_diisi,
+        }
+
+    # Hitung reward yang sudah diisi tapi belum selesai diproses operator
     cursor.execute("""
         SELECT COUNT(*) FROM REWARD_KONFIRMASI rk
         JOIN CLAIMS c ON c.id = rk.claim_id

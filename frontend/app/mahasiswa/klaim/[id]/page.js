@@ -10,6 +10,43 @@ const API_URL = "http://127.0.0.1:8000";
 const STATUS_LABEL = (s) => s === "sudah dicek" ? "Selesai" : s === "ditolak" ? "Ditolak" : "Dalam Proses";
 const STATUS_STYLE = (s) => s === "sudah dicek" ? "bg-green-100 text-green-700" : s === "ditolak" ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700";
 
+const TAHUN_INI = new Date().getFullYear();
+const OPT_TAHUN             = [String(TAHUN_INI), String(TAHUN_INI - 1), String(TAHUN_INI - 2)];
+const OPT_KATEGORI_SIMKATMAWA = [
+  { value: "lomba_mandiri_puspresnas",     label: "Lomba Mandiri — Puspresnas (DIKTI)" },
+  { value: "lomba_mandiri_non_puspresnas", label: "Lomba Mandiri — Non Puspresnas (Non DIKTI)" },
+  { value: "rekognisi",                    label: "Rekognisi Non-Lomba" },
+];
+const OPT_JENIS_KEPESERTAAN = [
+  { value: "individu", label: "Individu" },
+  { value: "kelompok", label: "Kelompok" },
+];
+const OPT_KATEGORI_LOMBA    = ["Provinsi / Wilayah", "Nasional", "Internasional"];
+const OPT_TINGKATAN         = ["Internasional", "Nasional", "Provinsi"];
+const OPT_MODEL_PELAKSANAAN = ["Online", "Offline"];
+const OPT_CAPAIAN = [
+  "Juara 1", "Juara 2", "Juara 3",
+  "Harapan 1", "Harapan 2", "Harapan 3",
+  "Didanai / Lolos Wilayah",
+  "Apresiasi kejuaraan / Penghargaan tambahan / Juara umum",
+  "Partisipasi / Delegasi / Peserta kejuaraan",
+];
+const OPT_KATEGORI_REKOGNISI = [
+  "Karya Mahasiswa berupa teknologi tepat guna/seni budaya/produk kreatif untuk UMKM dan Industri",
+  "Juri/Pelatih/Wasit",
+  "Pemakalah/Speaker pada Conference/Seminar Ilmiah",
+  "Narasumber pada kegiatan/seminar",
+  "Peserta pameran karya seni",
+  "Penulisan ISBN",
+  "Paten/Paten Sederhana",
+  "Publikasi jurnal nasional Sinta 1 dan 2 dan/atau internasional bereputasi sebagai penulis pertama",
+  "Tuan rumah kejuaraan/kompetisi mandiri",
+];
+const OPT_JENIS_KARYA = ["Teknologi Tepat Guna", "Seni Budaya", "Produk Kreatif"];
+
+const isLombaMandiri = (kat) =>
+  kat === "lomba_mandiri_puspresnas" || kat === "lomba_mandiri_non_puspresnas";
+
 const REWARD_LABEL = { menunggu: "Diproses", diproses: "Data Diterima", selesai: "Reward Dikirim", dikembalikan: "Perlu Diperbaiki", ditolak: "Ditolak" };
 const REWARD_STYLE = { menunggu: "bg-blue-100 text-blue-700", diproses: "bg-blue-100 text-blue-700", selesai: "bg-green-100 text-green-700", dikembalikan: "bg-orange-100 text-orange-700", ditolak: "bg-red-100 text-red-700" };
 
@@ -45,13 +82,53 @@ function FileLink({ label, path }) {
   if (!path) return null;
   const filename = path.split(/[\\/]/).pop();
   const url = `${API_URL}/uploads/${filename}`;
+  const match = filename.match(/^.+?_[0-9a-f]{32}_(.+)$/);
+  const displayName = match ? match[1] : filename;
   return (
-    <div>
+    <div className="min-w-0 overflow-hidden">
       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{label}</p>
       <a href={url} target="_blank" rel="noopener noreferrer"
-         className="text-[13px] text-[#046137] hover:underline mt-0.5 inline-block break-all">
-        {filename} ↗
+         className="text-[13px] text-[#046137] hover:text-[#035230] mt-0.5 flex items-center gap-1.5 transition-colors overflow-hidden">
+        <span className="truncate underline underline-offset-2">{displayName}</span>
+        <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}
+            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+        </svg>
       </a>
+    </div>
+  );
+}
+
+function EditInput({ label, name, value, onChange, type = "text" }) {
+  return (
+    <div>
+      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">{label}</p>
+      <input
+        type={type}
+        value={value ?? ""}
+        onChange={e => onChange(name, e.target.value)}
+        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-[13px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#046137]/30 transition-all"
+      />
+    </div>
+  );
+}
+
+function EditSelect({ label, name, value, onChange, options }) {
+  return (
+    <div>
+      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">{label}</p>
+      <select
+        value={value ?? ""}
+        onChange={e => onChange(name, e.target.value)}
+        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-[13px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#046137]/30 transition-all"
+      >
+        <option value="">— pilih —</option>
+        {options.map(o => {
+          const val = typeof o === "object" ? o.value : o;
+          const lbl = typeof o === "object" ? o.label : o;
+          return <option key={val} value={val}>{lbl}</option>;
+        })}
+      </select>
     </div>
   );
 }
@@ -128,16 +205,36 @@ export default function KlaimDetailPage() {
 
   const openEdit = () => {
     setEditForm({
-      nama_kegiatan:     pengajuan.nama_kegiatan     ?? "",
-      tahun_kegiatan:    pengajuan.tahun_kegiatan    ?? "",
-      tingkatan:         pengajuan.tingkatan         ?? "",
-      kategori_kegiatan: pengajuan.kategori_kegiatan ?? "",
-      url_penyelenggara: pengajuan.url_penyelenggara ?? "",
-      keterangan:        pengajuan.keterangan        ?? "",
+      nama_kegiatan:       pengajuan.nama_kegiatan       ?? "",
+      tahun_kegiatan:      pengajuan.tahun_kegiatan      ?? "",
+      kategori_simkatmawa: pengajuan.kategori_simkatmawa ?? "",
+      jenis_kepesertaan:   pengajuan.jenis_kepesertaan   ?? "",
+      kategori_kegiatan:   pengajuan.kategori_kegiatan   ?? "",
+      tingkatan:           pengajuan.tingkatan           ?? "",
+      model_pelaksanaan:   pengajuan.model_pelaksanaan   ?? "",
+      jumlah_peserta:      pengajuan.jumlah_peserta      ?? "",
+      capaian:             pengajuan.capaian             ?? "",
+      tanggal_mulai:       pengajuan.tanggal_mulai       ?? "",
+      tanggal_selesai:     pengajuan.tanggal_selesai     ?? "",
+      url_penyelenggara:   pengajuan.url_penyelenggara   ?? "",
+      keterangan:          pengajuan.keterangan          ?? "",
+      nama_lembaga:        pengajuan.nama_lembaga        ?? "",
+      jenis_karya_teks:    pengajuan.jenis_karya_teks    ?? "",
+      jenis_karya_pilihan: pengajuan.jenis_karya_pilihan ?? "",
+      nomor_surat:         pengajuan.nomor_surat         ?? "",
+      tanggal_surat:       pengajuan.tanggal_surat       ?? "",
+      deskripsi_karya:     pengajuan.deskripsi_karya     ?? "",
+      manfaat_karya:       pengajuan.manfaat_karya       ?? "",
+      nama_ketua:          pengajuan.nama_ketua          ?? "",
+      peran_pengeclaim:    pengajuan.peran_pengeclaim    ?? "",
+      keterangan_kelompok: pengajuan.keterangan_kelompok ?? "",
     });
     setSaveMsg("");
     setEditOpen(true);
   };
+
+  const setField    = (name, value) => setEditForm(f => ({ ...f, [name]: value }));
+  const cancelEdit  = () => { setEditOpen(false); setSaveMsg(""); };
 
   const handleSaveEdit = async () => {
     setSaving(true);
@@ -156,8 +253,7 @@ export default function KlaimDetailPage() {
       }
       if (!res.ok) throw new Error("Gagal menyimpan");
       setPengajuan(prev => ({ ...prev, ...editForm }));
-      setSaveMsg("Perubahan berhasil disimpan.");
-      setTimeout(() => setEditOpen(false), 1200);
+      setEditOpen(false);
     } catch {
       setSaveMsg("Gagal menyimpan. Coba lagi.");
     } finally {
@@ -287,17 +383,6 @@ export default function KlaimDetailPage() {
               </div>
               <div className="flex items-center gap-3">
                 <p className="text-[11px] text-gray-400 font-semibold uppercase tracking-widest">ID #{claim.id}</p>
-                {canEdit && (
-                  <button
-                    onClick={openEdit}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 text-gray-600 text-[11px] font-bold rounded-xl hover:bg-gray-50 transition-colors"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                    Edit
-                  </button>
-                )}
               </div>
             </div>
 
@@ -368,104 +453,199 @@ export default function KlaimDetailPage() {
               {/* Kolom kanan — Detail */}
               <div className="lg:col-span-8 space-y-6">
                 <div className="bg-white rounded-[28px] shadow-sm border border-gray-100 p-8">
-                  {pengajuan ? (
-                    <>
-                      <SectionTitle>Rincian Kegiatan</SectionTitle>
-                      <div className="grid grid-cols-2 gap-5">
-                        <InfoRow label="Kategori SIMKATMAWA" value={
-                          pengajuan.kategori_simkatmawa === "lomba_mandiri_puspresnas"     ? "Lomba Mandiri — Puspresnas (DIKTI)" :
-                          pengajuan.kategori_simkatmawa === "lomba_mandiri_non_puspresnas" ? "Lomba Mandiri — Non Puspresnas (Non DIKTI)" :
-                          "Rekognisi Non-Lomba"
-                        } />
-                        <InfoRow label="Jenis Kepesertaan"   value={pengajuan.jenis_kepesertaan} />
-                        <InfoRow label="Tahun Kegiatan"      value={pengajuan.tahun_kegiatan} />
-                        <InfoRow label="Kategori Kegiatan"   value={pengajuan.kategori_kegiatan} />
-                        <div className="col-span-2">
-                          <InfoRow label="Nama Lengkap Kegiatan" value={pengajuan.nama_kegiatan} />
-                        </div>
-                        {!isLomba && <InfoRow label="Tingkatan" value={pengajuan.tingkatan} />}
-                        {isLomba && <>
-                          <InfoRow label="Model Pelaksanaan" value={pengajuan.model_pelaksanaan} />
-                          <InfoRow label="Jumlah Peserta"    value={pengajuan.jumlah_peserta} />
-                          <InfoRow label="Capaian"           value={pengajuan.capaian} />
-                          <InfoRow label="Tanggal Mulai"     value={formatTanggal(pengajuan.tanggal_mulai)} />
-                          <InfoRow label="Tanggal Selesai"   value={formatTanggal(pengajuan.tanggal_selesai)} />
-                        </>}
-                        {!isLomba && <>
-                          <InfoRow label="Tanggal Mulai"   value={pengajuan.tanggal_mulai} />
-                          <InfoRow label="Tanggal Selesai" value={pengajuan.tanggal_selesai} />
-                        </>}
-                        {pengajuan.url_penyelenggara && (
-                          <div className="col-span-2">
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">URL Penyelenggara</p>
-                            <a href={pengajuan.url_penyelenggara} target="_blank" rel="noopener noreferrer"
-                               className="text-[13px] text-[#046137] hover:underline mt-0.5 inline-block break-all">
-                              {pengajuan.url_penyelenggara}
-                            </a>
+                  {pengajuan ? (() => {
+                    const ef      = editOpen ? editForm : pengajuan;
+                    const efLomba = isLombaMandiri(ef.kategori_simkatmawa);
+                    const efKarya = ef.kategori_kegiatan?.startsWith("Karya Mahasiswa");
+                    const efKelompok = ef.jenis_kepesertaan === "kelompok";
+                    return (
+                      <>
+                        {/* Card header dengan tombol edit */}
+                        <div className="flex items-center justify-between border-b border-gray-50 pb-5 mb-6">
+                          <div>
+                            <h2 className="text-[16px] font-black text-gray-900">Data Pengajuan</h2>
+                            <p className="text-[12px] text-gray-400 mt-0.5">
+                              {editOpen ? "File tidak dapat diubah melalui form ini." : "Detail lengkap pengajuan klaim."}
+                            </p>
                           </div>
-                        )}
-                        {pengajuan.keterangan && (
-                          <div className="col-span-2"><InfoRow label="Keterangan" value={pengajuan.keterangan} /></div>
-                        )}
-                      </div>
-
-                      <SectionTitle>Dosen Pembimbing</SectionTitle>
-                      <div className="grid grid-cols-2 gap-5">
-                        <InfoRow label="Menggunakan Dospem" value={pengajuan.ada_dospem === "ya" ? "Ya" : "Tidak"} />
-                        {pengajuan.ada_dospem === "ya" && <InfoRow label="NIK/NIDN/NIDK" value={pengajuan.nidn_dospem} />}
-                      </div>
-                      <div className="mt-4">
-                        <FileLink label="Surat Tugas Dospem" path={pengajuan.surat_tugas_path} />
-                      </div>
-
-                      {isKarya && (
-                        <>
-                          <SectionTitle>Data Karya Mahasiswa</SectionTitle>
-                          <div className="grid grid-cols-2 gap-5">
-                            <InfoRow label="Nama Lembaga/Mitra"  value={pengajuan.nama_lembaga} />
-                            <InfoRow label="Jenis Karya"         value={pengajuan.jenis_karya_teks} />
-                            <InfoRow label="Nomor Surat"         value={pengajuan.nomor_surat} />
-                            <InfoRow label="Tanggal Surat"       value={formatTanggal(pengajuan.tanggal_surat)} />
-                            <div className="col-span-2"><InfoRow label="Deskripsi Karya" value={pengajuan.deskripsi_karya} /></div>
-                            <div className="col-span-2"><InfoRow label="Manfaat Karya"   value={pengajuan.manfaat_karya} /></div>
-                          </div>
-                        </>
-                      )}
-
-                      {isKelompok && (
-                        <>
-                          <SectionTitle>Data Kelompok</SectionTitle>
-                          <div className="grid grid-cols-2 gap-5 mb-4">
-                            <InfoRow label="Nama Ketua" value={pengajuan.nama_ketua} />
-                            <InfoRow label="Peran Anda" value={pengajuan.peran_pengeclaim} />
-                            {pengajuan.keterangan_kelompok && (
-                              <div className="col-span-2"><InfoRow label="Keterangan Kelompok" value={pengajuan.keterangan_kelompok} /></div>
+                          <div className="flex items-center gap-3">
+                            {saveMsg && (
+                              <span className={`text-[12px] font-bold ${saveMsg.includes("Gagal") ? "text-red-500" : "text-[#046137] animate-pulse"}`}>
+                                {saveMsg.includes("Gagal") ? saveMsg : "✓ TERSIMPAN"}
+                              </span>
+                            )}
+                            {editOpen ? (
+                              <>
+                                <button onClick={cancelEdit}
+                                  className="px-4 py-2 text-[12px] font-bold rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors">
+                                  BATAL
+                                </button>
+                                <button onClick={handleSaveEdit} disabled={saving}
+                                  className="px-5 py-2 text-[12px] font-black rounded-xl bg-[#046137] text-white hover:bg-[#035230] disabled:opacity-50 transition-all shadow-lg shadow-green-100">
+                                  {saving ? "MENYIMPAN..." : "SIMPAN PERUBAHAN"}
+                                </button>
+                              </>
+                            ) : canEdit && (
+                              <button onClick={openEdit}
+                                className="px-4 py-2 text-[12px] font-black rounded-xl border border-gray-900 text-gray-900 hover:bg-gray-50 transition-all flex items-center gap-2">
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}
+                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                                EDIT DATA
+                              </button>
                             )}
                           </div>
-                          {anggota.length > 0 && (
-                            <div>
-                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Anggota Lainnya</p>
-                              <div className="space-y-1.5">
-                                {anggota.map((a, i) => (
-                                  <div key={i} className="flex gap-4 text-sm bg-gray-50 rounded-xl px-4 py-2.5">
-                                    <span className="text-gray-400 font-semibold w-5">{i + 2}.</span>
-                                    <span className="font-semibold text-gray-900">{a.nama}</span>
-                                    <span className="text-gray-400 font-mono">{a.nim}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </>
-                      )}
+                        </div>
 
-                      <SectionTitle>Dokumen Tambahan</SectionTitle>
-                      <div className="grid grid-cols-2 gap-5">
-                        <FileLink label="Foto Penyerahan" path={pengajuan.foto_penyerahan_path} />
-                        <FileLink label="Dokumen Lainnya" path={pengajuan.dokumen_lainnya_path} />
-                      </div>
-                    </>
-                  ) : (
+                        {/* Rincian Kegiatan */}
+                        <SectionTitle>Rincian Kegiatan</SectionTitle>
+                        <div className="grid grid-cols-2 gap-5">
+                          {editOpen ? (
+                            <>
+                              <div className="col-span-2">
+                                <EditInput label="Nama Lengkap Kegiatan" name="nama_kegiatan" value={ef.nama_kegiatan} onChange={setField} />
+                              </div>
+                              <EditSelect label="Kategori SIMKATMAWA" name="kategori_simkatmawa" value={ef.kategori_simkatmawa} onChange={setField} options={OPT_KATEGORI_SIMKATMAWA} />
+                              <EditSelect label="Jenis Kepesertaan"   name="jenis_kepesertaan"   value={ef.jenis_kepesertaan}   onChange={setField} options={OPT_JENIS_KEPESERTAAN} />
+                              <EditSelect label="Tahun Kegiatan"      name="tahun_kegiatan"      value={ef.tahun_kegiatan}      onChange={setField} options={OPT_TAHUN} />
+                              <div className="col-span-2">
+                                <EditSelect label="Kategori Kegiatan" name="kategori_kegiatan" value={ef.kategori_kegiatan} onChange={setField}
+                                  options={efLomba ? OPT_KATEGORI_LOMBA : OPT_KATEGORI_REKOGNISI} />
+                              </div>
+                              {!efLomba && <EditSelect label="Tingkatan" name="tingkatan" value={ef.tingkatan} onChange={setField} options={OPT_TINGKATAN} />}
+                              {efLomba  && <EditSelect label="Model Pelaksanaan" name="model_pelaksanaan" value={ef.model_pelaksanaan} onChange={setField} options={OPT_MODEL_PELAKSANAAN} />}
+                              {efLomba  && <EditInput  label="Jumlah Peserta"    name="jumlah_peserta"    value={ef.jumlah_peserta}    onChange={setField} type="number" />}
+                              {efLomba  && <div className="col-span-2"><EditSelect label="Capaian / Peringkat" name="capaian" value={ef.capaian} onChange={setField} options={OPT_CAPAIAN} /></div>}
+                              <EditInput label="Tanggal Mulai"   name="tanggal_mulai"   value={ef.tanggal_mulai}   onChange={setField} type="date" />
+                              <EditInput label="Tanggal Selesai" name="tanggal_selesai" value={ef.tanggal_selesai} onChange={setField} type="date" />
+                              <div className="col-span-2">
+                                <EditInput label="URL Website Penyelenggara" name="url_penyelenggara" value={ef.url_penyelenggara} onChange={setField} />
+                              </div>
+                              <div className="col-span-2">
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Keterangan Tambahan</p>
+                                <textarea rows={3} value={ef.keterangan ?? ""}
+                                  onChange={e => setField("keterangan", e.target.value)}
+                                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-[13px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#046137]/30 resize-none transition-all" />
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <InfoRow label="Kategori SIMKATMAWA" value={
+                                pengajuan.kategori_simkatmawa === "lomba_mandiri_puspresnas"     ? "Lomba Mandiri — Puspresnas (DIKTI)" :
+                                pengajuan.kategori_simkatmawa === "lomba_mandiri_non_puspresnas" ? "Lomba Mandiri — Non Puspresnas (Non DIKTI)" :
+                                "Rekognisi Non-Lomba"
+                              } />
+                              <InfoRow label="Jenis Kepesertaan"   value={pengajuan.jenis_kepesertaan} />
+                              <InfoRow label="Tahun Kegiatan"      value={pengajuan.tahun_kegiatan} />
+                              <InfoRow label="Kategori Kegiatan"   value={pengajuan.kategori_kegiatan} />
+                              <div className="col-span-2"><InfoRow label="Nama Lengkap Kegiatan" value={pengajuan.nama_kegiatan} /></div>
+                              {!efLomba && <InfoRow label="Tingkatan" value={pengajuan.tingkatan} />}
+                              {efLomba && <>
+                                <InfoRow label="Model Pelaksanaan" value={pengajuan.model_pelaksanaan} />
+                                <InfoRow label="Jumlah Peserta"    value={pengajuan.jumlah_peserta} />
+                                <InfoRow label="Capaian"           value={pengajuan.capaian} />
+                              </>}
+                              <InfoRow label="Tanggal Mulai"   value={formatTanggal(pengajuan.tanggal_mulai)} />
+                              <InfoRow label="Tanggal Selesai" value={formatTanggal(pengajuan.tanggal_selesai)} />
+                              {pengajuan.url_penyelenggara && (
+                                <div className="col-span-2">
+                                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">URL Penyelenggara</p>
+                                  <a href={pengajuan.url_penyelenggara} target="_blank" rel="noopener noreferrer"
+                                     className="text-[13px] text-[#046137] hover:underline mt-0.5 inline-block break-all">
+                                    {pengajuan.url_penyelenggara}
+                                  </a>
+                                </div>
+                              )}
+                              {pengajuan.keterangan && <div className="col-span-2"><InfoRow label="Keterangan" value={pengajuan.keterangan} /></div>}
+                            </>
+                          )}
+                        </div>
+
+                        {/* Dosen Pembimbing */}
+                        <SectionTitle>Dosen Pembimbing</SectionTitle>
+                        <div className="grid grid-cols-2 gap-5">
+                          <InfoRow label="Menggunakan Dospem" value={pengajuan.ada_dospem === "ya" ? "Ya" : "Tidak"} />
+                          {pengajuan.ada_dospem === "ya" && <InfoRow label="NIK/NIDN/NIDK" value={pengajuan.nidn_dospem} />}
+                        </div>
+                        <div className="mt-4">
+                          <FileLink label="Surat Tugas Dospem" path={pengajuan.surat_tugas_path} />
+                        </div>
+
+                        {/* Karya Mahasiswa */}
+                        {efKarya && (
+                          <>
+                            <SectionTitle>Data Karya Mahasiswa</SectionTitle>
+                            <div className="grid grid-cols-2 gap-5">
+                              {editOpen ? (
+                                <>
+                                  <EditInput label="Nama Lembaga/Mitra"    name="nama_lembaga"        value={ef.nama_lembaga}        onChange={setField} />
+                                  <EditInput label="Judul/Jenis Karya"      name="jenis_karya_teks"    value={ef.jenis_karya_teks}    onChange={setField} />
+                                  <EditSelect label="Kategori Karya"        name="jenis_karya_pilihan" value={ef.jenis_karya_pilihan} onChange={setField} options={OPT_JENIS_KARYA} />
+                                  <EditInput label="Nomor Surat Keterangan" name="nomor_surat"         value={ef.nomor_surat}         onChange={setField} />
+                                  <EditInput label="Tanggal Surat"          name="tanggal_surat"       value={ef.tanggal_surat}       onChange={setField} type="date" />
+                                  <div className="col-span-2"><EditInput label="Deskripsi Karya" name="deskripsi_karya" value={ef.deskripsi_karya} onChange={setField} /></div>
+                                  <div className="col-span-2"><EditInput label="Manfaat Karya"   name="manfaat_karya"   value={ef.manfaat_karya}   onChange={setField} /></div>
+                                </>
+                              ) : (
+                                <>
+                                  <InfoRow label="Nama Lembaga/Mitra" value={pengajuan.nama_lembaga} />
+                                  <InfoRow label="Jenis Karya"        value={pengajuan.jenis_karya_teks} />
+                                  <InfoRow label="Nomor Surat"        value={pengajuan.nomor_surat} />
+                                  <InfoRow label="Tanggal Surat"      value={formatTanggal(pengajuan.tanggal_surat)} />
+                                  <div className="col-span-2"><InfoRow label="Deskripsi Karya" value={pengajuan.deskripsi_karya} /></div>
+                                  <div className="col-span-2"><InfoRow label="Manfaat Karya"   value={pengajuan.manfaat_karya} /></div>
+                                </>
+                              )}
+                            </div>
+                          </>
+                        )}
+
+                        {/* Kelompok */}
+                        {efKelompok && (
+                          <>
+                            <SectionTitle>Data Kelompok</SectionTitle>
+                            <div className="grid grid-cols-2 gap-5 mb-4">
+                              {editOpen ? (
+                                <>
+                                  <EditInput label="Nama Lengkap Ketua"  name="nama_ketua"          value={ef.nama_ketua}          onChange={setField} />
+                                  <EditInput label="Peran Pengeclaim"    name="peran_pengeclaim"    value={ef.peran_pengeclaim}    onChange={setField} />
+                                  <div className="col-span-2"><EditInput label="Keterangan Kelompok" name="keterangan_kelompok" value={ef.keterangan_kelompok} onChange={setField} /></div>
+                                </>
+                              ) : (
+                                <>
+                                  <InfoRow label="Nama Ketua" value={pengajuan.nama_ketua} />
+                                  <InfoRow label="Peran Anda" value={pengajuan.peran_pengeclaim} />
+                                  {pengajuan.keterangan_kelompok && <div className="col-span-2"><InfoRow label="Keterangan Kelompok" value={pengajuan.keterangan_kelompok} /></div>}
+                                </>
+                              )}
+                            </div>
+                            {anggota.length > 0 && (
+                              <div>
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Anggota Lainnya</p>
+                                <div className="space-y-1.5">
+                                  {anggota.map((a, i) => (
+                                    <div key={i} className="flex gap-4 text-sm bg-gray-50 rounded-xl px-4 py-2.5">
+                                      <span className="text-gray-400 font-semibold w-5">{i + 2}.</span>
+                                      <span className="font-semibold text-gray-900">{a.nama}</span>
+                                      <span className="text-gray-400 font-mono">{a.nim}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        )}
+
+                        {/* Dokumen */}
+                        <SectionTitle>Dokumen Tambahan</SectionTitle>
+                        <div className="grid grid-cols-2 gap-5">
+                          <FileLink label="Foto Penyerahan" path={pengajuan.foto_penyerahan_path} />
+                          <FileLink label="Dokumen Lainnya" path={pengajuan.dokumen_lainnya_path} />
+                        </div>
+                      </>
+                    );
+                  })() : (
                     <div className="space-y-4">
                       <SectionTitle>Info Kegiatan</SectionTitle>
                       <div className="grid grid-cols-2 gap-5">
@@ -536,63 +716,6 @@ export default function KlaimDetailPage() {
         </main>
       </div>
 
-      {/* Modal Edit Pengajuan */}
-      {editOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={() => setEditOpen(false)}>
-          <div className="bg-white rounded-[28px] shadow-2xl w-full max-w-lg p-8 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <h3 className="text-[16px] font-black text-gray-900 mb-1">Edit Data Pengajuan</h3>
-            <p className="text-[12px] text-gray-400 mb-6">Hanya tersedia saat klaim belum diverifikasi. File tidak dapat diubah.</p>
-
-            <div className="space-y-4">
-              {[
-                { key: "nama_kegiatan",     label: "Nama Lengkap Kegiatan" },
-                { key: "tahun_kegiatan",    label: "Tahun Kegiatan" },
-                { key: "tingkatan",         label: "Tingkatan" },
-                { key: "kategori_kegiatan", label: "Kategori Kegiatan" },
-                { key: "url_penyelenggara", label: "URL Penyelenggara" },
-              ].map(({ key, label }) => (
-                <div key={key}>
-                  <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-1.5">{label}</p>
-                  <input
-                    type="text"
-                    value={editForm[key] ?? ""}
-                    onChange={e => setEditForm(f => ({ ...f, [key]: e.target.value }))}
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-[14px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#046137]/30 transition-all"
-                  />
-                </div>
-              ))}
-              <div>
-                <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Keterangan</p>
-                <textarea
-                  rows={3}
-                  value={editForm.keterangan ?? ""}
-                  onChange={e => setEditForm(f => ({ ...f, keterangan: e.target.value }))}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-[14px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#046137]/30 resize-none transition-all"
-                />
-              </div>
-            </div>
-
-            {saveMsg && (
-              <p className={`text-[13px] font-semibold mt-4 ${saveMsg.includes("Gagal") ? "text-red-500" : "text-[#046137]"}`}>
-                {saveMsg}
-              </p>
-            )}
-
-            <div className="flex items-center justify-end gap-3 mt-6">
-              <button onClick={() => setEditOpen(false)} className="px-5 py-2.5 text-[12px] font-bold text-gray-500 hover:text-gray-900 transition-colors">
-                Batal
-              </button>
-              <button
-                onClick={handleSaveEdit}
-                disabled={saving}
-                className="px-6 py-2.5 bg-[#046137] text-white text-[12px] font-black rounded-xl hover:bg-[#035230] disabled:opacity-50 transition-colors"
-              >
-                {saving ? "Menyimpan..." : "Simpan"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -25,9 +25,13 @@ export default function RewardDetailModal({ reward, onClose, onStatusUpdate }) {
 
   const handleStatus = async (status) => {
     setUpdating(true);
+    const opId = localStorage.getItem("operator_id");
     const res = await fetch(`${API}/reward-konfirmasi/${reward.id}/status`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(opId ? { "x-operator-id": opId } : {}),
+      },
       body: JSON.stringify({ status, catatan: catatan || null }),
     });
     setUpdating(false);
