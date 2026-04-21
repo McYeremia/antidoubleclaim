@@ -75,7 +75,7 @@ export default function OperatorLoginPage() {
         <div className="relative z-10 flex flex-col items-center text-center">
           <img src="/logo-ukdw.png" alt="UKDW" className="h-28 w-auto object-contain mb-8" />
           <div className="w-16 h-px bg-white/20 mb-8" />
-          <img src="/biro3.png" alt="Biro Kemahasiswaan" className="h-16 w-auto object-contain mb-10 opacity-90" />
+          <img src="/biro3-putih.png" alt="Biro Kemahasiswaan" className="h-16 w-auto object-contain mb-10 opacity-90" />
           <h2 className="text-white/90 text-[15px] font-bold tracking-[0.2em] uppercase mb-2">
             Portal Pengelola Sistem
           </h2>
@@ -96,7 +96,7 @@ export default function OperatorLoginPage() {
         <div className="flex lg:hidden items-center gap-4 mb-10">
           <img src="/logo-ukdw.png" alt="UKDW" className="h-14 w-auto object-contain" />
           <div className="w-px h-10 bg-gray-300" />
-          <img src="/biro3.png" alt="Biro Kemahasiswaan" className="h-10 w-auto object-contain" />
+          <img src="/biro3-putih.png" alt="Biro Kemahasiswaan" className="h-10 w-auto object-contain" />
         </div>
 
         <div className="w-full max-w-[400px]">
