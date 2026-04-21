@@ -1230,7 +1230,7 @@ function Step6({ data, onChange, nimInfo, errors }) {
       <div style={{ background: "#fffbeb", border: "1px solid #fcd34d", borderRadius: "10px", padding: "14px 16px" }}>
         <p style={{ fontSize: "12px", fontWeight: 700, color: "#92400e", marginBottom: "8px" }}>Persetujuan Pengajuan</p>
         <p style={{ fontSize: "11px", color: "#92400e", opacity: 0.8, lineHeight: 1.6, marginBottom: "8px" }}>
-          Link pengiriman data rekening akan dibuka setelah perhitungan penghargaan selesai. Jika tidak mengirimkan data rekening hingga batas waktu, pengajuan dinyatakan gugur pada periode tersebut.
+          Data pengajuan rekening dapat di isi setelah pengajuan klaim ini disetujui.
         </p>
         <label style={{ display: "flex", alignItems: "flex-start", gap: "10px", cursor: "pointer" }}>
           <input

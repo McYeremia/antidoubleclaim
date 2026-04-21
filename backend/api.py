@@ -152,9 +152,9 @@ async def buat_periode(body: PeriodeCreate):
 @app.put("/periode/{periode_id}")
 async def ubah_status_periode(periode_id: int, status: str, x_operator_id: Optional[str] = Header(None)):
     op = _require_operator(x_operator_id)
-    ok = update_periode_status(periode_id, status)
-    if not ok:
-        raise HTTPException(status_code=400, detail="Status tidak valid. Gunakan 'aktif', 'tutup', atau 'ditutup'.")
+    result = update_periode_status(periode_id, status)
+    if not result["ok"]:
+        raise HTTPException(status_code=400, detail=result.get("alasan", "Gagal mengubah status periode."))
     insert_audit_log(op["id"], op["nama"], f"periode_{status}", "periode", periode_id, None)
     return {"success": True}
 
@@ -354,7 +354,7 @@ async def submit_pengajuan(
             fname    = f"{prefix}_{uuid.uuid4().hex}_{upload.filename}"
             fpath    = os.path.join(UPLOAD_FOLDER, fname)
             with open(fpath, "wb") as buf:
-                shutil.copyfileobj(upload.file, buf)
+                buf.write(contents)
             return fpath
 
         surat_tugas_path       = save_file(surat_tugas,        "surat_tugas")

@@ -75,16 +75,22 @@ export function InfoRow({ label, value }) {
 export function DocLink({ label, path }) {
   if (!path) return null;
   const filename = path.split(/[\\/]/).pop();
+  const match = filename.match(/^.+?_[0-9a-f]{32}_(.+)$/);
+  const displayName = match ? match[1] : filename;
   return (
-    <div>
+    <div className="min-w-0 overflow-hidden">
       <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{label}</p>
       <a
         href={`${API}/uploads/${filename}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-[13px] font-bold text-gray-900 underline underline-offset-2 hover:text-[#046137] mt-1 inline-block"
+        className="text-[13px] font-bold text-[#046137] hover:text-[#035230] mt-1 flex items-center gap-1.5 overflow-hidden transition-colors"
       >
-        {filename} ↗
+        <span className="truncate underline underline-offset-2">{displayName}</span>
+        <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}
+            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+        </svg>
       </a>
     </div>
   );

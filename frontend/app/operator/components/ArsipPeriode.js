@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { API, ARSIP_STATUS_STYLE, STATUS_BADGE, formatTanggal, ConfirmModal } from "./shared";
+import * as XLSX from "xlsx";
+import { API, ARSIP_STATUS_STYLE, STATUS_BADGE, KATEGORI_LABEL, formatTanggal, ConfirmModal } from "./shared";
 import ArsipDetailView from "./ArsipDetailView";
 
 export default function ArsipPeriode() {
@@ -55,9 +56,17 @@ export default function ArsipPeriode() {
       onConfirm:    async () => {
         setConfirmModal(null);
         setActionLoading(true);
-        const res = await fetch(`${API}/periode/${p.id}?status=ditutup`, { method: "PUT" });
+        const opId = localStorage.getItem("operator_id");
+        const res = await fetch(`${API}/periode/${p.id}?status=ditutup`, {
+          method: "PUT",
+          headers: opId ? { "x-operator-id": opId } : {},
+        });
         setActionLoading(false);
-        if (!res.ok) { alert("Gagal menutup periode."); return; }
+        if (!res.ok) {
+          const d = await res.json().catch(() => ({}));
+          alert(d.detail || "Gagal menutup periode.");
+          return;
+        }
         fetchPeriode();
         if (selected?.id === p.id) setSelected(prev => ({ ...prev, status: "ditutup" }));
       },
@@ -91,6 +100,46 @@ export default function ArsipPeriode() {
 
   const closable   = (p) => p.status === "aktif";
   const archivable = (p) => p.status === "tutup" || p.status === "ditutup";
+
+  const exportClaims = (data, periodeName) => {
+    const rows = data.map((c, i) => ({
+      "No.":           i + 1,
+      "ID Klaim":      c.id,
+      "Nama Lomba":    c.nama_lomba ?? "",
+      "Mahasiswa":     c.nama_display ?? "",
+      "Email":         c.mahasiswa_email ?? "",
+      "Tingkat":       c.tingkat ?? "",
+      "Peringkat":     c.peringkat ?? "",
+      "Status":        c.status ?? "",
+      "Tanggal":       c.tanggal ?? "",
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws["!cols"] = [{ wch: 5 }, { wch: 10 }, { wch: 35 }, { wch: 25 }, { wch: 28 }, { wch: 15 }, { wch: 15 }, { wch: 14 }, { wch: 14 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Klaim");
+    XLSX.writeFile(wb, `klaim_${periodeName}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+
+  const exportRewards = (data, periodeName) => {
+    const rows = data.map((r, i) => ({
+      "No.":                   i + 1,
+      "ID Klaim":              r.claim_id,
+      "Nama Ketua":            r.nama_ketua ?? "",
+      "NIM":                   r.nim ?? "",
+      "Nama Lomba":            r.nama_lomba ?? "",
+      "Kategori":              KATEGORI_LABEL[r.kategori_lomba] ?? r.kategori_lomba ?? "",
+      "Nama Pemilik Rekening": r.nama_pemilik_rekening ?? r.nama_rekening ?? "",
+      "Bank":                  r.bank ?? "",
+      "Nomor Rekening":        r.nomor_rekening ?? "",
+      "Estimasi Dana (Rp)":    r.estimasi_reward ?? "",
+      "Status Reward":         r.reward_status ?? "",
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws["!cols"] = [{ wch: 5 }, { wch: 10 }, { wch: 25 }, { wch: 14 }, { wch: 35 }, { wch: 22 }, { wch: 25 }, { wch: 12 }, { wch: 20 }, { wch: 20 }, { wch: 14 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Reward");
+    XLSX.writeFile(wb, `reward_${periodeName}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
 
   if (detailItem) {
     return <ArsipDetailView detailItem={detailItem} rewards={rewards} onBack={() => setDetailItem(null)} />;
@@ -175,180 +224,196 @@ export default function ArsipPeriode() {
           </div>
         )}
 
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
-            {[{ key: "claims", label: `Klaim (${claims.length})` }, { key: "rewards", label: `Reward (${rewards.length})` }].map(tab => (
-              <button key={tab.key} onClick={() => { setActiveTab(tab.key); setSearchQuery(""); }}
-                className={`px-5 py-2 rounded-lg text-[12px] font-black transition-all ${
-                  activeTab === tab.key ? "bg-white shadow text-gray-900" : "text-gray-500 hover:text-gray-700"
-                }`}>
-                {tab.label}
-              </button>
-            ))}
-          </div>
-          <div className="relative">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input
-              type="text" value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder={activeTab === "claims" ? "Cari nama lomba, mahasiswa, email..." : "Cari nama lomba, rekening, bank..."}
-              className="pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-[13px] text-gray-900 w-[340px] focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all placeholder:text-gray-300"
-            />
-            {searchQuery && (
-              <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-600 transition-colors">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            )}
-          </div>
-        </div>
-
-        {activeTab === "claims" && (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            {dataLoading ? (
-              <div className="flex items-center justify-center py-16">
-                <svg className="w-7 h-7 text-gray-200 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
+        {(() => {
+          const q = searchQuery.toLowerCase().trim();
+          const filteredClaims  = q ? claims.filter(c =>
+            (c.nama_lomba || "").toLowerCase().includes(q) ||
+            (c.nama_display || "").toLowerCase().includes(q) ||
+            (c.mahasiswa_email || "").toLowerCase().includes(q) ||
+            (c.tingkat || "").toLowerCase().includes(q) ||
+            (c.peringkat || "").toLowerCase().includes(q) ||
+            (c.status || "").toLowerCase().includes(q) ||
+            String(c.id).includes(q)
+          ) : claims;
+          const filteredRewards = q ? rewards.filter(r =>
+            (r.nama_lomba || "").toLowerCase().includes(q) ||
+            (r.nama_rekening || "").toLowerCase().includes(q) ||
+            (r.nama_ketua || "").toLowerCase().includes(q) ||
+            (r.bank || "").toLowerCase().includes(q) ||
+            (r.nomor_rekening || "").toLowerCase().includes(q) ||
+            (r.reward_status || "").toLowerCase().includes(q) ||
+            String(r.claim_id).includes(q) ||
+            String(r.estimasi_reward || "").includes(q)
+          ) : rewards;
+          const currentData = activeTab === "claims" ? filteredClaims : filteredRewards;
+          const periodeName  = selected.nama.replace(/\s+/g, "_").toLowerCase();
+          return (
+            <>
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+                  {[{ key: "claims", label: `Klaim (${claims.length})` }, { key: "rewards", label: `Reward (${rewards.length})` }].map(tab => (
+                    <button key={tab.key} onClick={() => { setActiveTab(tab.key); setSearchQuery(""); }}
+                      className={`px-5 py-2 rounded-lg text-[12px] font-black transition-all ${
+                        activeTab === tab.key ? "bg-white shadow text-gray-900" : "text-gray-500 hover:text-gray-700"
+                      }`}>
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => activeTab === "claims" ? exportClaims(filteredClaims, periodeName) : exportRewards(filteredRewards, periodeName)}
+                    disabled={currentData.length === 0}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-[#046137] text-white text-[12px] font-black rounded-xl hover:bg-[#035230] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                    </svg>
+                    EXPORT EXCEL
+                  </button>
+                  <div className="relative">
+                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <input
+                      type="text" value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                      placeholder={activeTab === "claims" ? "Cari nama lomba, mahasiswa, email..." : "Cari nama lomba, rekening, bank..."}
+                      className="pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-[13px] text-gray-900 w-[280px] focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all placeholder:text-gray-300"
+                    />
+                    {searchQuery && (
+                      <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-600 transition-colors">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
-            ) : (() => {
-              const q = searchQuery.toLowerCase().trim();
-              const filtered = q ? claims.filter(c =>
-                (c.nama_lomba || "").toLowerCase().includes(q) ||
-                (c.nama_display || "").toLowerCase().includes(q) ||
-                (c.mahasiswa_email || "").toLowerCase().includes(q) ||
-                (c.tingkat || "").toLowerCase().includes(q) ||
-                (c.peringkat || "").toLowerCase().includes(q) ||
-                (c.status || "").toLowerCase().includes(q) ||
-                String(c.id).includes(q)
-              ) : claims;
-              return filtered.length === 0 ? (
-                <p className="text-center text-gray-400 text-[13px] py-12">
-                  {q ? `Tidak ada klaim yang cocok dengan "${searchQuery}".` : "Tidak ada klaim pada periode ini."}
-                </p>
-              ) : (
-                <table className="w-full text-sm text-left">
-                  <thead>
-                    <tr className="border-b border-gray-50">
-                      <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest w-16">ID</th>
-                      <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Nama Lomba</th>
-                      <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Mahasiswa</th>
-                      <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Status</th>
-                      <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Tanggal</th>
-                      <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {filtered.map(c => (
-                      <tr key={c.id} className="hover:bg-gray-50/60 transition-colors">
-                        <td className="px-6 py-4 font-mono text-[12px] text-gray-300 font-bold">#{c.id}</td>
-                        <td className="px-6 py-4">
-                          <p className="font-bold text-gray-900 text-[13px]">{c.nama_lomba}</p>
-                          <p className="text-[11px] text-gray-400 mt-0.5">{c.tingkat} · {c.peringkat}</p>
-                        </td>
-                        <td className="px-6 py-4">
-                          <p className="font-medium text-gray-900 text-[13px]">{c.nama_display}</p>
-                          <p className="text-[11px] font-mono text-gray-400 mt-0.5">{c.mahasiswa_email}</p>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                            STATUS_BADGE[c.status] ?? "bg-gray-100 text-gray-500"
-                          }`}>{c.status}</span>
-                        </td>
-                        <td className="px-6 py-4 text-[12px] text-gray-400">{formatTanggal(c.tanggal)}</td>
-                        <td className="px-6 py-4">
-                          <button onClick={() => setDetailItem(c)}
-                            className="px-3 py-1.5 rounded-lg text-[11px] font-black bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors uppercase tracking-wide">
-                            Detail
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              );
-            })()}
-          </div>
-        )}
 
-        {activeTab === "rewards" && (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            {dataLoading ? (
-              <div className="flex items-center justify-center py-16">
-                <svg className="w-7 h-7 text-gray-200 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-              </div>
-            ) : (() => {
-              const q = searchQuery.toLowerCase().trim();
-              const filtered = q ? rewards.filter(r =>
-                (r.nama_lomba || "").toLowerCase().includes(q) ||
-                (r.nama_rekening || "").toLowerCase().includes(q) ||
-                (r.nama_ketua || "").toLowerCase().includes(q) ||
-                (r.bank || "").toLowerCase().includes(q) ||
-                (r.nomor_rekening || "").toLowerCase().includes(q) ||
-                (r.reward_status || "").toLowerCase().includes(q) ||
-                String(r.claim_id).includes(q) ||
-                String(r.estimasi_reward || "").includes(q)
-              ) : rewards;
-              return filtered.length === 0 ? (
-                <p className="text-center text-gray-400 text-[13px] py-12">
-                  {q ? `Tidak ada reward yang cocok dengan "${searchQuery}".` : "Tidak ada data reward pada periode ini."}
-                </p>
-              ) : (
-                <table className="w-full text-sm text-left">
-                  <thead>
-                    <tr className="border-b border-gray-50">
-                      <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Nama Lomba</th>
-                      <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Rekening</th>
-                      <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Estimasi</th>
-                      <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Status</th>
-                      <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {filtered.map(r => {
-                      const claimForReward = claims.find(c => c.id === r.claim_id);
-                      return (
-                        <tr key={r.id} className="hover:bg-gray-50/60 transition-colors">
-                          <td className="px-6 py-4">
-                            <p className="font-bold text-gray-900 text-[13px]">{r.nama_lomba}</p>
-                            <p className="text-[11px] text-gray-400 mt-0.5">Klaim #{r.claim_id}</p>
-                          </td>
-                          <td className="px-6 py-4">
-                            <p className="font-medium text-gray-900 text-[13px]">{r.nama_rekening}</p>
-                            <p className="text-[11px] font-mono text-gray-400 mt-0.5">{r.bank} · {r.nomor_rekening}</p>
-                          </td>
-                          <td className="px-6 py-4 text-[12px] text-gray-700 font-semibold">{r.estimasi_reward || "—"}</td>
-                          <td className="px-6 py-4">
-                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                              r.reward_status === "selesai"  ? "bg-green-100 text-green-700"
-                              : r.reward_status === "diproses" ? "bg-[#d4ebe0] text-[#046137]"
-                              : "bg-orange-100 text-orange-600"
-                            }`}>{r.reward_status}</span>
-                          </td>
-                          <td className="px-6 py-4">
-                            {claimForReward && (
-                              <button onClick={() => setDetailItem(claimForReward)}
+              {activeTab === "claims" && (
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                  {dataLoading ? (
+                    <div className="flex items-center justify-center py-16">
+                      <svg className="w-7 h-7 text-gray-200 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                    </div>
+                  ) : filteredClaims.length === 0 ? (
+                    <p className="text-center text-gray-400 text-[13px] py-12">
+                      {q ? `Tidak ada klaim yang cocok dengan "${searchQuery}".` : "Tidak ada klaim pada periode ini."}
+                    </p>
+                  ) : (
+                    <table className="w-full text-sm text-left">
+                      <thead>
+                        <tr className="border-b border-gray-50">
+                          <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest w-16">ID</th>
+                          <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Nama Lomba</th>
+                          <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Mahasiswa</th>
+                          <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Status</th>
+                          <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Tanggal</th>
+                          <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest"></th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {filteredClaims.map(c => (
+                          <tr key={c.id} className="hover:bg-gray-50/60 transition-colors">
+                            <td className="px-6 py-4 font-mono text-[12px] text-gray-300 font-bold">#{c.id}</td>
+                            <td className="px-6 py-4">
+                              <p className="font-bold text-gray-900 text-[13px]">{c.nama_lomba}</p>
+                              <p className="text-[11px] text-gray-400 mt-0.5">{c.tingkat} · {c.peringkat}</p>
+                            </td>
+                            <td className="px-6 py-4">
+                              <p className="font-medium text-gray-900 text-[13px]">{c.nama_display}</p>
+                              <p className="text-[11px] font-mono text-gray-400 mt-0.5">{c.mahasiswa_email}</p>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                                STATUS_BADGE[c.status] ?? "bg-gray-100 text-gray-500"
+                              }`}>{c.status}</span>
+                            </td>
+                            <td className="px-6 py-4 text-[12px] text-gray-400">{formatTanggal(c.tanggal)}</td>
+                            <td className="px-6 py-4">
+                              <button onClick={() => setDetailItem(c)}
                                 className="px-3 py-1.5 rounded-lg text-[11px] font-black bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors uppercase tracking-wide">
                                 Detail
                               </button>
-                            )}
-                          </td>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              )}
+
+              {activeTab === "rewards" && (
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                  {dataLoading ? (
+                    <div className="flex items-center justify-center py-16">
+                      <svg className="w-7 h-7 text-gray-200 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                    </div>
+                  ) : filteredRewards.length === 0 ? (
+                    <p className="text-center text-gray-400 text-[13px] py-12">
+                      {q ? `Tidak ada reward yang cocok dengan "${searchQuery}".` : "Tidak ada data reward pada periode ini."}
+                    </p>
+                  ) : (
+                    <table className="w-full text-sm text-left">
+                      <thead>
+                        <tr className="border-b border-gray-50">
+                          <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Nama Lomba</th>
+                          <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Rekening</th>
+                          <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Estimasi</th>
+                          <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Status</th>
+                          <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest"></th>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              );
-            })()}
-          </div>
-        )}
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {filteredRewards.map(r => {
+                          const claimForReward = claims.find(c => c.id === r.claim_id);
+                          return (
+                            <tr key={r.id} className="hover:bg-gray-50/60 transition-colors">
+                              <td className="px-6 py-4">
+                                <p className="font-bold text-gray-900 text-[13px]">{r.nama_lomba}</p>
+                                <p className="text-[11px] text-gray-400 mt-0.5">Klaim #{r.claim_id}</p>
+                              </td>
+                              <td className="px-6 py-4">
+                                <p className="font-medium text-gray-900 text-[13px]">{r.nama_rekening}</p>
+                                <p className="text-[11px] font-mono text-gray-400 mt-0.5">{r.bank} · {r.nomor_rekening}</p>
+                              </td>
+                              <td className="px-6 py-4 text-[12px] text-gray-700 font-semibold">{r.estimasi_reward || "—"}</td>
+                              <td className="px-6 py-4">
+                                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                                  r.reward_status === "selesai"  ? "bg-green-100 text-green-700"
+                                  : r.reward_status === "diproses" ? "bg-[#d4ebe0] text-[#046137]"
+                                  : "bg-orange-100 text-orange-600"
+                                }`}>{r.reward_status}</span>
+                              </td>
+                              <td className="px-6 py-4">
+                                {claimForReward && (
+                                  <button onClick={() => setDetailItem(claimForReward)}
+                                    className="px-3 py-1.5 rounded-lg text-[11px] font-black bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors uppercase tracking-wide">
+                                    Detail
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              )}
+            </>
+          );
+        })()}
+
       <ConfirmModal
         isOpen={!!confirmModal}
         title={confirmModal?.title ?? ""}

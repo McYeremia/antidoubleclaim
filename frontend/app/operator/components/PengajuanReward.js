@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import * as XLSX from "xlsx";
-import { API, KATEGORI_LABEL } from "./shared";
+import { API, KATEGORI_LABEL, ConfirmModal, AlertModal } from "./shared";
 import RewardSection from "./RewardSection";
 import RewardDetailModal from "./RewardDetailModal";
 
@@ -13,6 +13,9 @@ export default function PengajuanReward() {
   const [bermasalahTarget,  setBermasalahTarget]  = useState(null);
   const [bermasalahCatatan, setBermasalahCatatan] = useState("");
   const [bermasalahLoading, setBermasalahLoading] = useState(false);
+  const [confirmKirim,      setConfirmKirim]      = useState(null); // reward object
+  const [confirmKirimSemua, setConfirmKirimSemua] = useState(false);
+  const [alertModal,        setAlertModal]        = useState(null); // { title, message }
 
   const fetchRewards = async () => {
     setLoading(true);
@@ -34,29 +37,35 @@ export default function PengajuanReward() {
   const diproses = rewards.filter(r => r.reward_status === "diproses");
   const selesai  = rewards.filter(r => r.reward_status === "selesai");
 
-  const handleKirimReward = async (id) => {
-    if (!confirm("Konfirmasi bahwa dana penghargaan sudah dikirim ke rekening mahasiswa ini?")) return;
+  const opHeaders = () => {
+    const opId = localStorage.getItem("operator_id");
+    return {
+      "Content-Type": "application/json",
+      ...(opId ? { "x-operator-id": opId } : {}),
+    };
+  };
+
+  const doKirimReward = async (id) => {
     const res = await fetch(`${API}/reward-konfirmasi/${id}/status`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: opHeaders(),
       body: JSON.stringify({ status: "selesai" }),
     });
-    if (!res.ok) { alert("Gagal memperbarui status reward."); return; }
+    if (!res.ok) { setAlertModal({ title: "Gagal", message: "Gagal memperbarui status reward. Coba lagi." }); return; }
     fetchRewards();
   };
 
-  const handleKirimSemuaReward = async () => {
-    if (!confirm(`Konfirmasi bahwa dana penghargaan sudah dikirim ke SEMUA ${diproses.length} mahasiswa di bagian Approved?`)) return;
+  const doKirimSemuaReward = async () => {
     try {
       await Promise.all(diproses.map(r =>
         fetch(`${API}/reward-konfirmasi/${r.id}/status`, {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
+          headers: opHeaders(),
           body: JSON.stringify({ status: "selesai" }),
         })
       ));
     } catch {
-      alert("Beberapa reward gagal diperbarui.");
+      setAlertModal({ title: "Gagal", message: "Beberapa reward gagal diperbarui." });
     }
     fetchRewards();
   };
@@ -66,11 +75,11 @@ export default function PengajuanReward() {
     setBermasalahLoading(true);
     const res = await fetch(`${API}/reward-konfirmasi/${bermasalahTarget.id}/status`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: opHeaders(),
       body: JSON.stringify({ status: "dikembalikan", catatan: bermasalahCatatan }),
     });
     setBermasalahLoading(false);
-    if (!res.ok) { alert("Gagal mengirim notifikasi."); return; }
+    if (!res.ok) { setAlertModal({ title: "Gagal", message: "Gagal mengirim notifikasi. Coba lagi." }); return; }
     setBermasalahTarget(null);
     setBermasalahCatatan("");
     fetchRewards();
@@ -160,13 +169,13 @@ export default function PengajuanReward() {
             title="Approved"
             color="bg-[#f0f7f3]/30 text-[#046137] border-[#f0f7f3]"
             items={diproses}
-            onBulkKirim={handleKirimSemuaReward}
+            onBulkKirim={() => setConfirmKirimSemua(true)}
             onExport={() => exportToExcel(diproses, "reward_approved")}
             onSelectReward={setSelectedReward}
             rowActions={(r) => (
               <>
                 <button
-                  onClick={() => handleKirimReward(r.id)}
+                  onClick={() => setConfirmKirim(r)}
                   className="px-3 py-1.5 rounded-xl text-[11px] font-black bg-green-600 text-white hover:bg-green-700 transition-colors"
                 >
                   REWARD DIKIRIM
@@ -197,6 +206,34 @@ export default function PengajuanReward() {
           onStatusUpdate={fetchRewards}
         />
       )}
+
+      <ConfirmModal
+        isOpen={!!confirmKirim}
+        title="Konfirmasi Pengiriman Dana"
+        message={confirmKirim ? `Konfirmasi bahwa dana penghargaan sudah dikirim ke rekening ${confirmKirim.nama_ketua}?` : ""}
+        variant="success"
+        confirmLabel="YA, SUDAH DIKIRIM"
+        onConfirm={() => { const id = confirmKirim.id; setConfirmKirim(null); doKirimReward(id); }}
+        onCancel={() => setConfirmKirim(null)}
+      />
+
+      <ConfirmModal
+        isOpen={confirmKirimSemua}
+        title="Kirim Semua Dana?"
+        message={`Konfirmasi bahwa dana penghargaan sudah dikirim ke semua ${diproses.length} mahasiswa di bagian Approved.`}
+        variant="success"
+        confirmLabel="YA, SEMUA SUDAH DIKIRIM"
+        onConfirm={() => { setConfirmKirimSemua(false); doKirimSemuaReward(); }}
+        onCancel={() => setConfirmKirimSemua(false)}
+      />
+
+      <AlertModal
+        isOpen={!!alertModal}
+        title={alertModal?.title ?? ""}
+        message={alertModal?.message ?? ""}
+        variant="danger"
+        onClose={() => setAlertModal(null)}
+      />
 
       {bermasalahTarget && (
         <div
