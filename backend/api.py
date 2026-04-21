@@ -218,11 +218,11 @@ async def detail_claim(claim_id: int):
 
 @app.patch("/claims/{claim_id}/approve")
 async def approve(claim_id: int, background_tasks: BackgroundTasks, x_operator_id: Optional[str] = Header(None)):
+    _require_operator(x_operator_id)
     claim = get_claim_by_id(claim_id)
     if not claim:
         raise HTTPException(status_code=404, detail="Klaim tidak ditemukan")
-    op_id = int(x_operator_id) if x_operator_id and x_operator_id.isdigit() else None
-    approve_claim(claim_id, operator_id=op_id)
+    approve_claim(claim_id, operator_id=int(x_operator_id))
     background_tasks.add_task(kirim_email_klaim_disetujui, claim["mahasiswa_email"], claim["nama_lomba"])
     return {"message": "Klaim disetujui", "id": claim_id}
 
@@ -231,12 +231,12 @@ class DiscardBody(BaseModel):
 
 @app.delete("/claims/{claim_id}")
 async def discard(claim_id: int, background_tasks: BackgroundTasks, body: Optional[DiscardBody] = None, x_operator_id: Optional[str] = Header(None)):
+    _require_operator(x_operator_id)
     claim = get_claim_by_id(claim_id)
     if not claim:
         raise HTTPException(status_code=404, detail="Klaim tidak ditemukan")
-    catatan   = body.catatan if body else None
-    op_id     = int(x_operator_id) if x_operator_id and x_operator_id.isdigit() else None
-    reject_claim(claim_id, operator_id=op_id, catatan=catatan)
+    catatan = body.catatan if body else None
+    reject_claim(claim_id, operator_id=int(x_operator_id), catatan=catatan)
     background_tasks.add_task(kirim_email_klaim_tidak_lolos, claim["mahasiswa_email"], claim["nama_lomba"], catatan)
     return {"message": "Klaim ditolak", "id": claim_id}
 
@@ -530,7 +530,8 @@ async def list_rewards(email: Optional[str] = None):
     return [dict(zip(cols, row)) for row in rows]
 
 @app.patch("/reward-konfirmasi/{reward_id}/status")
-async def update_reward(reward_id: int, body: RewardStatusUpdate, background_tasks: BackgroundTasks):
+async def update_reward(reward_id: int, body: RewardStatusUpdate, background_tasks: BackgroundTasks, x_operator_id: Optional[str] = Header(None)):
+    _require_operator(x_operator_id)
     reward = get_reward_konfirmasi_by_id(reward_id)
     update_reward_status(reward_id, body.status, body.catatan)
     if reward:
@@ -625,15 +626,19 @@ class CreateOperatorRequest(BaseModel):
     email: str
     role: Optional[str] = "operator"
 
+def _require_operator(x_operator_id: Optional[str]):
+    """Raise 401/403 jika header tidak ada atau ID tidak ada di DB. Kembalikan data operator."""
+    if not x_operator_id or not x_operator_id.isdigit():
+        raise HTTPException(status_code=401, detail="Akses ditolak: header X-Operator-ID diperlukan")
+    op = get_operator_by_id(int(x_operator_id))
+    if not op:
+        raise HTTPException(status_code=403, detail="Akses ditolak: operator tidak ditemukan")
+    return op
+
 def _require_superadmin(x_operator_id: Optional[str]):
     """Raise 403 jika requester bukan superadmin."""
-    if not x_operator_id:
-        raise HTTPException(status_code=403, detail="Akses ditolak: header X-Operator-ID diperlukan")
-    try:
-        op = get_operator_by_id(int(x_operator_id))
-    except ValueError:
-        op = None
-    if not op or op.get("role") != "superadmin":
+    op = _require_operator(x_operator_id)
+    if op.get("role") != "superadmin":
         raise HTTPException(status_code=403, detail="Akses ditolak: hanya Super Admin yang dapat melakukan ini")
 
 @app.post("/login-operator")
