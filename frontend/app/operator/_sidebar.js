@@ -38,8 +38,8 @@ export function OperatorTopbar() {
   const [periodeLabel, setPeriodeLabel] = useState(null);
 
   useEffect(() => {
-    setOperatorNama(sessionStorage.getItem("operator_nama") || "Operator");
-    setOperatorRole(sessionStorage.getItem("operator_role") || "operator");
+    setOperatorNama(localStorage.getItem("operator_nama") || "Operator");
+    setOperatorRole(localStorage.getItem("operator_role") || "operator");
     fetch("http://127.0.0.1:8000/periode/aktif")
       .then(r => r.ok ? r.json() : { aktif: false })
       .then(p => setPeriodeLabel(p.aktif && p.periode?.nama ? p.periode.nama : null))
@@ -47,9 +47,9 @@ export function OperatorTopbar() {
   }, []);
 
   const handleLogout = () => {
-    ["role","operator_id","operator_nama","operator_username","operator_role"]
-      .forEach(k => sessionStorage.removeItem(k));
-    router.push("/");
+    ["role","operator_id","operator_nama","operator_username","operator_role","operator_login_at"]
+      .forEach(k => localStorage.removeItem(k));
+    router.push("/portal");
   };
 
   const isSuperAdmin = operatorRole === "superadmin";
@@ -108,11 +108,11 @@ export function OperatorTopbar() {
 
 export default function OperatorSidebar({ activeKey = "claim" }) {
   const isSuperAdmin = typeof window !== "undefined"
-    ? sessionStorage.getItem("operator_role") === "superadmin"
+    ? localStorage.getItem("operator_role") === "superadmin"
     : false;
   const [superAdmin, setSuperAdmin] = useState(false);
   useEffect(() => {
-    setSuperAdmin(sessionStorage.getItem("operator_role") === "superadmin");
+    setSuperAdmin(localStorage.getItem("operator_role") === "superadmin");
   }, []);
 
   const menus = [
@@ -130,9 +130,7 @@ export default function OperatorSidebar({ activeKey = "claim" }) {
       {/* Logo */}
       <div className="px-7 pt-9 pb-8">
         <Link href="/operator">
-          <p className="text-[22px] font-black text-white leading-none tracking-tight uppercase">
-            ANTI<br />DOUBLE<br />CLAIM
-          </p>
+          <img src="/logo_utama.png" alt="Anti Double Claim" className="h-20 w-auto object-contain" />
           <p className="text-[10px] font-semibold text-white/50 mt-2.5 tracking-widest uppercase">Portal Pengelola</p>
         </Link>
       </div>
