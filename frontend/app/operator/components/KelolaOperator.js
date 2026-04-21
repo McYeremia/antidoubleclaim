@@ -5,7 +5,7 @@ import { API, ConfirmModal } from "./shared";
 
 const ROLE_BADGE = {
   superadmin: "bg-purple-100 text-purple-700",
-  operator:   "bg-blue-100 text-blue-700",
+  operator:   "bg-[#d4ebe0] text-[#046137]",
 };
 
 export default function KelolaOperator({ operatorId }) {
@@ -84,7 +84,7 @@ export default function KelolaOperator({ operatorId }) {
         </div>
         <button
           onClick={() => { setShowForm(v => !v); setFormError(""); }}
-          className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white text-[13px] font-bold rounded-xl hover:bg-gray-700 transition-all hover:scale-105 mt-1"
+          className="flex items-center gap-2 px-5 py-2.5 bg-[#046137] text-white text-[13px] font-bold rounded-xl hover:bg-[#035230] transition-all hover:scale-105 mt-1"
         >
           {showForm ? "BATALKAN" : "+ TAMBAH OPERATOR"}
         </button>
@@ -127,7 +127,7 @@ export default function KelolaOperator({ operatorId }) {
               <button
                 type="submit"
                 disabled={saving}
-                className="ml-auto px-10 py-3.5 rounded-2xl text-[14px] font-black bg-gray-900 text-white hover:bg-gray-700 transition-all shadow-xl shadow-gray-200"
+                className="ml-auto px-10 py-3.5 rounded-2xl text-[14px] font-black bg-[#046137] text-white hover:bg-[#035230] transition-all shadow-xl shadow-gray-200"
               >
                 {saving ? "MENYIMPAN..." : "SIMPAN OPERATOR"}
               </button>

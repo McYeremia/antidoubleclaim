@@ -7,7 +7,7 @@ import OperatorSidebar, { OperatorTopbar } from "../_sidebar";
 import { ConfirmModal } from "../components/shared";
 
 const STATUS_STYLE = {
-  "belum dicek":    "bg-blue-100 text-blue-700",
+  "belum dicek":    "bg-[#d4ebe0] text-[#046137]",
   "perlu ditinjau": "bg-orange-100 text-orange-700",
   "sudah dicek":    "bg-green-100 text-green-700",
 };
@@ -143,7 +143,7 @@ function FileLink({ label, path }) {
     <div>
       <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{label}</p>
       <a href={url} target="_blank" rel="noopener noreferrer"
-         className="text-[13px] font-bold text-gray-900 underline underline-offset-4 hover:text-blue-600 mt-1 inline-block transition-colors">
+         className="text-[13px] font-bold text-gray-900 underline underline-offset-4 hover:text-[#046137] mt-1 inline-block transition-colors">
         {filename} ↗
       </a>
     </div>
@@ -273,7 +273,7 @@ function PengajuanDetail({ p, onSaved }) {
                 BATAL
               </button>
               <button onClick={handleSave} disabled={saving}
-                className="px-6 py-2 text-[12px] font-black rounded-xl bg-gray-900 text-white hover:bg-gray-700 disabled:opacity-50 transition-all shadow-lg shadow-gray-200">
+                className="px-6 py-2 text-[12px] font-black rounded-xl bg-[#046137] text-white hover:bg-[#035230] disabled:opacity-50 transition-all shadow-lg shadow-green-100">
                 {saving ? "MENYIMPAN..." : "SIMPAN PERUBAHAN"}
               </button>
             </>
@@ -420,7 +420,7 @@ function PengajuanDetail({ p, onSaved }) {
                 <div className="col-span-2 sm:col-span-3">
                   <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">URL Website Penyelenggara</p>
                   <a href={p.url_penyelenggara} target="_blank" rel="noopener noreferrer"
-                     className="text-[13px] font-bold text-gray-900 underline underline-offset-4 hover:text-blue-600 transition-colors break-all">
+                     className="text-[13px] font-bold text-gray-900 underline underline-offset-4 hover:text-[#046137] transition-colors break-all">
                     {p.url_penyelenggara || "—"}
                   </a>
                 </div>
@@ -493,7 +493,7 @@ function PengajuanDetail({ p, onSaved }) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {anggota.map((a, i) => (
                     <div key={i} className="flex items-center gap-4 bg-white rounded-xl p-3 shadow-sm border border-gray-100">
-                      <div className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center text-[11px] font-black text-white shrink-0">
+                      <div className="w-8 h-8 rounded-lg bg-[#046137] flex items-center justify-center text-[11px] font-black text-white shrink-0">
                         {i + 2}
                       </div>
                       <div className="truncate">
@@ -520,10 +520,10 @@ function PengajuanDetail({ p, onSaved }) {
 
       {/* Estimasi Reward */}
       {(d.estimasi_reward != null || editing) && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="bg-[#f0f7f3] border border-[#d4ebe0] rounded-2xl px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <p className="text-[10px] font-bold text-amber-600 uppercase tracking-[0.18em]">Estimasi Dana Penghargaan</p>
-            <p className="text-[11px] text-amber-500 mt-0.5">
+            <p className="text-[10px] font-bold text-[#046137] uppercase tracking-[0.18em]">Estimasi Dana Penghargaan</p>
+            <p className="text-[11px] text-[#046137] opacity-70 mt-0.5">
               SK Rektor 078/B.02/UKDW/2023 ·{" "}
               {d.kategori_simkatmawa === "lomba_mandiri_puspresnas" ? "PUSPRESNAS (DIKTI)" : "Non PUSPRESNAS"}
             </p>
@@ -531,7 +531,7 @@ function PengajuanDetail({ p, onSaved }) {
           {editing ? (
             <div className="flex items-center gap-2">
               {autoEstimasi && (
-                <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest bg-blue-50 px-2 py-0.5 rounded-full">AUTO</span>
+                <span className="text-[10px] font-black text-[#046137] uppercase tracking-widest bg-[#d4ebe0] px-2 py-0.5 rounded-full">AUTO</span>
               )}
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] font-semibold text-gray-500">Rp</span>
@@ -539,7 +539,7 @@ function PengajuanDetail({ p, onSaved }) {
                   type="number"
                   value={d.estimasi_reward ?? ""}
                   onChange={e => set("estimasi_reward", e.target.value)}
-                  className="w-52 pl-9 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-[15px] font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all text-right"
+                  className="w-52 pl-9 pr-4 py-2.5 bg-white border border-[#d4ebe0] rounded-xl text-[15px] font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#046137] transition-all text-right"
                 />
               </div>
               {!autoEstimasi && (
@@ -549,14 +549,14 @@ function PengajuanDetail({ p, onSaved }) {
                     const hasil = hitungEstimasi(form);
                     if (hasil !== null) set("estimasi_reward", String(hasil));
                   }}
-                  className="text-[10px] font-black text-gray-400 hover:text-gray-900 uppercase tracking-widest underline"
+                  className="text-[10px] font-black text-[#046137] hover:text-[#035230] uppercase tracking-widest underline"
                 >
                   Reset Auto
                 </button>
               )}
             </div>
           ) : (
-            <p className="text-[22px] font-black text-amber-700 tabular-nums">
+            <p className="text-[22px] font-black text-[#046137] tabular-nums">
               {d.estimasi_reward != null ? "Rp " + Number(d.estimasi_reward).toLocaleString("id-ID") : "—"}
             </p>
           )}
@@ -653,7 +653,7 @@ export default function DetailKlaim() {
       <div className="bg-white p-12 rounded-[32px] shadow-xl text-center border border-gray-100 max-w-sm">
         <p className="text-[16px] font-black text-gray-900 mb-2 uppercase">Klaim Tidak Ditemukan</p>
         <p className="text-[13px] text-gray-400 font-medium mb-8">Data yang Anda cari mungkin telah dihapus atau ID salah.</p>
-        <Link href="/operator" className="inline-block px-8 py-3 bg-gray-900 text-white rounded-xl text-[12px] font-black hover:bg-gray-700 transition-all">← KEMBALI</Link>
+        <Link href="/operator" className="inline-block px-8 py-3 bg-[#046137] text-white rounded-xl text-[12px] font-black hover:bg-[#035230] transition-all">← KEMBALI</Link>
       </div>
     </div>
   );
@@ -687,7 +687,7 @@ export default function DetailKlaim() {
             {canAct && (
               <div className="flex gap-2">
                 <button onClick={handleApprove} disabled={actionLoading}
-                  className="px-6 py-2.5 rounded-xl text-[12px] font-black bg-gray-900 text-white hover:bg-gray-700 disabled:opacity-50 transition-all shadow-lg shadow-gray-200">
+                  className="px-6 py-2.5 rounded-xl text-[12px] font-black bg-[#046137] text-white hover:bg-[#035230] disabled:opacity-50 transition-all shadow-lg shadow-green-100">
                   {actionLoading ? "PROCESSING..." : "APPROVE"}
                 </button>
                 <button onClick={handleDiscard} disabled={actionLoading}
@@ -728,7 +728,7 @@ export default function DetailKlaim() {
               <SectionTitle>Preview Sertifikat Digital</SectionTitle>
               <CertPreview url={fileUrl} filename={claim.sertifikat_filename} />
               <a href={fileUrl} target="_blank" rel="noopener noreferrer"
-                 className="mt-6 inline-flex items-center gap-2 text-[12px] font-black text-gray-900 underline underline-offset-4 hover:text-blue-600 transition-colors uppercase tracking-widest">
+                 className="mt-6 inline-flex items-center gap-2 text-[12px] font-black text-gray-900 underline underline-offset-4 hover:text-[#046137] transition-colors uppercase tracking-widest">
                 BUKA DALAM TAB BARU
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />

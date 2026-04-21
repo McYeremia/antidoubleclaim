@@ -78,7 +78,7 @@ export default function RewardSection({
                     {rowActions && rowActions(r)}
                     <button
                       onClick={() => onSelectReward(r)}
-                      className="px-4 py-1.5 rounded-xl text-[11px] font-black bg-gray-900 text-white hover:bg-gray-700 transition-all hover:scale-105"
+                      className="px-4 py-1.5 rounded-xl text-[11px] font-black bg-[#046137] text-white hover:bg-[#035230] transition-all hover:scale-105"
                     >
                       DETAIL
                     </button>

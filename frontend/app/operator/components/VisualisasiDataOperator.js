@@ -17,13 +17,13 @@ const FAK_SHORT = {
 };
 
 const CHART_COLORS = [
-  "bg-blue-500", "bg-violet-500", "bg-emerald-500", "bg-amber-400",
+  "bg-[#046137]", "bg-violet-500", "bg-emerald-500", "bg-amber-400",
   "bg-rose-400",  "bg-sky-400",   "bg-fuchsia-400", "bg-teal-500",
 ];
 
 const STATUS_CONFIG = {
   "Disetujui":      { bg: "bg-emerald-50", border: "border-emerald-100", text: "text-emerald-700", num: "text-emerald-800", dot: "bg-emerald-500" },
-  "Dalam Proses":   { bg: "bg-blue-50",    border: "border-blue-100",    text: "text-blue-700",    num: "text-blue-800",    dot: "bg-blue-400"    },
+  "Dalam Proses":   { bg: "bg-[#f0f7f3]", border: "border-[#d4ebe0]",   text: "text-[#046137]",   num: "text-[#035230]",   dot: "bg-[#046137]"   },
   "Perlu Ditinjau": { bg: "bg-amber-50",   border: "border-amber-100",   text: "text-amber-700",   num: "text-amber-800",   dot: "bg-amber-500"   },
   "Ditolak":        { bg: "bg-red-50",     border: "border-red-100",     text: "text-red-600",     num: "text-red-700",     dot: "bg-red-400"     },
 };
@@ -64,9 +64,9 @@ function BarChart({ data, formatLabel }) {
 function ProgressList({ data, total }) {
   if (!data || data.length === 0)
     return <p className="text-sm text-gray-400 text-center py-8">Belum ada data.</p>;
-  const bars  = ["bg-blue-500",   "bg-violet-500",  "bg-emerald-500", "bg-amber-400",  "bg-gray-300"];
-  const dots  = ["bg-blue-500",   "bg-violet-500",  "bg-emerald-500", "bg-amber-400",  "bg-gray-300"];
-  const texts = ["text-blue-600", "text-violet-600","text-emerald-600","text-amber-600","text-gray-400"];
+  const bars  = ["bg-[#046137]",      "bg-violet-500",  "bg-emerald-500", "bg-amber-400",  "bg-gray-300"];
+  const dots  = ["bg-[#046137]",      "bg-violet-500",  "bg-emerald-500", "bg-amber-400",  "bg-gray-300"];
+  const texts = ["text-[#046137]", "text-violet-600","text-emerald-600","text-amber-600","text-gray-400"];
   return (
     <div className="space-y-3.5">
       {data.map((item, i) => {
@@ -397,7 +397,7 @@ export default function VisualisasiDataOperator() {
         <button
           onClick={handleExport}
           disabled={exporting || loading}
-          className="flex items-center gap-2.5 px-5 py-2.5 bg-gray-900 text-white text-[13px] font-semibold rounded-xl hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex-shrink-0 mt-1"
+          className="flex items-center gap-2.5 px-5 py-2.5 bg-[#046137] text-white text-[13px] font-semibold rounded-xl hover:bg-[#035230] disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex-shrink-0 mt-1"
         >
           {exporting ? (
             <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">

@@ -132,7 +132,7 @@ export default function PengajuanReward() {
           <p className="text-5xl font-black text-gray-900 mt-3 leading-none">{menunggu.length}</p>
         </div>
         <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
-          <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em]">Diproses</p>
+          <p className="text-[10px] font-black text-[#046137] uppercase tracking-[0.2em]">Diproses</p>
           <p className="text-5xl font-black text-gray-900 mt-3 leading-none">{diproses.length}</p>
         </div>
         <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
@@ -158,7 +158,7 @@ export default function PengajuanReward() {
           />
           <RewardSection
             title="Approved"
-            color="bg-blue-50/30 text-blue-600 border-blue-50"
+            color="bg-[#f0f7f3]/30 text-[#046137] border-[#f0f7f3]"
             items={diproses}
             onBulkKirim={handleKirimSemuaReward}
             onExport={() => exportToExcel(diproses, "reward_approved")}

@@ -13,11 +13,11 @@ export const STATUS_LABEL = (status) => {
 export const STATUS_STYLE = (status) => {
   if (status === "sudah dicek") return "bg-green-100 text-green-700";
   if (status === "ditolak")     return "bg-red-100 text-red-700";
-  return "bg-blue-100 text-blue-700";
+  return "bg-[#d4ebe0] text-[#046137]";
 };
 
 export const REWARD_LABEL = {
-  menunggu:     "Sedang Diproses",
+  menunggu:     "Diproses",
   diproses:     "Data Diterima",
   selesai:      "Reward Dikirim",
   dikembalikan: "Perlu Diperbaiki",
@@ -56,7 +56,7 @@ export function InfoRow({ label, value }) {
   );
 }
 
-export function BarChart({ data, colorClass = "bg-blue-500", formatLabel }) {
+export function BarChart({ data, colorClass = "bg-[#046137]", formatLabel }) {
   if (!data || data.length === 0) return (
     <p className="text-sm text-gray-400 text-center py-8">Belum ada data.</p>
   );

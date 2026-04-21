@@ -6,7 +6,7 @@ import { API, formatTanggal, ConfirmModal } from "./shared";
 const STATE_STYLE = {
   aktif:       { badge: "bg-green-100 text-green-700",   label: "Aktif" },
   tutup:       { badge: "bg-gray-100 text-gray-500",     label: "Tutup" },
-  belum_mulai: { badge: "bg-blue-100 text-blue-600",     label: "Belum Dimulai" },
+  belum_mulai: { badge: "bg-[#d4ebe0] text-[#046137]",   label: "Belum Dimulai" },
   kadaluarsa:  { badge: "bg-red-100 text-red-600",       label: "Kadaluarsa" },
   diarsipkan:  { badge: "bg-purple-100 text-purple-700", label: "Diarsipkan" },
 };
@@ -162,7 +162,7 @@ export default function PengaturanPeriode({ operatorNama }) {
         </div>
         <button
           onClick={openCreate}
-          className="flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white text-[13px] font-semibold rounded-xl hover:bg-gray-700 transition-colors"
+          className="flex items-center gap-2 px-4 py-2.5 bg-[#046137] text-white text-[13px] font-semibold rounded-xl hover:bg-[#035230] transition-colors"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -186,7 +186,7 @@ export default function PengaturanPeriode({ operatorNama }) {
                   type="text" value={form.nama}
                   onChange={e => setForm(f => ({ ...f, nama: e.target.value }))}
                   placeholder="Contoh: Periode 1 2025"
-                  className="block w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="block w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#046137]"
                 />
               </div>
               <div>
@@ -195,7 +195,7 @@ export default function PengaturanPeriode({ operatorNama }) {
                 </label>
                 <input type="date" value={form.tanggal_mulai}
                   onChange={e => setForm(f => ({ ...f, tanggal_mulai: e.target.value }))}
-                  className="block w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="block w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#046137]"
                 />
               </div>
               <div>
@@ -204,13 +204,13 @@ export default function PengaturanPeriode({ operatorNama }) {
                 </label>
                 <input type="date" value={form.tanggal_selesai}
                   onChange={e => setForm(f => ({ ...f, tanggal_selesai: e.target.value }))}
-                  className="block w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="block w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#046137]"
                 />
               </div>
             </div>
             <div className="flex items-center gap-3 pt-1">
               <button type="submit" disabled={saving}
-                className="px-5 py-2.5 bg-gray-900 text-white text-[13px] font-semibold rounded-xl hover:bg-gray-700 disabled:opacity-50 transition-colors">
+                className="px-5 py-2.5 bg-[#046137] text-white text-[13px] font-semibold rounded-xl hover:bg-[#035230] disabled:opacity-50 transition-colors">
                 {saving ? "Menyimpan..." : (editingPeriode ? "Simpan Perubahan" : "Simpan Periode")}
               </button>
               <button type="button" onClick={closeForm}

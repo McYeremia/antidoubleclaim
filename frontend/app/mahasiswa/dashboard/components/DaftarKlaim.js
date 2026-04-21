@@ -332,7 +332,7 @@ export default function DaftarKlaim({ session, search, onOpenForm, onTambahKlaim
                     <td className="px-5 py-4 text-[13px]" onClick={(e) => e.stopPropagation()}>
                       {claim.status === "sudah dicek" && (
                         rewardMap[claim.id] ? (
-                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${REWARD_STYLE[rewardMap[claim.id].reward_status] ?? "bg-gray-100 text-gray-600"}`}>
+                          <span className={`inline-flex items-center whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-semibold ${REWARD_STYLE[rewardMap[claim.id].reward_status] ?? "bg-gray-100 text-gray-600"}`}>
                             {REWARD_LABEL[rewardMap[claim.id].reward_status] ?? rewardMap[claim.id].reward_status}
                           </span>
                         ) : (

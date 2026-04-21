@@ -34,7 +34,7 @@ function RewardDetailModal({ claim, reward, onClose }) {
             <p className="text-xs text-gray-400 mt-0.5">{claim.nama_lomba}</p>
           </div>
           <div className="flex items-center gap-3">
-            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${REWARD_STYLE[reward.reward_status] ?? "bg-gray-100 text-gray-600"}`}>
+            <span className={`whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-semibold ${REWARD_STYLE[reward.reward_status] ?? "bg-gray-100 text-gray-600"}`}>
               {REWARD_LABEL[reward.reward_status] ?? reward.reward_status}
             </span>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
@@ -193,7 +193,7 @@ export default function KonfirmasiReward({ session, initialClaimId = null, onCle
                   )}
                   {mode === "status" && (
                     <div className="flex items-center justify-end gap-2">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${REWARD_STYLE[reward?.reward_status] ?? "bg-gray-100 text-gray-600"}`}>
+                      <span className={`inline-flex items-center whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-semibold ${REWARD_STYLE[reward?.reward_status] ?? "bg-gray-100 text-gray-600"}`}>
                         {REWARD_LABEL[reward?.reward_status] ?? "—"}
                       </span>
                       <button

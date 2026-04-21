@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import OperatorSidebar, { OperatorTopbar } from "../../_sidebar";
 
 const STATUS_LABEL = {
-  "belum dicek":    { text: "Belum Dicek",    cls: "bg-blue-100 text-blue-700" },
+  "belum dicek":    { text: "Belum Dicek",    cls: "bg-[#d4ebe0] text-[#046137]" },
   "perlu ditinjau": { text: "Perlu Ditinjau", cls: "bg-orange-100 text-orange-700" },
   "sudah dicek":    { text: "Sudah Dicek",    cls: "bg-green-100 text-green-700" },
 };
@@ -29,8 +29,8 @@ function CertPanel({ claim, label, accent }) {
 
   const fileUrl  = `http://127.0.0.1:8000/uploads/${claim.sertifikat_filename}`;
   const isPdf    = claim.sertifikat_filename?.toLowerCase().endsWith(".pdf");
-  const accentBg = accent === "orange" ? "bg-orange-50 border-orange-200" : "bg-blue-50 border-blue-200";
-  const accentTxt = accent === "orange" ? "text-orange-600" : "text-blue-600";
+  const accentBg = accent === "orange" ? "bg-orange-50 border-orange-200" : "bg-[#f0f7f3] border-[#d4ebe0]";
+  const accentTxt = accent === "orange" ? "text-orange-600" : "text-[#046137]";
 
   return (
     <div className="flex-1 bg-white rounded-[28px] border border-gray-100 shadow-sm overflow-hidden">
@@ -80,7 +80,7 @@ function CertPanel({ claim, label, accent }) {
               className={`inline-flex w-full items-center justify-center gap-2 py-2.5 rounded-xl text-[12px] font-black uppercase tracking-widest border transition-all ${
                 accent === "orange"
                   ? "border-orange-200 text-orange-700 hover:bg-orange-50"
-                  : "border-blue-200 text-blue-700 hover:bg-blue-50"
+                  : "border-[#d4ebe0] text-[#046137] hover:bg-[#f0f7f3]"
               }`}>
           Buka Detail Klaim #{claim.id}
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -145,7 +145,7 @@ export default function ComparePage() {
     <div className="min-h-screen bg-[#f7f7f8] flex items-center justify-center p-4">
       <div className="bg-white p-12 rounded-[32px] shadow-xl text-center border border-gray-100 max-w-sm">
         <p className="text-[16px] font-black text-gray-900 mb-2 uppercase">Klaim Tidak Ditemukan</p>
-        <Link href="/operator" className="inline-block px-8 py-3 bg-gray-900 text-white rounded-xl text-[12px] font-black hover:bg-gray-700 transition-all mt-6">← Kembali</Link>
+        <Link href="/operator" className="inline-block px-8 py-3 bg-[#046137] text-white rounded-xl text-[12px] font-black hover:bg-[#035230] transition-all mt-6">← Kembali</Link>
       </div>
     </div>
   );
@@ -222,7 +222,7 @@ export default function ComparePage() {
                   <tr className="border-b border-gray-100">
                     <th className="text-left py-2 pr-6 text-[10px] font-black text-gray-400 uppercase tracking-widest w-32">Field</th>
                     <th className="text-left py-2 pr-6 text-[10px] font-black text-orange-400 uppercase tracking-widest">Klaim #{claimA.id}</th>
-                    <th className="text-left py-2 text-[10px] font-black text-blue-400 uppercase tracking-widest">Klaim #{claimB.id}</th>
+                    <th className="text-left py-2 text-[10px] font-black text-[#046137] uppercase tracking-widest">Klaim #{claimB.id}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
@@ -239,7 +239,7 @@ export default function ComparePage() {
                       <tr key={field}>
                         <td className="py-3 pr-6 text-[10px] font-black text-gray-400 uppercase tracking-widest align-top">{field}</td>
                         <td className={`py-3 pr-6 font-medium align-top ${same ? "text-gray-500" : "text-orange-700 font-bold"}`}>{valA || "—"}</td>
-                        <td className={`py-3 font-medium align-top ${same ? "text-gray-500" : "text-blue-700 font-bold"}`}>{valB || "—"}</td>
+                        <td className={`py-3 font-medium align-top ${same ? "text-gray-500" : "text-[#035230] font-bold"}`}>{valB || "—"}</td>
                       </tr>
                     );
                   })}
