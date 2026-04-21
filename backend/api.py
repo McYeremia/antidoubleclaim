@@ -49,6 +49,7 @@ app.add_middleware(
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
@@ -255,10 +256,14 @@ async def upload_certificate(
     try:
         print(f"--- Menerima upload: {nama_lomba} dari {mahasiswa_email} ---")
 
+        contents = await file.read()
+        if len(contents) > MAX_FILE_SIZE:
+            raise HTTPException(status_code=413, detail="Ukuran file melebihi batas maksimal 10 MB")
+
         unique_name   = f"{uuid.uuid4().hex}_{file.filename}"
         file_location = os.path.join(UPLOAD_FOLDER, unique_name)
         with open(file_location, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+            buffer.write(contents)
         print(f"File disimpan di: {file_location}")
 
         result = insert_claim(nama_lomba, tingkat, tanggal, peringkat, file_location,
@@ -325,6 +330,9 @@ async def submit_pengajuan(
         def save_file(upload: Optional[UploadFile], prefix: str) -> Optional[str]:
             if not upload or not upload.filename:
                 return None
+            contents = upload.file.read()
+            if len(contents) > MAX_FILE_SIZE:
+                raise HTTPException(status_code=413, detail=f"File '{upload.filename}' melebihi batas maksimal 10 MB")
             fname    = f"{prefix}_{uuid.uuid4().hex}_{upload.filename}"
             fpath    = os.path.join(UPLOAD_FOLDER, fname)
             with open(fpath, "wb") as buf:
@@ -465,10 +473,13 @@ async def submit_reward_konfirmasi(
         def save_file(upload: Optional[UploadFile], prefix: str) -> Optional[str]:
             if not upload or not upload.filename:
                 return None
+            contents = upload.file.read()
+            if len(contents) > MAX_FILE_SIZE:
+                raise HTTPException(status_code=413, detail=f"File '{upload.filename}' melebihi batas maksimal 10 MB")
             fname = f"{prefix}_{uuid.uuid4().hex}_{upload.filename}"
             fpath = os.path.join(UPLOAD_FOLDER, fname)
             with open(fpath, "wb") as buf:
-                shutil.copyfileobj(upload.file, buf)
+                buf.write(contents)
             return fpath
 
         data = {
@@ -584,9 +595,12 @@ async def resubmit_reward(
     def save_file(upload: Optional[UploadFile]) -> Optional[str]:
         if not upload or not upload.filename:
             return None
+        contents = upload.file.read()
+        if len(contents) > MAX_FILE_SIZE:
+            raise HTTPException(status_code=413, detail=f"File '{upload.filename}' melebihi batas maksimal 10 MB")
         path = os.path.join(UPLOAD_FOLDER, f"{uuid.uuid4().hex}_{upload.filename}")
         with open(path, "wb") as f:
-            shutil.copyfileobj(upload.file, f)
+            f.write(contents)
         return path
 
     data = {

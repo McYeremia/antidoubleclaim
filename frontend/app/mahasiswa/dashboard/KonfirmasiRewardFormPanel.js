@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 const API = "http://127.0.0.1:8000";
+const MAX_FILE_MB = 10;
 
 const _BULAN = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
 function formatTanggal(str) {
@@ -345,7 +346,13 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
 
   const handleFileChange = (e) => {
     const { name, files: fileList } = e.target;
-    setFiles(f => ({ ...f, [name]: fileList[0] || null }));
+    const file = fileList[0] || null;
+    if (file && file.size > MAX_FILE_MB * 1024 * 1024) {
+      setErrors(prev => ({ ...prev, [name]: `Ukuran file maksimal ${MAX_FILE_MB} MB` }));
+      e.target.value = "";
+      return;
+    }
+    setFiles(f => ({ ...f, [name]: file }));
     setErrors(prev => ({ ...prev, [name]: "" }));
   };
 
