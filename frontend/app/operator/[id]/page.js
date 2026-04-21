@@ -605,7 +605,7 @@ export default function DetailKlaim() {
 
   useEffect(() => { fetchAll(); }, [id]);
 
-  const opId = typeof window !== "undefined" ? sessionStorage.getItem("operator_id") : null;
+  const opId = typeof window !== "undefined" ? localStorage.getItem("operator_id") : null;
   const opHeaders = opId ? { "x-operator-id": opId } : {};
 
   const handleApprove = async () => {

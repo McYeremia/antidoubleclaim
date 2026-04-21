@@ -1,20 +1,34 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API          = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const SESSION_MS   = 8 * 60 * 60 * 1000; // 8 jam
+
+function isOperatorSessionValid() {
+  const loginAt = localStorage.getItem("operator_login_at");
+  if (!loginAt) return false;
+  return Date.now() - Number(loginAt) < SESSION_MS;
+}
 
 export default function OperatorLoginPage() {
   const router = useRouter();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [username,     setUsername]     = useState("");
+  const [password,     setPassword]     = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [error,        setError]        = useState("");
+  const [loading,      setLoading]      = useState(false);
+  const submitted = useRef(false);
+
+  useEffect(() => {
+    if (isOperatorSessionValid()) router.replace("/operator");
+  }, [router]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submitted.current) return;
+    submitted.current = true;
     setError("");
     setLoading(true);
     try {
@@ -26,17 +40,20 @@ export default function OperatorLoginPage() {
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         setError(data.detail || "Username atau password salah.");
+        submitted.current = false;
         return;
       }
       const { user } = await res.json();
-      sessionStorage.setItem("role",              "operator");
-      sessionStorage.setItem("operator_id",       String(user.id));
-      sessionStorage.setItem("operator_nama",     user.nama);
-      sessionStorage.setItem("operator_username", user.username);
-      sessionStorage.setItem("operator_role",     user.role);
+      localStorage.setItem("role",              "operator");
+      localStorage.setItem("operator_id",       String(user.id));
+      localStorage.setItem("operator_nama",     user.nama);
+      localStorage.setItem("operator_username", user.username);
+      localStorage.setItem("operator_role",     user.role);
+      localStorage.setItem("operator_login_at", String(Date.now()));
       router.push("/operator");
     } catch {
       setError("Tidak dapat terhubung ke server. Pastikan backend berjalan.");
+      submitted.current = false;
     } finally {
       setLoading(false);
     }
@@ -46,9 +63,8 @@ export default function OperatorLoginPage() {
     <main className="min-h-screen bg-[#f7f7f8] flex items-center justify-center px-4" style={{ fontFamily: "var(--font-poppins, sans-serif)" }}>
       <div className="w-full max-w-[440px]">
 
-        {/* Header */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-900 rounded-2xl mb-6 shadow-lg shadow-gray-200">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-[#046137] rounded-2xl mb-6 shadow-lg shadow-green-200">
             <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}
                 d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -57,11 +73,10 @@ export default function OperatorLoginPage() {
           <h1 className="text-[28px] font-black text-gray-900 leading-tight tracking-tight uppercase">
             PORTAL<br />PENGELOLA
           </h1>
-          <div className="h-1 w-10 bg-gray-900 mx-auto mt-4 rounded-full"></div>
+          <div className="h-1 w-10 bg-[#046137] mx-auto mt-4 rounded-full"></div>
           <p className="text-[12px] font-bold text-gray-400 mt-5 tracking-[0.2em] uppercase italic">Anti-Double Claim</p>
         </div>
 
-        {/* Card */}
         <div className="bg-white rounded-[32px] p-10 shadow-2xl shadow-gray-200/50 border border-gray-100">
           <form onSubmit={handleSubmit} className="space-y-6">
 
@@ -76,7 +91,7 @@ export default function OperatorLoginPage() {
                 value={username}
                 onChange={(e) => { setUsername(e.target.value); setError(""); }}
                 placeholder="Masukkan username"
-                className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-[14px] text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all"
+                className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-[14px] text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#046137] transition-all"
               />
             </div>
 
@@ -92,12 +107,12 @@ export default function OperatorLoginPage() {
                   value={password}
                   onChange={(e) => { setPassword(e.target.value); setError(""); }}
                   placeholder="Masukkan password"
-                  className="w-full px-4 py-3.5 pr-12 bg-gray-50 border border-gray-200 rounded-2xl text-[14px] text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all"
+                  className="w-full px-4 py-3.5 pr-12 bg-gray-50 border border-gray-200 rounded-2xl text-[14px] text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#046137] transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(v => !v)}
-                  className="absolute inset-y-0 right-0 flex items-center px-4 text-gray-400 hover:text-gray-900 transition-colors"
+                  className="absolute inset-y-0 right-0 flex items-center px-4 text-gray-400 hover:text-[#046137] transition-colors"
                   tabIndex={-1}
                 >
                   {showPassword ? (
@@ -130,7 +145,7 @@ export default function OperatorLoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-4 bg-gray-900 hover:bg-gray-700 disabled:opacity-50 text-white text-[14px] font-bold rounded-2xl transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-gray-200"
+              className="w-full py-4 bg-[#046137] hover:bg-[#035230] disabled:opacity-50 text-white text-[14px] font-bold rounded-2xl transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-green-200"
             >
               {loading ? (
                 <div className="flex items-center justify-center gap-2">
@@ -148,7 +163,7 @@ export default function OperatorLoginPage() {
 
         <p className="text-center text-[11px] text-gray-400 font-medium mt-10 uppercase tracking-widest leading-relaxed">
           Halaman ini hanya untuk pengelola sistem.<br />
-          &copy; 2026 Kemahasiswaan UKDW
+          &copy; {new Date().getFullYear()} Kemahasiswaan UKDW
         </p>
 
       </div>

@@ -1,23 +1,47 @@
 "use client";
 
-import { useState } from "react";
-import { signIn } from "next-auth/react";
+import { useState, useEffect, useRef } from "react";
+import { signIn, useSession } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
+
+const ERROR_MAP = {
+  OAuthAccountNotLinked: "Akun ini sudah terdaftar dengan metode lain.",
+  OAuthSignin:           "Gagal memulai proses login Google.",
+  OAuthCallback:         "Terjadi kesalahan saat kembali dari Google.",
+  Callback:              "Terjadi kesalahan saat memproses login.",
+  AccessDenied:          "Akun Anda tidak terdaftar. Gunakan email @students.ukdw.ac.id.",
+  Default:               "Login gagal. Pastikan menggunakan email @students.ukdw.ac.id.",
+};
 
 export default function LoginPage() {
+  const { status } = useSession();
+  const router     = useRouter();
+  const params     = useSearchParams();
   const [loading, setLoading] = useState(false);
+  const submitted  = useRef(false);
 
-  const handleGoogleLogin = async () => {
+  useEffect(() => {
+    if (status === "authenticated") router.replace("/mahasiswa/dashboard");
+  }, [status, router]);
+
+  const errorCode = params.get("error");
+  const errorMsg  = errorCode ? (ERROR_MAP[errorCode] ?? ERROR_MAP.Default) : null;
+
+  const handleGoogleLogin = () => {
+    if (submitted.current || loading) return;
+    submitted.current = true;
     setLoading(true);
-    await signIn("google", { callbackUrl: "/mahasiswa/dashboard" });
+    signIn("google", { callbackUrl: "/mahasiswa/dashboard" });
   };
+
+  if (status === "loading" || status === "authenticated") return null;
 
   return (
     <main className="min-h-screen bg-[#f7f7f8] flex items-center justify-center px-4" style={{ fontFamily: "var(--font-poppins, sans-serif)" }}>
       <div className="bg-white rounded-[32px] shadow-2xl shadow-gray-200/50 w-full max-w-[440px] p-12 border border-gray-100">
 
-        {/* Logo / Judul */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-900 rounded-2xl mb-6 shadow-lg shadow-gray-200">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-[#046137] rounded-2xl mb-6 shadow-lg shadow-green-200">
             <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}
                 d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
@@ -26,22 +50,32 @@ export default function LoginPage() {
           <h1 className="text-[32px] font-black text-gray-900 leading-tight tracking-tight uppercase">
             ANTI<br />DOUBLE<br />CLAIM
           </h1>
-          <div className="h-1 w-12 bg-gray-900 mx-auto mt-6 rounded-full"></div>
+          <div className="h-1 w-12 bg-[#046137] mx-auto mt-6 rounded-full"></div>
           <p className="text-[13px] font-semibold text-gray-400 mt-6 tracking-widest uppercase italic">Sistem Deteksi Klaim Ganda</p>
         </div>
 
         <div className="space-y-6">
-          <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 text-center">
+          {errorMsg && (
+            <div className="flex items-center gap-3 px-4 py-3.5 bg-red-50 border border-red-100 rounded-2xl">
+              <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-[13px] font-bold text-red-600">{errorMsg}</p>
+            </div>
+          )}
+
+          <div className="bg-[#f0f7f3] rounded-2xl p-6 border border-[#d4ebe0] text-center">
             <p className="text-[13px] text-gray-500 leading-relaxed">
               Gunakan akun Google institusi Anda<br />
-              <span className="font-bold text-gray-900">@students.ukdw.ac.id</span>
+              <span className="font-bold text-[#046137]">@students.ukdw.ac.id</span>
             </p>
           </div>
 
           <button
             onClick={handleGoogleLogin}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-3 py-4 bg-gray-900 hover:bg-gray-700 text-white rounded-2xl text-[14px] font-bold transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-60 shadow-xl shadow-gray-200"
+            className="w-full flex items-center justify-center gap-3 py-4 bg-[#046137] hover:bg-[#035230] text-white rounded-2xl text-[14px] font-bold transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-60 shadow-xl shadow-green-200"
           >
             {!loading && (
               <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -64,7 +98,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-[11px] text-gray-300 font-medium mt-10 uppercase tracking-widest">
-          &copy; 2026 Universitas Kristen Duta Wacana
+          &copy; {new Date().getFullYear()} Universitas Kristen Duta Wacana
         </p>
       </div>
     </main>

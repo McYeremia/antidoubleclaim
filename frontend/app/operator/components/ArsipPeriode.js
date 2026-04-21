@@ -72,7 +72,7 @@ export default function ArsipPeriode() {
       confirmLabel: "YA, ARSIPKAN",
       onConfirm:    async () => {
         setConfirmModal(null);
-        const opId = sessionStorage.getItem("operator_id");
+        const opId = localStorage.getItem("operator_id");
         setActionLoading(true);
         const res = await fetch(`${API}/periode/${p.id}/arsip`, {
           method: "POST",

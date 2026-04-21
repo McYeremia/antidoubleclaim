@@ -12,7 +12,7 @@ export default function PengajuanClaim({ router }) {
   const [discardModal,  setDiscardModal]  = useState(null); // { id, name }
 
   useEffect(() => {
-    setOpId(sessionStorage.getItem("operator_id"));
+    setOpId(localStorage.getItem("operator_id"));
     fetchClaims();
   }, []);
 

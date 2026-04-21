@@ -8,9 +8,11 @@ const handler = NextAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     }),
   ],
+  session: {
+    maxAge: 86400, // 1 hari
+  },
   callbacks: {
     async signIn({ user }) {
-      // Hanya izinkan email @students.ukdw.ac.id
       return user.email?.endsWith("@students.ukdw.ac.id") ?? false;
     },
     async session({ session }) {
@@ -18,7 +20,7 @@ const handler = NextAuth({
     },
   },
   pages: {
-    error: "/auth-error",
+    error: "/",
   },
 });
 

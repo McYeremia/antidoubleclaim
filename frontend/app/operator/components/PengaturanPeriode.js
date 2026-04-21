@@ -104,7 +104,7 @@ export default function PengaturanPeriode({ operatorNama }) {
       confirmLabel: "YA, HAPUS",
       onConfirm:    async () => {
         setConfirmModal(null);
-        const opId = sessionStorage.getItem("operator_id");
+        const opId = localStorage.getItem("operator_id");
         const res  = await fetch(`${API}/periode/${p.id}`, {
           method: "DELETE",
           headers: opId ? { "x-operator-id": opId } : {},
@@ -128,7 +128,7 @@ export default function PengaturanPeriode({ operatorNama }) {
       confirmLabel:    "RESET SEMUA DATA",
       onConfirm:       async () => {
         setConfirmModal(null);
-        const opId = sessionStorage.getItem("operator_id");
+        const opId = localStorage.getItem("operator_id");
         const res  = await fetch(`${API}/admin/reset-data`, {
           method: "POST",
           headers: opId ? { "x-operator-id": opId } : {},

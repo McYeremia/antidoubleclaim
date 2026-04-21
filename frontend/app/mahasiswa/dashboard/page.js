@@ -94,9 +94,7 @@ export default function MahasiswaDashboard() {
       {/* Sidebar */}
       <aside className="w-[240px] bg-[#046137] flex flex-col flex-shrink-0 h-screen sticky top-0">
         <div className="px-7 pt-9 pb-8">
-          <p className="text-[22px] font-black text-white leading-none tracking-tight uppercase">
-            ANTI<br />DOUBLE<br />CLAIM
-          </p>
+          <img src="/logo_utama.png" alt="Anti Double Claim" className="h-20 w-auto object-contain" />
           <p className="text-[10px] font-semibold text-white/50 mt-2.5 tracking-widest uppercase">Portal Mahasiswa</p>
         </div>
 
