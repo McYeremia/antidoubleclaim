@@ -9,6 +9,7 @@ export default function RewardDetailModal({ reward, onClose, onStatusUpdate }) {
   const [updating,       setUpdating]       = useState(false);
   const [catatan,        setCatatan]        = useState(reward.catatan_operator ?? "");
   const [confirmKembali, setConfirmKembali] = useState(false);
+  const [confirmApprove, setConfirmApprove] = useState(false);
 
   useEffect(() => {
     if (!reward.claim_id) return;
@@ -184,7 +185,7 @@ export default function RewardDetailModal({ reward, onClose, onStatusUpdate }) {
                 </button>
               </div>
               <button
-                onClick={() => handleStatus("diproses")}
+                onClick={() => setConfirmApprove(true)}
                 disabled={updating}
                 className="px-8 py-2.5 rounded-xl text-[12px] font-black bg-[#046137] text-white hover:bg-[#035230] transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-green-100"
               >
@@ -204,6 +205,17 @@ export default function RewardDetailModal({ reward, onClose, onStatusUpdate }) {
         confirmLabel="YA, KEMBALIKAN"
         onConfirm={() => { setConfirmKembali(false); handleStatus("dikembalikan"); }}
         onCancel={() => setConfirmKembali(false)}
+      />
+
+      {/* Konfirmasi Approve */}
+      <ConfirmModal
+        isOpen={confirmApprove}
+        title="Setujui Data Rekening?"
+        message={`Konfirmasi bahwa data rekening mahasiswa ${reward.nama_ketua} sudah benar dan siap untuk diproses pembayarannya.`}
+        variant="success"
+        confirmLabel="YA, SETUJUI"
+        onConfirm={() => { setConfirmApprove(false); handleStatus("diproses"); }}
+        onCancel={() => setConfirmApprove(false)}
       />
     </>
   );

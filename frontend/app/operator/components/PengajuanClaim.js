@@ -10,6 +10,7 @@ export default function PengajuanClaim({ router }) {
   const [loading,       setLoading]       = useState(true);
   const [opId,          setOpId]          = useState(null);
   const [discardModal,  setDiscardModal]  = useState(null); // { id, name }
+  const [approveModal,  setApproveModal]  = useState(null); // { id, name }
 
   useEffect(() => {
     setOpId(localStorage.getItem("operator_id"));
@@ -38,8 +39,22 @@ export default function PengajuanClaim({ router }) {
     ...(opId ? { "x-operator-id": opId } : {}),
   });
 
-  const handleApprove = async (id, e) => {
+  const handleApprove = (id, e) => {
     e.stopPropagation();
+    const claim = claims.find(c => c.id === id);
+
+    // Validasi Rekognisi: Harus ada estimasi dana
+    if (claim?.kategori === "rekognisi" && (!claim.estimasi_reward || Number(claim.estimasi_reward) === 0)) {
+      alert(`Klaim "${claim.nama_lomba}" adalah kategori Rekognisi. Harap isi estimasi dana di halaman detail terlebih dahulu sebelum menyetujui.`);
+      return;
+    }
+
+    setApproveModal({ id, name: claim?.nama_lomba ?? `Klaim #${id}` });
+  };
+
+  const handleApproveConfirm = async () => {
+    const { id } = approveModal;
+    setApproveModal(null);
     const res = await fetch(`${API}/claims/${id}/approve`, { method: "PATCH", headers: opHeaders() });
     if (!res.ok) { alert("Gagal menyetujui klaim."); return; }
     fetchClaims();
@@ -195,6 +210,16 @@ export default function PengajuanClaim({ router }) {
         confirmLabel="YA, DISCARD"
         onConfirm={handleDiscardConfirm}
         onCancel={() => setDiscardModal(null)}
+      />
+
+      <ConfirmModal
+        isOpen={!!approveModal}
+        title="Setujui Klaim?"
+        message={`Konfirmasi persetujuan untuk klaim "${approveModal?.name}". Pastikan semua data sudah valid.`}
+        variant="success"
+        confirmLabel="YA, SETUJUI"
+        onConfirm={handleApproveConfirm}
+        onCancel={() => setApproveModal(null)}
       />
     </div>
   );

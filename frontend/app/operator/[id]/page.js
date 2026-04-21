@@ -584,6 +584,7 @@ export default function DetailKlaim() {
   const [notFound,      setNotFound]      = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [discardModal,  setDiscardModal]  = useState(false);
+  const [approveModal,  setApproveModal]  = useState(false);
 
   const fetchAll = async () => {
     setLoading(true);
@@ -609,7 +610,10 @@ export default function DetailKlaim() {
   const opId = typeof window !== "undefined" ? localStorage.getItem("operator_id") : null;
   const opHeaders = opId ? { "x-operator-id": opId } : {};
 
-  const handleApprove = async () => {
+  const handleApprove = () => setApproveModal(true);
+
+  const handleApproveConfirm = async () => {
+    setApproveModal(false);
     setActionLoading(true);
     try {
       const res = await fetch(`http://127.0.0.1:8000/claims/${id}/approve`, { method: "PATCH", headers: opHeaders });
@@ -662,6 +666,13 @@ export default function DetailKlaim() {
   const fileUrl = `http://127.0.0.1:8000/uploads/${claim.sertifikat_filename}`;
   const canAct  = claim.status !== "sudah dicek" && claim.status !== "ditolak";
 
+  // Validasi khusus Rekognisi: Harus ada estimasi dana
+  // (Pengecekan kategori 'rekognisi' dan nilai estimasi_reward)
+  const isRekognisi = claim.kategori === "rekognisi";
+  const rewardValue = pengajuan?.estimasi_reward;
+  const rewardEmpty = rewardValue === null || rewardValue === undefined || String(rewardValue).trim() === "" || Number(rewardValue) === 0;
+  const isApproveDisabled = actionLoading || (isRekognisi && rewardEmpty);
+
   return (
     <div className="min-h-screen bg-[#f7f7f8] flex" style={{ fontFamily: "var(--font-poppins, sans-serif)" }}>
       <OperatorSidebar activeKey="claim" />
@@ -694,15 +705,22 @@ export default function DetailKlaim() {
               </span>
             )}
             {canAct && (
-              <div className="flex gap-2">
-                <button onClick={handleApprove} disabled={actionLoading}
-                  className="px-6 py-2.5 rounded-xl text-[12px] font-black bg-[#046137] text-white hover:bg-[#035230] disabled:opacity-50 transition-all shadow-lg shadow-green-100">
-                  {actionLoading ? "PROCESSING..." : "APPROVE"}
-                </button>
-                <button onClick={handleDiscard} disabled={actionLoading}
-                  className="px-6 py-2.5 rounded-xl text-[12px] font-black bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 disabled:opacity-50 transition-all">
-                  DISCARD
-                </button>
+              <div className="flex items-center gap-3">
+                {isRekognisi && rewardEmpty && (
+                   <span className="text-[10px] font-black text-orange-500 uppercase tracking-widest bg-orange-50 px-3 py-2 rounded-lg border border-orange-100 animate-pulse">
+                     Isi Estimasi Dana Dahulu
+                   </span>
+                )}
+                <div className="flex gap-2">
+                  <button onClick={handleApprove} disabled={isApproveDisabled}
+                    className="px-6 py-2.5 rounded-xl text-[12px] font-black bg-[#046137] text-white hover:bg-[#035230] disabled:opacity-40 disabled:grayscale transition-all shadow-lg shadow-green-100">
+                    {actionLoading ? "PROCESSING..." : "APPROVE"}
+                  </button>
+                  <button onClick={handleDiscard} disabled={actionLoading}
+                    className="px-6 py-2.5 rounded-xl text-[12px] font-black bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 disabled:opacity-50 transition-all">
+                    DISCARD
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -824,7 +842,16 @@ export default function DetailKlaim() {
       confirmLabel="YA, DISCARD"
       onConfirm={handleDiscardConfirm}
       onCancel={() => setDiscardModal(false)}
-    />
-    </div>
-  );
-}
+      />
+
+      <ConfirmModal
+        isOpen={approveModal}
+        title="Setujui Klaim?"
+        message={`Konfirmasi persetujuan untuk klaim sertifikat #${id}. Pastikan semua data sudah valid.`}
+        variant="success"
+        confirmLabel="YA, SETUJUI"
+        onConfirm={handleApproveConfirm}
+        onCancel={() => setApproveModal(false)}
+      />      </div>
+      );
+      }
