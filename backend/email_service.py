@@ -11,7 +11,9 @@ except ImportError:
     pass
 
 EMAIL_SENDER   = os.getenv("EMAIL_SENDER",   "test.antidoubleclaim@gmail.com")
-EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD",  "pcmsbtzhjobqvugp")
+EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
+if not EMAIL_PASSWORD:
+    raise RuntimeError("EMAIL_PASSWORD tidak ditemukan di environment. Isi di file .env terlebih dahulu.")
 SMTP_HOST      = "smtp.gmail.com"
 SMTP_PORT      = 587
 
