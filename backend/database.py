@@ -396,6 +396,8 @@ def _row_to_dict(row):
         "verified_by_nama":    row[12] if len(row) > 12 else None,
         "flag_alasan":         row[13] if len(row) > 13 else None,
         "catatan_penolakan":   row[14] if len(row) > 14 else None,
+        "periode_id":          row[15] if len(row) > 15 else None,
+        "periode_nama":        row[16] if len(row) > 16 else None,
     }
 
 # ---------------------------------------------------------------------------
@@ -409,7 +411,8 @@ def get_all_claims():
         SELECT c.id, c.nama_lomba, c.tingkat, c.tanggal, c.peringkat,
                c.sertifikat_path, c.status, c.mahasiswa_email, c.nama_display,
                c.mirip_dengan_id, c.verified_by, c.verified_at,
-               u.nama AS verified_by_nama, c.flag_alasan, c.catatan_penolakan
+               u.nama AS verified_by_nama, c.flag_alasan, c.catatan_penolakan,
+               c.periode_id, pk.nama AS periode_nama
         FROM CLAIMS c
         LEFT JOIN USERS u ON u.id = c.verified_by
         LEFT JOIN PERIODE_KLAIM pk ON pk.id = c.periode_id
@@ -586,9 +589,11 @@ def get_claims_by_email(email):
         SELECT c.id, c.nama_lomba, c.tingkat, c.tanggal, c.peringkat,
                c.sertifikat_path, c.status, c.mahasiswa_email, c.nama_display,
                c.mirip_dengan_id, c.verified_by, c.verified_at,
-               u.nama AS verified_by_nama, c.flag_alasan, c.catatan_penolakan
+               u.nama AS verified_by_nama, c.flag_alasan, c.catatan_penolakan,
+               c.periode_id, pk.nama AS periode_nama
         FROM CLAIMS c
         LEFT JOIN USERS u ON u.id = c.verified_by
+        LEFT JOIN PERIODE_KLAIM pk ON pk.id = c.periode_id
         WHERE c.mahasiswa_email = ? ORDER BY c.id DESC
     """, (email,))
     rows = cursor.fetchall()
@@ -602,9 +607,11 @@ def get_claim_by_id(claim_id):
         SELECT c.id, c.nama_lomba, c.tingkat, c.tanggal, c.peringkat,
                c.sertifikat_path, c.status, c.mahasiswa_email, c.nama_display,
                c.mirip_dengan_id, c.verified_by, c.verified_at,
-               u.nama AS verified_by_nama, c.flag_alasan, c.catatan_penolakan
+               u.nama AS verified_by_nama, c.flag_alasan, c.catatan_penolakan,
+               c.periode_id, pk.nama AS periode_nama
         FROM CLAIMS c
         LEFT JOIN USERS u ON u.id = c.verified_by
+        LEFT JOIN PERIODE_KLAIM pk ON pk.id = c.periode_id
         WHERE c.id = ?
     """, (claim_id,))
     row = cursor.fetchone()

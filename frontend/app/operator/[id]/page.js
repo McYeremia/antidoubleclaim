@@ -186,7 +186,7 @@ function EditSelect({ label, name, value, onChange, options, span2 = false }) {
 }
 
 // ── Blok data pengajuan lengkap ───────────────────────────────────────────────
-function PengajuanDetail({ p, onSaved }) {
+function PengajuanDetail({ p, onSaved, claimId }) {
   const [editing,       setEditing]       = useState(false);
   const [form,          setForm]          = useState({});
   const [saving,        setSaving]        = useState(false);
@@ -391,6 +391,7 @@ function PengajuanDetail({ p, onSaved }) {
               </>
             ) : (
               <>
+                <InfoRow label="ID Klaim"            value={claimId ? `#${claimId}` : null} />
                 <InfoRow label="Kategori SIMKATMAWA"
                   value={LABEL_KATEGORI[p.kategori_simkatmawa] ?? p.kategori_simkatmawa} />
                 <InfoRow label="Jenis Kepesertaan"  value={p.jenis_kepesertaan} />
@@ -678,12 +679,20 @@ export default function DetailKlaim() {
                </svg>
                Kembali ke Dashboard
             </Link>
-            <h1 className="text-4xl font-black text-gray-900 mt-3 tracking-tight">Klaim Sertifikat #{claim.id}</h1>
+            <h1 className="text-4xl font-black text-gray-900 mt-3 tracking-tight">{claim.nama_lomba}</h1>
           </div>
           <div className="flex items-center gap-4 flex-wrap">
             <span className={`px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-widest ${STATUS_STYLE[claim.status] ?? "bg-gray-100 text-gray-700"}`}>
               {claim.status}
             </span>
+            {claim.periode_nama && (
+              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold bg-[#f0f7f3] text-[#046137] border border-[#d4ebe0]">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                {claim.periode_nama}
+              </span>
+            )}
             {canAct && (
               <div className="flex gap-2">
                 <button onClick={handleApprove} disabled={actionLoading}
@@ -739,7 +748,7 @@ export default function DetailKlaim() {
 
           {/* Detailed Form Column */}
           <div className="lg:col-span-8 space-y-10">
-             <PengajuanDetail p={pengajuan} onSaved={fetchAll} />
+             <PengajuanDetail p={pengajuan} onSaved={fetchAll} claimId={claim.id} />
           </div>
         </div>
 
