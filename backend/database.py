@@ -254,7 +254,8 @@ def create_database():
     # Seed akun superadmin default jika belum ada
     cursor.execute("SELECT id FROM USERS WHERE username = 'admin'")
     if not cursor.fetchone():
-        default_hash = bcrypt.hashpw(b"admin123", bcrypt.gensalt()).decode()
+        default_pass = os.getenv("ADMIN_DEFAULT_PASSWORD", "admin123")
+        default_hash = bcrypt.hashpw(default_pass.encode(), bcrypt.gensalt()).decode()
         cursor.execute(
             "INSERT INTO USERS (username, password_hash, nama, email, role) VALUES (?, ?, ?, ?, ?)",
             ("admin", default_hash, "Super Admin", "admin@campus.ac.id", "superadmin"),
