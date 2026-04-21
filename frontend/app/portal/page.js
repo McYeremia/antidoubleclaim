@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
-const API          = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-const SESSION_MS   = 8 * 60 * 60 * 1000; // 8 jam
+const API        = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const SESSION_MS = 8 * 60 * 60 * 1000;
 
 function isOperatorSessionValid() {
   const loginAt = localStorage.getItem("operator_login_at");
@@ -60,26 +60,54 @@ export default function OperatorLoginPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#f7f7f8] flex items-center justify-center px-4" style={{ fontFamily: "var(--font-poppins, sans-serif)" }}>
-      <div className="w-full max-w-[440px]">
+    <main className="min-h-screen flex" style={{ fontFamily: "var(--font-poppins, sans-serif)" }}>
 
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-[#046137] rounded-2xl mb-6 shadow-lg shadow-green-200">
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}
-                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-          </div>
-          <h1 className="text-[28px] font-black text-gray-900 leading-tight tracking-tight uppercase">
-            PORTAL<br />PENGELOLA
-          </h1>
-          <div className="h-1 w-10 bg-[#046137] mx-auto mt-4 rounded-full"></div>
-          <p className="text-[12px] font-bold text-gray-400 mt-5 tracking-[0.2em] uppercase italic">Anti-Double Claim</p>
+      {/* Panel Kiri */}
+      <div className="hidden lg:flex lg:w-[55%] bg-[#046137] relative flex-col items-center justify-center px-16 overflow-hidden">
+        {/* Dekorasi lingkaran */}
+        <div className="absolute -top-32 -right-32 w-[420px] h-[420px] rounded-full bg-white/5" />
+        <div className="absolute -bottom-40 -left-24 w-[480px] h-[480px] rounded-full bg-white/5" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-white/[0.03]" />
+        <div className="absolute top-16 left-16 w-24 h-24 rounded-full bg-white/5" />
+        <div className="absolute bottom-24 right-20 w-16 h-16 rounded-full bg-white/5" />
+
+        {/* Konten */}
+        <div className="relative z-10 flex flex-col items-center text-center">
+          <img src="/logo-ukdw.png" alt="UKDW" className="h-28 w-auto object-contain mb-8" />
+          <div className="w-16 h-px bg-white/20 mb-8" />
+          <img src="/biro3.png" alt="Biro Kemahasiswaan" className="h-16 w-auto object-contain mb-10 opacity-90" />
+          <h2 className="text-white/90 text-[15px] font-bold tracking-[0.2em] uppercase mb-2">
+            Portal Pengelola Sistem
+          </h2>
+          <p className="text-white/50 text-[12px] tracking-widest uppercase">
+            Universitas Kristen Duta Wacana
+          </p>
         </div>
 
-        <div className="bg-white rounded-[32px] p-10 shadow-2xl shadow-gray-200/50 border border-gray-100">
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <p className="absolute bottom-8 text-white/30 text-[10px] tracking-widest uppercase">
+          &copy; {new Date().getFullYear()} Kemahasiswaan UKDW
+        </p>
+      </div>
 
+      {/* Panel Kanan */}
+      <div className="flex-1 bg-[#f7f7f8] flex flex-col items-center justify-center px-8 py-12">
+
+        {/* Logo mobile */}
+        <div className="flex lg:hidden items-center gap-4 mb-10">
+          <img src="/logo-ukdw.png" alt="UKDW" className="h-14 w-auto object-contain" />
+          <div className="w-px h-10 bg-gray-300" />
+          <img src="/biro3.png" alt="Biro Kemahasiswaan" className="h-10 w-auto object-contain" />
+        </div>
+
+        <div className="w-full max-w-[400px]">
+          <div className="mb-10">
+            <h1 className="text-[28px] font-black text-gray-900 leading-tight tracking-tight">
+              Portal Pengelola
+            </h1>
+            <p className="text-gray-400 text-[13px] mt-1.5">Masuk dengan akun operator untuk melanjutkan</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">
                 Username
@@ -91,7 +119,7 @@ export default function OperatorLoginPage() {
                 value={username}
                 onChange={(e) => { setUsername(e.target.value); setError(""); }}
                 placeholder="Masukkan username"
-                className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-[14px] text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#046137] transition-all"
+                className="w-full px-4 py-3.5 bg-white border border-gray-200 rounded-2xl text-[14px] text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#046137] transition-all shadow-sm"
               />
             </div>
 
@@ -107,7 +135,7 @@ export default function OperatorLoginPage() {
                   value={password}
                   onChange={(e) => { setPassword(e.target.value); setError(""); }}
                   placeholder="Masukkan password"
-                  className="w-full px-4 py-3.5 pr-12 bg-gray-50 border border-gray-200 rounded-2xl text-[14px] text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#046137] transition-all"
+                  className="w-full px-4 py-3.5 pr-12 bg-white border border-gray-200 rounded-2xl text-[14px] text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#046137] transition-all shadow-sm"
                 />
                 <button
                   type="button"
@@ -145,7 +173,7 @@ export default function OperatorLoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-4 bg-[#046137] hover:bg-[#035230] disabled:opacity-50 text-white text-[14px] font-bold rounded-2xl transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-green-200"
+              className="w-full py-4 bg-[#046137] hover:bg-[#035230] disabled:opacity-50 text-white text-[14px] font-bold rounded-2xl transition-all hover:scale-[1.01] active:scale-95 shadow-lg shadow-green-900/20"
             >
               {loading ? (
                 <div className="flex items-center justify-center gap-2">
@@ -157,16 +185,15 @@ export default function OperatorLoginPage() {
                 </div>
               ) : "Masuk ke Sistem"}
             </button>
-
           </form>
+
+          <p className="text-center text-[11px] text-gray-300 font-medium mt-10 uppercase tracking-widest leading-relaxed">
+            Halaman ini hanya untuk pengelola sistem.<br />
+            &copy; {new Date().getFullYear()} Kemahasiswaan UKDW
+          </p>
         </div>
-
-        <p className="text-center text-[11px] text-gray-400 font-medium mt-10 uppercase tracking-widest leading-relaxed">
-          Halaman ini hanya untuk pengelola sistem.<br />
-          &copy; {new Date().getFullYear()} Kemahasiswaan UKDW
-        </p>
-
       </div>
+
     </main>
   );
 }
