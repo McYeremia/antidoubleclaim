@@ -398,6 +398,8 @@ def _row_to_dict(row):
         "catatan_penolakan":   row[14] if len(row) > 14 else None,
         "periode_id":          row[15] if len(row) > 15 else None,
         "periode_nama":        row[16] if len(row) > 16 else None,
+        "kategori":            row[17] if len(row) > 17 else None,
+        "estimasi_reward":     row[18] if len(row) > 18 else None,
     }
 
 # ---------------------------------------------------------------------------
@@ -412,10 +414,12 @@ def get_all_claims():
                c.sertifikat_path, c.status, c.mahasiswa_email, c.nama_display,
                c.mirip_dengan_id, c.verified_by, c.verified_at,
                u.nama AS verified_by_nama, c.flag_alasan, c.catatan_penolakan,
-               c.periode_id, pk.nama AS periode_nama
+               c.periode_id, pk.nama AS periode_nama,
+               p.kategori_simkatmawa, p.estimasi_reward
         FROM CLAIMS c
         LEFT JOIN USERS u ON u.id = c.verified_by
         LEFT JOIN PERIODE_KLAIM pk ON pk.id = c.periode_id
+        LEFT JOIN PENGAJUAN p ON p.claim_id = c.id
         WHERE (pk.status IS NULL OR pk.status != 'diarsipkan')
           AND c.status != 'ditolak'
         ORDER BY c.id DESC
@@ -590,10 +594,12 @@ def get_claims_by_email(email):
                c.sertifikat_path, c.status, c.mahasiswa_email, c.nama_display,
                c.mirip_dengan_id, c.verified_by, c.verified_at,
                u.nama AS verified_by_nama, c.flag_alasan, c.catatan_penolakan,
-               c.periode_id, pk.nama AS periode_nama
+               c.periode_id, pk.nama AS periode_nama,
+               p.kategori_simkatmawa, p.estimasi_reward
         FROM CLAIMS c
         LEFT JOIN USERS u ON u.id = c.verified_by
         LEFT JOIN PERIODE_KLAIM pk ON pk.id = c.periode_id
+        LEFT JOIN PENGAJUAN p ON p.claim_id = c.id
         WHERE c.mahasiswa_email = ? ORDER BY c.id DESC
     """, (email,))
     rows = cursor.fetchall()
@@ -608,10 +614,12 @@ def get_claim_by_id(claim_id):
                c.sertifikat_path, c.status, c.mahasiswa_email, c.nama_display,
                c.mirip_dengan_id, c.verified_by, c.verified_at,
                u.nama AS verified_by_nama, c.flag_alasan, c.catatan_penolakan,
-               c.periode_id, pk.nama AS periode_nama
+               c.periode_id, pk.nama AS periode_nama,
+               p.kategori_simkatmawa, p.estimasi_reward
         FROM CLAIMS c
         LEFT JOIN USERS u ON u.id = c.verified_by
         LEFT JOIN PERIODE_KLAIM pk ON pk.id = c.periode_id
+        LEFT JOIN PENGAJUAN p ON p.claim_id = c.id
         WHERE c.id = ?
     """, (claim_id,))
     row = cursor.fetchone()

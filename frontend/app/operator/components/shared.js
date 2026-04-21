@@ -151,6 +151,7 @@ export function ConfirmModal({
   const c = {
     danger:  { btn: "bg-red-600 hover:bg-red-700 text-white",    iconBg: "bg-red-50",    icon: "text-red-500"    },
     warning: { btn: "bg-orange-500 hover:bg-orange-600 text-white", iconBg: "bg-orange-50", icon: "text-orange-500" },
+    success: { btn: "bg-[#046137] hover:bg-[#035230] text-white", iconBg: "bg-[#f0f7f3]", icon: "text-[#046137]" },
     default: { btn: "bg-gray-900 hover:bg-gray-700 text-white",   iconBg: "bg-gray-100",  icon: "text-gray-500"   },
   }[variant];
 
