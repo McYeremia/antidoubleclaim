@@ -41,6 +41,7 @@ export default function MahasiswaDashboard() {
   const [claimsRefreshKey, setClaimsRefreshKey] = useState(0);
   const [rewardOpenId,     setRewardOpenId]     = useState(null);
   const [showUserMenu,     setShowUserMenu]     = useState(false);
+  const [profil,           setProfil]           = useState(null);
 
   // Sinkronisasi menu dengan URL query param
   useEffect(() => {
@@ -54,12 +55,19 @@ export default function MahasiswaDashboard() {
     return () => window.removeEventListener("popstate", handlePop);
   }, []);
 
-  // Fix: redirect dalam useEffect, bukan langsung di render
   useEffect(() => {
     if (status === "unauthenticated" || (status === "authenticated" && !session?.user?.email?.endsWith("@students.ukdw.ac.id"))) {
       router.replace("/");
     }
   }, [status, session, router]);
+
+  useEffect(() => {
+    if (status !== "authenticated" || !session?.user?.email) return;
+    fetch(`http://127.0.0.1:8000/profil?email=${encodeURIComponent(session.user.email)}`)
+      .then(r => r.ok ? r.json() : {})
+      .then(p => setProfil(p))
+      .catch(() => {});
+  }, [status, session]);
 
   if (status === "loading") {
     return <p className="text-center mt-20 text-gray-400">Memuat sesi...</p>;
@@ -212,8 +220,11 @@ export default function MahasiswaDashboard() {
         {/* Konten */}
         <main className="flex-1 px-10 py-10 overflow-y-auto">
           {activeMenu === "daftar"      && <DaftarKlaim key={claimsRefreshKey} session={session} search={search}
+                                              profil={profil}
+                                              profilLengkap={!!(profil?.nomor_wa && profil?.nama_pemilik_rekening && profil?.nomor_rekening?.length === 10)}
                                               onOpenForm={(id) => { setRewardOpenId(id); navigateTo("reward"); }}
-                                              onTambahKlaim={() => setShowTambah(true)} />}
+                                              onTambahKlaim={() => setShowTambah(true)}
+                                              onGoProfil={() => navigateTo("profil")} />}
           {activeMenu === "reward"      && <KonfirmasiReward session={session} initialClaimId={rewardOpenId} onClearInitial={() => setRewardOpenId(null)} />}
           {activeMenu === "visualisasi" && <VisualisasiData />}
           {activeMenu === "sk-rektor"   && <SKRektor />}
@@ -225,6 +236,7 @@ export default function MahasiswaDashboard() {
       {showTambah && (
         <TambahKlaimWizard
           session={session}
+          profil={profil}
           onClose={() => setShowTambah(false)}
           onSuccess={handleClaimSuccess}
         />

@@ -158,6 +158,7 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
   const [periodeAktif,   setPeriodeAktif]   = useState(null);
   // Kumpulan field yang di-prefill dari pengajuan (tidak boleh diubah)
   const [prefilledFields, setPrefilledFields] = useState(new Set());
+  const [profilData,      setProfilData]      = useState({});
 
   const nim = session?.user?.email?.split("@")[0] ?? "";
 
@@ -209,6 +210,7 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
       // Parse semua respons di awal (Response hanya bisa dibaca sekali)
       const claimData    = await claimRes.json();
       const profilData   = profilRes.ok    ? await profilRes.json()    : {};
+      setProfilData(profilData);
       const periodeData  = periodeRes.ok   ? await periodeRes.json()   : { ditemukan: false };
       const rewardData   = rewardRes.ok    ? await rewardRes.json()    : null;
       const pengajuanData = pengajuanRes.ok ? await pengajuanRes.json() : null;
@@ -672,9 +674,23 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
               <Input type="text" value={nim} disabled />
             </div>
             <div>
-              <Label required={!prefilledFields.has("nomor_wa")}>
-                Nomor WhatsApp{prefilledFields.has("nomor_wa") && <PrefilledBadge />}
-              </Label>
+              <div className="flex items-center justify-between mb-1">
+                <Label required={!prefilledFields.has("nomor_wa")}>
+                  Nomor WhatsApp{prefilledFields.has("nomor_wa") && <PrefilledBadge />}
+                </Label>
+                {!prefilledFields.has("nomor_wa") && profilData?.nomor_wa && (() => {
+                    const active = form.nomor_wa === profilData.nomor_wa;
+                    return (
+                      <button type="button" onClick={() => setForm(f => ({ ...f, nomor_wa: active ? "" : profilData.nomor_wa }))}
+                        className="flex items-center gap-2 group">
+                        <span className="text-[11px] text-gray-400 group-hover:text-gray-600 transition-colors">Dari Profil</span>
+                        <span className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 cursor-pointer ${active ? "bg-[#046137]" : "bg-gray-200"}`}>
+                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${active ? "translate-x-4" : "translate-x-0"}`} />
+                        </span>
+                      </button>
+                    );
+                  })()}
+              </div>
               <Input
                 type="text"
                 name="nomor_wa"
@@ -694,6 +710,23 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
             <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 text-xs text-amber-800">
               Rekening yang digunakan hanya <span className="font-semibold">Bank BNI</span>.
             </div>
+            {(profilData?.nama_pemilik_rekening || profilData?.nomor_rekening) && (() => {
+                const active = form.nama_pemilik_rekening === profilData.nama_pemilik_rekening && form.nomor_rekening === profilData.nomor_rekening;
+                return (
+                  <button type="button"
+                    onClick={() => setForm(f => active
+                      ? { ...f, nama_pemilik_rekening: "", nomor_rekening: "" }
+                      : { ...f, nama_pemilik_rekening: profilData.nama_pemilik_rekening || f.nama_pemilik_rekening, nomor_rekening: profilData.nomor_rekening || f.nomor_rekening }
+                    )}
+                    className="flex items-center gap-2 group self-start"
+                  >
+                    <span className="text-[11px] text-gray-400 group-hover:text-gray-600 transition-colors">Isi Rekening dari Profil</span>
+                    <span className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 cursor-pointer ${active ? "bg-[#046137]" : "bg-gray-200"}`}>
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${active ? "translate-x-4" : "translate-x-0"}`} />
+                    </span>
+                  </button>
+                );
+              })()}
             <div>
               <Label required>Nama Lengkap Pemilik Rekening</Label>
               <p className="text-xs text-gray-400 mb-1">Pastikan isi dengan lengkap dan benar agar tidak terjadi kendala.</p>
