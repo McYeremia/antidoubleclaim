@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 
@@ -73,8 +73,9 @@ export default function KlaimDetailPage() {
   const [loading,   setLoading]   = useState(true);
   const [editOpen,  setEditOpen]  = useState(false);
   const [editForm,  setEditForm]  = useState({});
-  const [saving,    setSaving]    = useState(false);
-  const [saveMsg,   setSaveMsg]   = useState("");
+  const [saving,      setSaving]      = useState(false);
+  const [saveMsg,     setSaveMsg]     = useState("");
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
   useEffect(() => {
     if (authStatus === "unauthenticated") { router.replace("/"); return; }
@@ -199,7 +200,7 @@ export default function KlaimDetailPage() {
 
       {/* Konten */}
       <div className="flex-1 flex flex-col overflow-auto">
-        <header className="h-16 bg-[#f0f7f3] border-b border-[#d4ebe0] flex items-center px-8 flex-shrink-0">
+        <header className="h-16 bg-[#f0f7f3] border-b border-[#d4ebe0] flex items-center justify-between px-8 flex-shrink-0">
           <Link href="/mahasiswa/dashboard"
             className="flex items-center gap-2 text-[11px] font-black text-gray-400 uppercase tracking-widest hover:text-[#046137] transition-colors">
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -207,6 +208,55 @@ export default function KlaimDetailPage() {
             </svg>
             Kembali ke Dashboard
           </Link>
+
+          {/* Profil user */}
+          <div className="relative">
+            <button
+              onClick={() => setShowUserMenu(v => !v)}
+              className="flex items-center gap-3 px-3 py-1.5 rounded-xl hover:bg-[#d4ebe0] transition-colors"
+            >
+              <div className="w-9 h-9 rounded-full bg-[#046137] flex items-center justify-center flex-shrink-0 overflow-hidden">
+                {session?.user?.image ? (
+                  <img src={session.user.image} alt="avatar" className="w-9 h-9 rounded-full object-cover" />
+                ) : (
+                  <span className="text-xs font-bold text-white">
+                    {session?.user?.name?.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()}
+                  </span>
+                )}
+              </div>
+              <div className="text-left">
+                <p className="text-[13px] font-semibold text-gray-900 leading-tight">{session?.user?.name}</p>
+                <p className="text-[11px] text-gray-400 leading-tight truncate max-w-[160px]">{session?.user?.email}</p>
+              </div>
+              <svg className={`w-3.5 h-3.5 text-gray-400 transition-transform ${showUserMenu ? "rotate-180" : ""}`}
+                   fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {showUserMenu && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowUserMenu(false)} />
+                <div className="absolute right-0 top-full mt-2 w-60 bg-white rounded-xl border border-gray-100 shadow-lg z-20 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
+                    <p className="text-sm font-semibold text-gray-900 truncate">{session?.user?.name}</p>
+                    <p className="text-xs text-gray-400 truncate mt-0.5">{session?.user?.email}</p>
+                  </div>
+                  <div className="p-1.5">
+                    <button
+                      onClick={() => signOut({ callbackUrl: "/" })}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors text-left"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}
+                          d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                      </svg>
+                      Keluar
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </header>
 
         <main className="flex-1 px-10 py-10 overflow-y-auto">

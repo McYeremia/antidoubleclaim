@@ -11,7 +11,7 @@ const STATE_STYLE = {
   diarsipkan:  { badge: "bg-purple-100 text-purple-700", label: "Diarsipkan" },
 };
 
-export default function PengaturanPeriode({ operatorNama }) {
+export default function PengaturanPeriode({ operatorNama, operatorId }) {
   const [periodeList,    setPeriodeList]    = useState([]);
   const [loading,        setLoading]        = useState(true);
   const [showForm,       setShowForm]       = useState(false);
@@ -89,7 +89,10 @@ export default function PengaturanPeriode({ operatorNama }) {
       confirmLabel: newStatus === "aktif" ? "YA, AKTIFKAN" : "YA, TUTUP",
       onConfirm:    async () => {
         setConfirmModal(null);
-        const res = await fetch(`${API}/periode/${p.id}?status=${newStatus}`, { method: "PUT" });
+        const res = await fetch(`${API}/periode/${p.id}?status=${newStatus}`, {
+          method: "PUT",
+          headers: operatorId ? { "x-operator-id": String(operatorId) } : {},
+        });
         if (!res.ok) { alert("Gagal mengubah status periode."); return; }
         fetchPeriode();
       },
@@ -104,10 +107,9 @@ export default function PengaturanPeriode({ operatorNama }) {
       confirmLabel: "YA, HAPUS",
       onConfirm:    async () => {
         setConfirmModal(null);
-        const opId = localStorage.getItem("operator_id");
         const res  = await fetch(`${API}/periode/${p.id}`, {
           method: "DELETE",
-          headers: opId ? { "x-operator-id": opId } : {},
+          headers: operatorId ? { "x-operator-id": String(operatorId) } : {},
         });
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
@@ -128,10 +130,9 @@ export default function PengaturanPeriode({ operatorNama }) {
       confirmLabel:    "RESET SEMUA DATA",
       onConfirm:       async () => {
         setConfirmModal(null);
-        const opId = localStorage.getItem("operator_id");
         const res  = await fetch(`${API}/admin/reset-data`, {
           method: "POST",
-          headers: opId ? { "x-operator-id": opId } : {},
+          headers: operatorId ? { "x-operator-id": String(operatorId) } : {},
         });
         if (res.ok) {
           alert("Semua data berhasil dihapus.");
