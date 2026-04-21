@@ -21,6 +21,7 @@ from backend.database import (
     create_operator, delete_operator,
     get_stats_visualisasi, get_export_data,
     get_profil_mahasiswa, upsert_profil_mahasiswa,
+    insert_audit_log, get_audit_log,
     get_periode_aktif, get_periode_terkini, get_all_periode, create_periode,
     update_periode_status, update_periode_data, delete_periode, reset_semua_data,
     arsipkan_periode, get_claims_by_periode_id, get_rewards_by_periode_id,
@@ -149,18 +150,21 @@ async def buat_periode(body: PeriodeCreate):
     return {"success": True, "id": periode_id}
 
 @app.put("/periode/{periode_id}")
-async def ubah_status_periode(periode_id: int, status: str):
+async def ubah_status_periode(periode_id: int, status: str, x_operator_id: Optional[str] = Header(None)):
+    op = _require_operator(x_operator_id)
     ok = update_periode_status(periode_id, status)
     if not ok:
         raise HTTPException(status_code=400, detail="Status tidak valid. Gunakan 'aktif', 'tutup', atau 'ditutup'.")
+    insert_audit_log(op["id"], op["nama"], f"periode_{status}", "periode", periode_id, None)
     return {"success": True}
 
 @app.post("/periode/{periode_id}/arsip")
 async def arsip_periode(periode_id: int, x_operator_id: Optional[str] = Header(None)):
-    _require_superadmin(x_operator_id)
+    op = _require_superadmin(x_operator_id)
     result = arsipkan_periode(periode_id)
     if not result["ok"]:
         raise HTTPException(status_code=400, detail=result.get("alasan", "Tidak dapat mengarsipkan"))
+    insert_audit_log(op["id"], op["nama"], "arsip_periode", "periode", periode_id, None)
     return {"success": True}
 
 @app.get("/periode/{periode_id}/claims")
@@ -183,17 +187,25 @@ async def edit_periode(periode_id: int, body: PeriodeEdit):
 
 @app.delete("/periode/{periode_id}")
 async def hapus_periode(periode_id: int, x_operator_id: Optional[str] = Header(None)):
-    _require_superadmin(x_operator_id)
+    op = _require_superadmin(x_operator_id)
     ok = delete_periode(periode_id)
     if not ok:
         raise HTTPException(status_code=400, detail="Tidak dapat menghapus: periode tidak ditemukan atau sedang aktif.")
+    insert_audit_log(op["id"], op["nama"], "hapus_periode", "periode", periode_id, None)
     return {"success": True}
 
 @app.post("/admin/reset-data")
 async def reset_data(x_operator_id: Optional[str] = Header(None)):
-    _require_superadmin(x_operator_id)
+    op = _require_superadmin(x_operator_id)
     reset_semua_data()
+    insert_audit_log(op["id"], op["nama"], "reset_semua_data", None, None, None)
     return {"success": True, "pesan": "Semua data berhasil dihapus. Tabel USERS tetap utuh."}
+
+# ── Audit Log ──────────────────────────────────────────────────────────────────────────
+@app.get("/audit-log")
+async def list_audit_log(x_operator_id: Optional[str] = Header(None)):
+    _require_superadmin(x_operator_id)
+    return get_audit_log()
 
 # ── NIM Info ─────────────────────────────────────────────────────────────────
 @app.get("/nim-info")
@@ -220,11 +232,12 @@ async def detail_claim(claim_id: int):
 
 @app.patch("/claims/{claim_id}/approve")
 async def approve(claim_id: int, background_tasks: BackgroundTasks, x_operator_id: Optional[str] = Header(None)):
-    _require_operator(x_operator_id)
+    op = _require_operator(x_operator_id)
     claim = get_claim_by_id(claim_id)
     if not claim:
         raise HTTPException(status_code=404, detail="Klaim tidak ditemukan")
     approve_claim(claim_id, operator_id=int(x_operator_id))
+    insert_audit_log(op["id"], op["nama"], "approve_klaim", "klaim", claim_id, claim["nama_lomba"])
     background_tasks.add_task(kirim_email_klaim_disetujui, claim["mahasiswa_email"], claim["nama_lomba"])
     return {"message": "Klaim disetujui", "id": claim_id}
 
@@ -233,12 +246,13 @@ class DiscardBody(BaseModel):
 
 @app.delete("/claims/{claim_id}")
 async def discard(claim_id: int, background_tasks: BackgroundTasks, body: Optional[DiscardBody] = None, x_operator_id: Optional[str] = Header(None)):
-    _require_operator(x_operator_id)
+    op = _require_operator(x_operator_id)
     claim = get_claim_by_id(claim_id)
     if not claim:
         raise HTTPException(status_code=404, detail="Klaim tidak ditemukan")
     catatan = body.catatan if body else None
     reject_claim(claim_id, operator_id=int(x_operator_id), catatan=catatan)
+    insert_audit_log(op["id"], op["nama"], "tolak_klaim", "klaim", claim_id, claim["nama_lomba"])
     background_tasks.add_task(kirim_email_klaim_tidak_lolos, claim["mahasiswa_email"], claim["nama_lomba"], catatan)
     return {"message": "Klaim ditolak", "id": claim_id}
 
@@ -544,9 +558,11 @@ async def list_rewards(email: Optional[str] = None):
 
 @app.patch("/reward-konfirmasi/{reward_id}/status")
 async def update_reward(reward_id: int, body: RewardStatusUpdate, background_tasks: BackgroundTasks, x_operator_id: Optional[str] = Header(None)):
-    _require_operator(x_operator_id)
+    op = _require_operator(x_operator_id)
     reward = get_reward_konfirmasi_by_id(reward_id)
     update_reward_status(reward_id, body.status, body.catatan)
+    insert_audit_log(op["id"], op["nama"], f"reward_{body.status}", "reward", reward_id,
+                     reward.get("judul_lomba") if reward else None)
     if reward:
         claim = get_claim_by_id(reward["claim_id"])
         if claim:
@@ -652,10 +668,11 @@ def _require_operator(x_operator_id: Optional[str]):
     return op
 
 def _require_superadmin(x_operator_id: Optional[str]):
-    """Raise 403 jika requester bukan superadmin."""
+    """Raise 403 jika requester bukan superadmin. Kembalikan data operator."""
     op = _require_operator(x_operator_id)
     if op.get("role") != "superadmin":
         raise HTTPException(status_code=403, detail="Akses ditolak: hanya Super Admin yang dapat melakukan ini")
+    return op
 
 @app.post("/login-operator")
 async def login_operator(body: OperatorLoginRequest):
@@ -674,10 +691,11 @@ async def add_operator(
     body: CreateOperatorRequest,
     x_operator_id: Optional[str] = Header(None),
 ):
-    _require_superadmin(x_operator_id)
+    op = _require_superadmin(x_operator_id)
     ok = create_operator(body.username, body.password, body.nama, body.email, body.role or "operator")
     if not ok:
         raise HTTPException(status_code=409, detail="Username atau email sudah digunakan")
+    insert_audit_log(op["id"], op["nama"], "tambah_operator", "operator", None, body.username)
     return {"success": True}
 
 @app.delete("/operators/{operator_id}")
@@ -685,10 +703,11 @@ async def remove_operator(
     operator_id: int,
     x_operator_id: Optional[str] = Header(None),
 ):
-    _require_superadmin(x_operator_id)
+    op = _require_superadmin(x_operator_id)
     if str(operator_id) == str(x_operator_id):
         raise HTTPException(status_code=400, detail="Tidak dapat menghapus akun sendiri")
     ok = delete_operator(operator_id)
     if not ok:
         raise HTTPException(status_code=400, detail="Tidak dapat menghapus: akun tidak ditemukan atau superadmin terakhir")
+    insert_audit_log(op["id"], op["nama"], "hapus_operator", "operator", operator_id, None)
     return {"success": True}

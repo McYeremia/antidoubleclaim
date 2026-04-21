@@ -67,10 +67,14 @@ export default function KlaimDetailPage() {
   const router = useRouter();
   const { id }  = useParams();
 
-  const [claim,    setClaim]    = useState(null);
+  const [claim,     setClaim]     = useState(null);
   const [pengajuan, setPengajuan] = useState(null);
-  const [reward,   setReward]   = useState(null);
-  const [loading,  setLoading]  = useState(true);
+  const [reward,    setReward]    = useState(null);
+  const [loading,   setLoading]   = useState(true);
+  const [editOpen,  setEditOpen]  = useState(false);
+  const [editForm,  setEditForm]  = useState({});
+  const [saving,    setSaving]    = useState(false);
+  const [saveMsg,   setSaveMsg]   = useState("");
 
   useEffect(() => {
     if (authStatus === "unauthenticated") { router.replace("/"); return; }
@@ -115,10 +119,44 @@ export default function KlaimDetailPage() {
     );
   }
 
-  const fileUrl    = `${API_URL}/uploads/${claim.sertifikat_filename}`;
-  const isLomba    = pengajuan?.kategori_simkatmawa?.startsWith("lomba_mandiri");
-  const isKarya    = pengajuan?.kategori_kegiatan?.startsWith("Karya Mahasiswa");
-  const isKelompok = pengajuan?.jenis_kepesertaan === "kelompok";
+  const fileUrl      = `${API_URL}/uploads/${claim.sertifikat_filename}`;
+  const isLomba      = pengajuan?.kategori_simkatmawa?.startsWith("lomba_mandiri");
+  const isKarya      = pengajuan?.kategori_kegiatan?.startsWith("Karya Mahasiswa");
+  const isKelompok   = pengajuan?.jenis_kepesertaan === "kelompok";
+  const canEdit      = pengajuan && (claim.status === "belum dicek" || claim.status === "perlu ditinjau");
+
+  const openEdit = () => {
+    setEditForm({
+      nama_kegiatan:     pengajuan.nama_kegiatan     ?? "",
+      tahun_kegiatan:    pengajuan.tahun_kegiatan    ?? "",
+      tingkatan:         pengajuan.tingkatan         ?? "",
+      kategori_kegiatan: pengajuan.kategori_kegiatan ?? "",
+      url_penyelenggara: pengajuan.url_penyelenggara ?? "",
+      keterangan:        pengajuan.keterangan        ?? "",
+    });
+    setSaveMsg("");
+    setEditOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    setSaving(true);
+    setSaveMsg("");
+    try {
+      const res = await fetch(`${API_URL}/pengajuan/${pengajuan.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editForm),
+      });
+      if (!res.ok) throw new Error("Gagal menyimpan");
+      setPengajuan(prev => ({ ...prev, ...editForm }));
+      setSaveMsg("Perubahan berhasil disimpan.");
+      setTimeout(() => setEditOpen(false), 1200);
+    } catch {
+      setSaveMsg("Gagal menyimpan. Coba lagi.");
+    } finally {
+      setSaving(false);
+    }
+  };
   const anggota    = pengajuan?.anggota_list
     ? pengajuan.anggota_list.split(";;").map(s => { const [nama, nim] = s.split("|"); return { nama, nim }; })
     : [];
@@ -191,7 +229,20 @@ export default function KlaimDetailPage() {
                   )}
                 </div>
               </div>
-              <p className="text-[11px] text-gray-400 font-semibold uppercase tracking-widest">ID #{claim.id}</p>
+              <div className="flex items-center gap-3">
+                <p className="text-[11px] text-gray-400 font-semibold uppercase tracking-widest">ID #{claim.id}</p>
+                {canEdit && (
+                  <button
+                    onClick={openEdit}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 text-gray-600 text-[11px] font-bold rounded-xl hover:bg-gray-50 transition-colors"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Edit
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Penolakan */}
@@ -428,6 +479,64 @@ export default function KlaimDetailPage() {
           </div>
         </main>
       </div>
+
+      {/* Modal Edit Pengajuan */}
+      {editOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={() => setEditOpen(false)}>
+          <div className="bg-white rounded-[28px] shadow-2xl w-full max-w-lg p-8 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <h3 className="text-[16px] font-black text-gray-900 mb-1">Edit Data Pengajuan</h3>
+            <p className="text-[12px] text-gray-400 mb-6">Hanya tersedia saat klaim belum diverifikasi. File tidak dapat diubah.</p>
+
+            <div className="space-y-4">
+              {[
+                { key: "nama_kegiatan",     label: "Nama Lengkap Kegiatan" },
+                { key: "tahun_kegiatan",    label: "Tahun Kegiatan" },
+                { key: "tingkatan",         label: "Tingkatan" },
+                { key: "kategori_kegiatan", label: "Kategori Kegiatan" },
+                { key: "url_penyelenggara", label: "URL Penyelenggara" },
+              ].map(({ key, label }) => (
+                <div key={key}>
+                  <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-1.5">{label}</p>
+                  <input
+                    type="text"
+                    value={editForm[key] ?? ""}
+                    onChange={e => setEditForm(f => ({ ...f, [key]: e.target.value }))}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-[14px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#046137]/30 transition-all"
+                  />
+                </div>
+              ))}
+              <div>
+                <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Keterangan</p>
+                <textarea
+                  rows={3}
+                  value={editForm.keterangan ?? ""}
+                  onChange={e => setEditForm(f => ({ ...f, keterangan: e.target.value }))}
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-[14px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#046137]/30 resize-none transition-all"
+                />
+              </div>
+            </div>
+
+            {saveMsg && (
+              <p className={`text-[13px] font-semibold mt-4 ${saveMsg.includes("Gagal") ? "text-red-500" : "text-[#046137]"}`}>
+                {saveMsg}
+              </p>
+            )}
+
+            <div className="flex items-center justify-end gap-3 mt-6">
+              <button onClick={() => setEditOpen(false)} className="px-5 py-2.5 text-[12px] font-bold text-gray-500 hover:text-gray-900 transition-colors">
+                Batal
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                disabled={saving}
+                className="px-6 py-2.5 bg-[#046137] text-white text-[12px] font-black rounded-xl hover:bg-[#035230] disabled:opacity-50 transition-colors"
+              >
+                {saving ? "Menyimpan..." : "Simpan"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
