@@ -27,7 +27,7 @@ export function formatDatetime(str) {
 
 export const STATUS_BADGE = {
   "perlu ditinjau": "bg-orange-100 text-orange-700",
-  "belum dicek":    "bg-[#d4ebe0] text-[#046137]",
+  "belum dicek":    "bg-blue-100 text-blue-700",
   "sudah dicek":    "bg-green-100 text-green-700",
   "ditolak":        "bg-red-100 text-red-700",
 };

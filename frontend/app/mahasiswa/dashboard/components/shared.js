@@ -13,7 +13,7 @@ export const STATUS_LABEL = (status) => {
 export const STATUS_STYLE = (status) => {
   if (status === "sudah dicek") return "bg-green-100 text-green-700";
   if (status === "ditolak")     return "bg-red-100 text-red-700";
-  return "bg-[#d4ebe0] text-[#046137]";
+  return "bg-blue-100 text-blue-700";
 };
 
 export const REWARD_LABEL = {

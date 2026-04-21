@@ -1210,9 +1210,9 @@ function Step6({ data, onChange, nimInfo, errors }) {
         </div>
       )}
 
-      <div style={{ background: "#f0f7f3", border: "1px solid #d4ebe0", borderRadius: "10px", padding: "14px 16px" }}>
-        <p style={{ fontSize: "12px", fontWeight: 700, color: "#046137", marginBottom: "8px" }}>Persetujuan Pengajuan</p>
-        <p style={{ fontSize: "11px", color: "#046137", opacity: 0.7, lineHeight: 1.6, marginBottom: "8px" }}>
+      <div style={{ background: "#fffbeb", border: "1px solid #fcd34d", borderRadius: "10px", padding: "14px 16px" }}>
+        <p style={{ fontSize: "12px", fontWeight: 700, color: "#92400e", marginBottom: "8px" }}>Persetujuan Pengajuan</p>
+        <p style={{ fontSize: "11px", color: "#92400e", opacity: 0.8, lineHeight: 1.6, marginBottom: "8px" }}>
           Link pengiriman data rekening akan dibuka setelah perhitungan penghargaan selesai. Jika tidak mengirimkan data rekening hingga batas waktu, pengajuan dinyatakan gugur pada periode tersebut.
         </p>
         <label style={{ display: "flex", alignItems: "flex-start", gap: "10px", cursor: "pointer" }}>
@@ -1220,9 +1220,9 @@ function Step6({ data, onChange, nimInfo, errors }) {
             type="checkbox"
             checked={data.setuju}
             onChange={(e) => onChange("setuju", e.target.checked)}
-            style={{ marginTop: "2px", accentColor: T.accent, width: "15px", height: "15px", flexShrink: 0 }}
+            style={{ marginTop: "2px", accentColor: "#d97706", width: "15px", height: "15px", flexShrink: 0 }}
           />
-          <span style={{ fontSize: "12px", color: "#1c1a17" }}>
+          <span style={{ fontSize: "12px", color: "#78350f", fontWeight: 500 }}>
             Saya menyatakan bahwa data yang diisi adalah benar dan saya menyetujui ketentuan di atas.
           </span>
         </label>
