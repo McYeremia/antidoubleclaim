@@ -7,7 +7,7 @@ import OperatorSidebar, { OperatorTopbar } from "../_sidebar";
 import { ConfirmModal } from "../components/shared";
 
 const STATUS_STYLE = {
-  "belum dicek":    "bg-[#d4ebe0] text-[#046137]",
+  "belum dicek":    "bg-blue-100 text-blue-700",
   "perlu ditinjau": "bg-orange-100 text-orange-700",
   "sudah dicek":    "bg-green-100 text-green-700",
 };

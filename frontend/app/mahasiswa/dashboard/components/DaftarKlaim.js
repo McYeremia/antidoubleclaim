@@ -336,7 +336,7 @@ export default function DaftarKlaim({ session, search, onOpenForm, onTambahKlaim
                     </td>
                     <td className="px-5 py-4 text-[12px] text-gray-400">{formatTanggal(claim.tanggal)}</td>
                     <td className="px-5 py-4">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${STATUS_STYLE(claim.status)}`}>
+                      <span className={`inline-flex items-center whitespace-nowrap px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${STATUS_STYLE(claim.status)}`}>
                         {STATUS_LABEL(claim.status)}
                       </span>
                     </td>
