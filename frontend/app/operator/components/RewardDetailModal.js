@@ -60,24 +60,24 @@ export default function RewardDetailModal({ reward, onClose, onStatusUpdate }) {
           <div className="flex-1 overflow-y-auto p-8 space-y-8">
             {/* Klaim Terkait */}
             {claim && (
-              <div className="bg-gray-900 rounded-2xl p-6 text-white shadow-xl shadow-gray-200">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Klaim Terkait</p>
+              <div className="bg-[#f0f7f3] border border-[#d4ebe0] rounded-2xl p-6">
+                <p className="text-[10px] font-black text-[#046137] uppercase tracking-[0.2em] mb-4">Klaim Terkait</p>
                 <div className="grid grid-cols-2 gap-y-4 gap-x-6 text-sm">
                   <div>
-                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Nama Lomba</p>
-                    <p className="font-bold text-white mt-0.5">{claim.nama_lomba}</p>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Nama Lomba</p>
+                    <p className="font-bold text-gray-900 mt-0.5">{claim.nama_lomba}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Mahasiswa</p>
-                    <p className="font-bold text-white mt-0.5">{claim.nama_display}</p>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Mahasiswa</p>
+                    <p className="font-bold text-gray-900 mt-0.5">{claim.nama_display}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Peringkat & Tingkat</p>
-                    <p className="text-gray-200 mt-0.5">{claim.peringkat} · {claim.tingkat}</p>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Peringkat & Tingkat</p>
+                    <p className="text-gray-700 mt-0.5">{claim.peringkat} · {claim.tingkat}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Tanggal Klaim</p>
-                    <p className="text-gray-200 mt-0.5">{formatTanggal(claim.tanggal)}</p>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tanggal Klaim</p>
+                    <p className="text-gray-700 mt-0.5">{formatTanggal(claim.tanggal)}</p>
                   </div>
                 </div>
               </div>
@@ -85,12 +85,12 @@ export default function RewardDetailModal({ reward, onClose, onStatusUpdate }) {
 
             {/* Estimasi Dana */}
             {pengajuan?.estimasi_reward != null && (
-              <div className="bg-blue-50 border border-blue-100 rounded-2xl p-6 flex items-center justify-between">
+              <div className="bg-[#f0f7f3] border border-[#d4ebe0] rounded-2xl p-6 flex items-center justify-between">
                 <div>
-                  <p className="text-[11px] font-black text-blue-700 uppercase tracking-wider">Estimasi Dana Penghargaan</p>
-                  <p className="text-[11px] text-blue-400 mt-1 font-medium italic">SK Rektor No. 078/B.02/UKDW/2023</p>
+                  <p className="text-[11px] font-black text-[#046137] uppercase tracking-wider">Estimasi Dana Penghargaan</p>
+                  <p className="text-[11px] text-[#046137] mt-1 font-medium italic opacity-70">SK Rektor No. 078/B.02/UKDW/2023</p>
                 </div>
-                <p className="text-3xl font-black text-blue-700 tracking-tight">
+                <p className="text-3xl font-black text-[#046137] tracking-tight">
                   {"Rp " + Number(pengajuan.estimasi_reward).toLocaleString("id-ID")}
                 </p>
               </div>
@@ -184,7 +184,7 @@ export default function RewardDetailModal({ reward, onClose, onStatusUpdate }) {
               <button
                 onClick={() => handleStatus("diproses")}
                 disabled={updating}
-                className="px-8 py-2.5 rounded-xl text-[12px] font-black bg-gray-900 text-white hover:bg-gray-700 transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-gray-200"
+                className="px-8 py-2.5 rounded-xl text-[12px] font-black bg-[#046137] text-white hover:bg-[#035230] transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-green-100"
               >
                 {updating ? "MEMPROSES..." : "APPROVE DATA REKENING"}
               </button>

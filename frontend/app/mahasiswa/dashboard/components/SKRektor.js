@@ -47,7 +47,7 @@ export default function SKRektor() {
             onClick={() => setActiveTab(t.key)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${
               activeTab === t.key
-                ? "border-blue-600 text-blue-600"
+                ? "border-[#046137] text-[#046137]"
                 : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
           >
@@ -101,7 +101,7 @@ export default function SKRektor() {
 
       {activeTab === "mahasiswa" && (
         <div className="space-y-6">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+          <div className="bg-[#f0f7f3] border border-[#d4ebe0] rounded-lg p-3 text-sm text-[#046137]">
             <strong>Pengali:</strong> Rp 225.000 per poin. Contoh: poin 6 = Rp 1.350.000
           </div>
 

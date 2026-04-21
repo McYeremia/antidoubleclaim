@@ -137,7 +137,7 @@ export default function ArsipPeriode() {
             { label: "Total Klaim",     value: selected.jumlah_klaim ?? 0,    color: "text-gray-900" },
             { label: "Klaim Disetujui", value: selected.klaim_disetujui ?? 0, color: "text-green-600" },
             { label: "Klaim Ditolak",   value: selected.klaim_ditolak ?? 0,   color: "text-red-600" },
-            { label: "Reward Selesai",  value: selected.reward_selesai ?? 0,  color: "text-blue-600" },
+            { label: "Reward Selesai",  value: selected.reward_selesai ?? 0,  color: "text-[#046137]" },
           ].map(s => (
             <div key={s.label} className="bg-white rounded-2xl shadow-sm p-5 border border-gray-100">
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">{s.label}</p>
@@ -328,7 +328,7 @@ export default function ArsipPeriode() {
                           <td className="px-6 py-4">
                             <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
                               r.reward_status === "selesai"  ? "bg-green-100 text-green-700"
-                              : r.reward_status === "diproses" ? "bg-blue-100 text-blue-700"
+                              : r.reward_status === "diproses" ? "bg-[#d4ebe0] text-[#046137]"
                               : "bg-orange-100 text-orange-600"
                             }`}>{r.reward_status}</span>
                           </td>

@@ -62,7 +62,7 @@ export default function ArsipDetailView({ detailItem, rewards, onBack }) {
               <>
                 <ArsipCertPreview url={certUrl} filename={certFilename} />
                 <a href={certUrl} target="_blank" rel="noopener noreferrer"
-                   className="mt-6 inline-flex items-center gap-2 text-[12px] font-black text-gray-900 underline underline-offset-4 hover:text-blue-600 transition-colors uppercase tracking-widest">
+                   className="mt-6 inline-flex items-center gap-2 text-[12px] font-black text-gray-900 underline underline-offset-4 hover:text-[#046137] transition-colors uppercase tracking-widest">
                   BUKA DALAM TAB BARU
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -156,7 +156,7 @@ export default function ArsipDetailView({ detailItem, rewards, onBack }) {
                     <div className="col-span-2 sm:col-span-3">
                       <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">URL Website Penyelenggara</p>
                       <a href={p.url_penyelenggara} target="_blank" rel="noopener noreferrer"
-                         className="text-[13px] font-bold text-gray-900 underline underline-offset-4 hover:text-blue-600 transition-colors break-all">
+                         className="text-[13px] font-bold text-gray-900 underline underline-offset-4 hover:text-[#046137] transition-colors break-all">
                         {p.url_penyelenggara || "—"}
                       </a>
                     </div>
@@ -199,7 +199,7 @@ export default function ArsipDetailView({ detailItem, rewards, onBack }) {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           {anggota.map((a, i) => (
                             <div key={i} className="flex items-center gap-4 bg-white rounded-xl p-3 shadow-sm border border-gray-100">
-                              <div className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center text-[11px] font-black text-white shrink-0">
+                              <div className="w-8 h-8 rounded-lg bg-[#046137] flex items-center justify-center text-[11px] font-black text-white shrink-0">
                                 {i + 2}
                               </div>
                               <div className="truncate">
@@ -256,7 +256,7 @@ export default function ArsipDetailView({ detailItem, rewards, onBack }) {
                 </div>
                 <span className={`px-3 py-1.5 rounded-full text-[11px] font-black uppercase tracking-widest ${
                   reward.reward_status === "selesai"  ? "bg-green-100 text-green-700"
-                  : reward.reward_status === "diproses" ? "bg-blue-100 text-blue-700"
+                  : reward.reward_status === "diproses" ? "bg-[#d4ebe0] text-[#046137]"
                   : reward.reward_status === "ditolak"  ? "bg-red-100 text-red-700"
                   : "bg-orange-100 text-orange-600"
                 }`}>{reward.reward_status}</span>
@@ -294,12 +294,12 @@ export default function ArsipDetailView({ detailItem, rewards, onBack }) {
               </div>
 
               {reward.estimasi_reward && (
-                <div className="bg-blue-50 border border-blue-100 rounded-2xl p-6 flex items-center justify-between">
+                <div className="bg-[#f0f7f3] border border-[#d4ebe0] rounded-2xl p-6 flex items-center justify-between">
                   <div>
-                    <p className="text-[11px] font-black text-blue-700 uppercase tracking-wider">Estimasi Dana Penghargaan</p>
-                    <p className="text-[11px] text-blue-400 mt-1 font-medium italic">SK Rektor No. 078/B.02/UKDW/2023</p>
+                    <p className="text-[11px] font-black text-[#046137] uppercase tracking-wider">Estimasi Dana Penghargaan</p>
+                    <p className="text-[11px] text-[#046137] mt-1 font-medium italic opacity-70">SK Rektor No. 078/B.02/UKDW/2023</p>
                   </div>
-                  <p className="text-3xl font-black text-blue-700 tracking-tight">
+                  <p className="text-3xl font-black text-[#046137] tracking-tight">
                     {"Rp " + Number(reward.estimasi_reward).toLocaleString("id-ID")}
                   </p>
                 </div>

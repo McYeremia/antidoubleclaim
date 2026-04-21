@@ -43,7 +43,7 @@ export default function ClaimSection({
                 </td>
                 <td className="px-6 py-4 text-[13px] text-gray-500 font-medium">{claim.tingkat}</td>
                 <td className="px-6 py-4">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-black bg-gray-900 text-white">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-black bg-[#046137] text-white">
                     {claim.peringkat}
                   </span>
                 </td>
@@ -74,7 +74,7 @@ export default function ClaimSection({
                   <td className="px-6 py-4 text-right space-x-2" onClick={e => e.stopPropagation()}>
                     <button
                       onClick={e => onApprove(claim.id, e)}
-                      className="px-3 py-1.5 rounded-xl text-[11px] font-black bg-gray-900 text-white hover:bg-gray-700 transition-colors"
+                      className="px-3 py-1.5 rounded-xl text-[11px] font-black bg-[#046137] text-white hover:bg-[#035230] transition-colors"
                     >
                       APPROVE
                     </button>

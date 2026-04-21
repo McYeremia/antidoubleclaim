@@ -27,7 +27,7 @@ export function formatDatetime(str) {
 
 export const STATUS_BADGE = {
   "perlu ditinjau": "bg-orange-100 text-orange-700",
-  "belum dicek":    "bg-blue-100 text-blue-700",
+  "belum dicek":    "bg-[#d4ebe0] text-[#046137]",
   "sudah dicek":    "bg-green-100 text-green-700",
   "ditolak":        "bg-red-100 text-red-700",
 };
@@ -39,8 +39,8 @@ export const KATEGORI_LABEL = {
 };
 
 export const REWARD_STATUS_BADGE = {
-  menunggu:     "bg-blue-100 text-blue-700",
-  diproses:     "bg-blue-100 text-blue-700",
+  menunggu:     "bg-[#d4ebe0] text-[#046137]",
+  diproses:     "bg-[#d4ebe0] text-[#046137]",
   selesai:      "bg-green-100 text-green-700",
   ditolak:      "bg-red-100 text-red-700",
   dikembalikan: "bg-orange-100 text-orange-700",
@@ -82,7 +82,7 @@ export function DocLink({ label, path }) {
         href={`${API}/uploads/${filename}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-[13px] font-bold text-gray-900 underline underline-offset-2 hover:text-blue-600 mt-1 inline-block"
+        className="text-[13px] font-bold text-gray-900 underline underline-offset-2 hover:text-[#046137] mt-1 inline-block"
       >
         {filename} ↗
       </a>
@@ -118,7 +118,7 @@ export function ArsipFileLink({ label, path }) {
         href={`${API}/uploads/${filename}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-[13px] font-bold text-gray-900 underline underline-offset-4 hover:text-blue-600 mt-1 inline-block transition-colors"
+        className="text-[13px] font-bold text-gray-900 underline underline-offset-4 hover:text-[#046137] mt-1 inline-block transition-colors"
       >
         {filename} ↗
       </a>

@@ -47,6 +47,7 @@ export default function OperatorDashboard() {
   const [operatorRole, setOperatorRole] = useState("");
   const [operatorId,   setOperatorId]   = useState(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [periodeLabel, setPeriodeLabel] = useState(null);
 
   useEffect(() => {
     if (sessionStorage.getItem("role") !== "operator") {
@@ -56,7 +57,6 @@ export default function OperatorDashboard() {
     setOperatorNama(sessionStorage.getItem("operator_nama") || "Operator");
     setOperatorRole(sessionStorage.getItem("operator_role") || "operator");
     setOperatorId(sessionStorage.getItem("operator_id"));
-
     const getMenuFromUrl = () =>
       new URLSearchParams(window.location.search).get("menu") || "claim";
     setActiveMenu(getMenuFromUrl());
@@ -65,6 +65,13 @@ export default function OperatorDashboard() {
     window.addEventListener("popstate", handlePop);
     return () => window.removeEventListener("popstate", handlePop);
   }, [router]);
+
+  useEffect(() => {
+    fetch("http://127.0.0.1:8000/periode/aktif")
+      .then(r => r.ok ? r.json() : { aktif: false })
+      .then(p => setPeriodeLabel(p.aktif && p.periode?.nama ? p.periode.nama : null))
+      .catch(() => setPeriodeLabel(null));
+  }, [activeMenu]);
 
   const navigateTo = (key) => {
     setActiveMenu(key);
@@ -97,44 +104,54 @@ export default function OperatorDashboard() {
     <div className="min-h-screen bg-[#f7f7f8] flex" style={{ fontFamily: "var(--font-poppins, sans-serif)" }}>
 
       {/* Sidebar */}
-      <aside className="w-[240px] bg-white flex flex-col flex-shrink-0 border-r border-gray-100">
+      <aside className="w-[240px] bg-[#046137] flex flex-col flex-shrink-0 h-screen sticky top-0">
         <div className="px-7 pt-9 pb-8">
-          <p className="text-[22px] font-black text-gray-900 leading-none tracking-tight uppercase">
+          <p className="text-[22px] font-black text-white leading-none tracking-tight uppercase">
             ANTI<br />DOUBLE<br />CLAIM
           </p>
-          <p className="text-[10px] font-semibold text-gray-400 mt-2.5 tracking-widest uppercase">Portal Pengelola</p>
+          <p className="text-[10px] font-semibold text-white/50 mt-2.5 tracking-widest uppercase">Portal Pengelola</p>
         </div>
         <nav className="flex-1 px-4 space-y-0.5">
           {menus.map((m) => (
             <button
               key={m.key}
               onClick={() => navigateTo(m.key)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] text-left transition-colors
+              className={`relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] text-left transition-colors overflow-hidden
                 ${activeMenu === m.key
-                  ? "text-gray-900 font-bold bg-gray-50 shadow-sm"
-                  : "text-gray-400 font-normal hover:text-gray-700 hover:bg-gray-50"
+                  ? "text-white font-bold bg-white/10"
+                  : "text-white/70 font-medium hover:text-white hover:bg-white/10"
                 }`}
             >
+              {activeMenu === m.key && (
+                <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] bg-white rounded-full" />
+              )}
               {m.icon}
               {m.label}
             </button>
           ))}
         </nav>
+        <div className="px-7 py-6 border-t border-white/10">
+          <p className="text-[11px] font-bold text-white/80 uppercase tracking-widest leading-none">UKDW</p>
+          <p className="text-[10px] text-white/40 mt-1 leading-snug">Universitas Kristen<br />Duta Wacana</p>
+          <p className="text-[10px] text-white/30 mt-3 tabular-nums">© {new Date().getFullYear()}</p>
+        </div>
       </aside>
 
       {/* Area Kanan */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-8 flex-shrink-0">
-          <div className="flex items-center gap-4">
-            <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
-            <h2 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.3em]">{activeMenu} node active</h2>
+        <header className="h-16 bg-[#f0f7f3] border-b border-[#d4ebe0] flex items-center justify-between px-8 flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className={`h-2 w-2 rounded-full animate-pulse ${periodeLabel ? "bg-[#046137]" : "bg-gray-300"}`} />
+            <h2 className={`text-[11px] font-black uppercase tracking-[0.3em] ${periodeLabel ? "text-[#046137]" : "text-gray-400"}`}>
+              {periodeLabel ?? "Tidak Ada Periode Aktif"}
+            </h2>
           </div>
           <div className="relative">
             <button
               onClick={() => setShowUserMenu(v => !v)}
-              className="flex items-center gap-3 px-3 py-1.5 rounded-xl hover:bg-gray-50 transition-colors"
+              className="flex items-center gap-3 px-3 py-1.5 rounded-xl hover:bg-[#d4ebe0] transition-colors"
             >
-              <div className="w-9 h-9 rounded-full bg-gray-900 flex items-center justify-center flex-shrink-0">
+              <div className="w-9 h-9 rounded-full bg-[#046137] flex items-center justify-center flex-shrink-0">
                 <span className="text-xs font-bold text-white uppercase">
                   {operatorNama.split(" ").map(w => w[0]).join("").slice(0, 2)}
                 </span>
