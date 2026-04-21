@@ -573,7 +573,7 @@ function ProgressBar({ steps, current }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Step 1 — Data Diri
 // ─────────────────────────────────────────────────────────────────────────────
-function Step1({ data, onChange, onBlur, nimInfo, errors }) {
+function Step1({ data, onChange, onBlur, nimInfo, errors, profil }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
@@ -598,22 +598,39 @@ function Step1({ data, onChange, onBlur, nimInfo, errors }) {
           disabled
           style={{ gridColumn: "1 / -1" }}
         />
-        <FInput
-          id="nomor_wa"
-          label="Nomor WhatsApp"
-          required
-          type="tel"
-          placeholder="08123456789"
-          value={data.nomor_wa}
-          onChange={(e) => {
-            const val = e.target.value.replace(/[^\d+\s-]/g, "");
-            onChange("nomor_wa", val);
-          }}
-          onBlur={() => onBlur("nomor_wa")}
-          hint="Format: 08xxxxxxxxxx — 10 hingga 13 digit angka, diawali 08 atau +62"
-          error={errors?.nomor_wa}
-          maxLength={16}
-        />
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label htmlFor="nomor_wa" className="block text-sm font-semibold text-gray-700">
+              Nomor WhatsApp <span className="text-red-500">*</span>
+            </label>
+            {profil?.nomor_wa && (() => {
+              const active = data.nomor_wa === profil.nomor_wa;
+              return (
+                <button type="button" onClick={() => onChange("nomor_wa", active ? "" : profil.nomor_wa)}
+                  className="flex items-center gap-2 group">
+                  <span className="text-[11px] text-gray-400 group-hover:text-gray-600 transition-colors">Isi Dari Profil</span>
+                  <span className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 cursor-pointer ${active ? "bg-[#046137]" : "bg-gray-200"}`}>
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${active ? "translate-x-4" : "translate-x-0"}`} />
+                  </span>
+                </button>
+              );
+            })()}
+          </div>
+          <FInput
+            id="nomor_wa"
+            type="tel"
+            placeholder="08123456789"
+            value={data.nomor_wa}
+            onChange={(e) => {
+              const val = e.target.value.replace(/[^\d+\s-]/g, "");
+              onChange("nomor_wa", val);
+            }}
+            onBlur={() => onBlur("nomor_wa")}
+            hint="Format: 08xxxxxxxxxx — 10 hingga 13 digit angka, diawali 08 atau +62"
+            error={errors?.nomor_wa}
+            maxLength={16}
+          />
+        </div>
       </div>
       {nimInfo?.valid && (
         <div style={{ background: "#f6fdf8", border: "1px solid #c2e8d0", borderRadius: "8px", padding: "10px 14px", fontSize: "13px", color: "#1a7a4a" }}>
@@ -1251,7 +1268,7 @@ const INITIAL_DATA = {
   setuju: false,
 };
 
-export default function TambahKlaimWizard({ session, onClose, onSuccess }) {
+export default function TambahKlaimWizard({ session, profil, onClose, onSuccess }) {
   const [step,         setStep]         = useState(1);
   const [data,         setData]         = useState({ ...INITIAL_DATA, nama_lengkap: session.user.name ?? "", email: session.user.email ?? "" });
   const [files,        setFiles]        = useState({});
@@ -1456,7 +1473,7 @@ export default function TambahKlaimWizard({ session, onClose, onSuccess }) {
 
         {/* Content */}
         <div style={{ flex: 1, overflowY: "auto", padding: "0 24px 16px" }}>
-          {step === 1 && <Step1 data={data} onChange={onChange} onBlur={handleBlur} nimInfo={nimInfo} errors={fieldErrors} />}
+          {step === 1 && <Step1 data={data} onChange={onChange} onBlur={handleBlur} nimInfo={nimInfo} errors={fieldErrors} profil={profil} />}
           {step === 2 && <Step2 data={data} onChange={onChange} onBlur={handleBlur} onFileChange={onFileChange} files={files} errors={fieldErrors} />}
           {step === 3 && <Step3 data={data} onChange={onChange} errors={fieldErrors} />}
           {step === 4 && data.kategori_simkatmawa === "rekognisi"          && <Step4Rekognisi data={data} onChange={onChange} onBlur={handleBlur} onFileChange={onFileChange} files={files} errors={fieldErrors} periodeTanggalSelesai={periodeTanggalSelesai} />}

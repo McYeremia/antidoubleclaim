@@ -159,11 +159,13 @@ export default function RewardDetailModal({ reward, onClose, onStatusUpdate }) {
                       : "bg-gray-50 border-gray-200 focus:ring-gray-900"
                   }`}
                 />
-                {reward.reward_status !== "selesai" && reward.reward_status !== "diproses" && !catatanFilled && (
-                  <p className="text-[11px] text-orange-500 font-semibold mt-1.5">
-                    Isi catatan terlebih dahulu sebelum dapat mengembalikan data rekening.
-                  </p>
-                )}
+                <p className={`text-[11px] font-semibold mt-1.5 transition-opacity duration-150 ${
+                  reward.reward_status !== "selesai" && reward.reward_status !== "diproses" && !catatanFilled
+                    ? "text-orange-500 opacity-100"
+                    : "opacity-0 select-none"
+                }`}>
+                  Isi catatan terlebih dahulu sebelum dapat mengembalikan data rekening.
+                </p>
               </section>
             </div>
           </div>

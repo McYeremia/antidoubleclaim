@@ -11,12 +11,13 @@ import {
 } from "./shared";
 
 
-export default function DaftarKlaim({ session, search, onOpenForm, onTambahKlaim }) {
+export default function DaftarKlaim({ session, search, onOpenForm, onTambahKlaim, onGoProfil, profilLengkap, profil }) {
   const router = useRouter();
   const [claims, setClaims]              = useState([]);
   const [rewardMap, setRewardMap]        = useState({});
   const [pengajuanMap, setPengajuanMap]  = useState({});
   const [loading, setLoading]            = useState(true);
+  const [showProfilGate, setShowProfilGate] = useState(false);
   const fetchClaims = async () => {
     setLoading(true);
     try {
@@ -53,14 +54,16 @@ export default function DaftarKlaim({ session, search, onOpenForm, onTambahKlaim
 
   return (
     <div>
-      <div className="flex items-start justify-between mb-10">
+      <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="text-4xl font-black text-gray-900 leading-none tracking-tight">Daftar Klaim</h1>
           <p className="text-gray-400 mt-3 text-[14px]">Riwayat klaim sertifikat prestasi yang telah diajukan.</p>
         </div>
         <button
-          onClick={onTambahKlaim}
-          className="flex items-center gap-2 px-5 py-2.5 bg-[#046137] text-white text-[13px] font-semibold rounded-xl hover:bg-[#035230] transition-colors flex-shrink-0 mt-1"
+          onClick={profilLengkap ? onTambahKlaim : () => setShowProfilGate(true)}
+          className={`flex items-center gap-2 px-5 py-2.5 text-white text-[13px] font-semibold rounded-xl transition-colors flex-shrink-0 mt-1 ${
+            profilLengkap ? "bg-[#046137] hover:bg-[#035230]" : "bg-gray-400 hover:bg-gray-500"
+          }`}
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
@@ -68,6 +71,21 @@ export default function DaftarKlaim({ session, search, onOpenForm, onTambahKlaim
           Tambah Klaim
         </button>
       </div>
+
+      {profilLengkap === false && (
+        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 mb-6">
+          <svg className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div className="flex-1">
+            <p className="text-[13px] font-bold text-amber-800">Profil belum lengkap</p>
+            <p className="text-[12px] text-amber-700 mt-0.5">Lengkapi nomor WhatsApp dan data rekening BNI sebelum mengajukan klaim.</p>
+          </div>
+          <button onClick={onGoProfil} className="text-[12px] font-black text-amber-700 hover:text-amber-900 underline underline-offset-2 flex-shrink-0">
+            Lengkapi Profil →
+          </button>
+        </div>
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
@@ -160,6 +178,69 @@ export default function DaftarKlaim({ session, search, onOpenForm, onTambahKlaim
             </table>
             <div className="px-5 py-3 border-t border-gray-50">
               <p className="text-[11px] text-gray-300 font-medium">{filtered.length} klaim ditemukan</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showProfilGate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={() => setShowProfilGate(false)}>
+          <div className="bg-white rounded-[28px] shadow-2xl w-full max-w-sm p-8" onClick={e => e.stopPropagation()}>
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center mb-5">
+              <svg className="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h3 className="text-[16px] font-black text-gray-900 mb-2">Profil Belum Lengkap</h3>
+            <p className="text-[13px] text-gray-500 leading-relaxed mb-6">
+              Sebelum mengajukan klaim, lengkapi terlebih dahulu data berikut di halaman <span className="font-bold text-gray-700">Profil</span>:
+            </p>
+            {(() => {
+              const checks = [
+                { label: "Nomor WhatsApp",          ok: !!profil?.nomor_wa },
+                { label: "Nama Pemilik Rekening",    ok: !!profil?.nama_pemilik_rekening },
+                { label: "Nomor Rekening BNI (10 digit)", ok: profil?.nomor_rekening?.length === 10 },
+              ];
+              const allDone = checks.every(c => c.ok);
+              return (
+                <>
+                  <ul className="space-y-2 mb-5">
+                    {checks.map(({ label, ok }) => (
+                      <li key={label} className="flex items-center gap-2.5 text-[13px]">
+                        <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${ok ? "bg-green-100" : "bg-red-100"}`}>
+                          {ok ? (
+                            <svg className="w-2.5 h-2.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                          ) : (
+                            <svg className="w-2.5 h-2.5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          )}
+                        </div>
+                        <span className={ok ? "text-gray-400 line-through" : "text-gray-700"}>{label}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  {allDone && (
+                    <p className="text-[12px] text-green-600 font-semibold mb-5">Semua data sudah lengkap! Kamu bisa mengajukan klaim sekarang.</p>
+                  )}
+                </>
+              );
+            })()}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowProfilGate(false)}
+                className="flex-1 px-4 py-2.5 text-[12px] font-bold text-gray-500 hover:text-gray-900 transition-colors"
+              >
+                Nanti Saja
+              </button>
+              <button
+                onClick={() => { setShowProfilGate(false); onGoProfil(); }}
+                className="flex-1 px-4 py-2.5 bg-[#046137] text-white text-[12px] font-black rounded-xl hover:bg-[#035230] transition-colors"
+              >
+                Lengkapi Profil
+              </button>
             </div>
           </div>
         </div>

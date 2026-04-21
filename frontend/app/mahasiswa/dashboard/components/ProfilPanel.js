@@ -3,6 +3,16 @@
 import { useState, useEffect } from "react";
 import { API_URL } from "./shared";
 
+function validateNomorWA(nomor) {
+  if (!nomor) return { status: "empty", msg: "" };
+  const digits = nomor.replace(/\D/g, "");
+  if (digits.length === 0)   return { status: "invalid", msg: "Hanya boleh berisi angka" };
+  if (!digits.startsWith("08")) return { status: "invalid", msg: "Harus diawali 08" };
+  if (digits.length < 10)    return { status: "invalid", msg: `Kurang ${10 - digits.length} digit lagi (min. 10 digit)` };
+  if (digits.length > 13)    return { status: "invalid", msg: "Terlalu panjang — maksimal 13 digit" };
+  return { status: "valid", msg: "Format nomor WhatsApp valid" };
+}
+
 function validateRekeningBNI(nomor) {
   if (!nomor) return { status: "empty", msg: "" };
   const digits = nomor.replace(/\D/g, "");
@@ -132,7 +142,7 @@ export default function ProfilPanel({ session, onBack }) {
                 Nomor WhatsApp
               </label>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 pointer-events-none">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75}
                       d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
@@ -142,11 +152,48 @@ export default function ProfilPanel({ session, onBack }) {
                   type="text"
                   name="nomor_wa"
                   value={form.nomor_wa}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, "");
+                    setForm(f => ({ ...f, nomor_wa: val }));
+                    setSaved(false);
+                  }}
                   placeholder="Contoh: 08123456789"
-                  className="block w-full pl-10 pr-4 py-3.5 border border-gray-200 rounded-xl text-[15px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  maxLength={13}
+                  inputMode="tel"
+                  className={`block w-full pl-10 pr-4 py-3.5 border rounded-xl text-[15px] text-gray-900 focus:outline-none focus:ring-2 focus:border-transparent transition-all ${
+                    (() => {
+                      const v = validateNomorWA(form.nomor_wa);
+                      if (v.status === "valid")   return "border-green-300 focus:ring-green-400";
+                      if (v.status === "invalid") return "border-red-300 focus:ring-red-400";
+                      return "border-gray-200 focus:ring-blue-500";
+                    })()
+                  }`}
                 />
               </div>
+              {(() => {
+                const v = validateNomorWA(form.nomor_wa);
+                if (v.status === "valid") return (
+                  <div className="flex items-center gap-2 mt-2 px-3 py-2 bg-green-50 border border-green-200 rounded-xl">
+                    <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+                      <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <p className="text-[12px] font-bold text-green-700">{v.msg}</p>
+                  </div>
+                );
+                if (v.status === "invalid") return (
+                  <div className="flex items-center gap-2 mt-2 px-3 py-2 bg-red-50 border border-red-200 rounded-xl">
+                    <div className="w-4 h-4 rounded-full bg-red-400 flex items-center justify-center flex-shrink-0">
+                      <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </div>
+                    <p className="text-[12px] font-bold text-red-600">{v.msg}</p>
+                  </div>
+                );
+                return null;
+              })()}
             </div>
 
             <div className="border-t border-gray-100 pt-5 space-y-4">
