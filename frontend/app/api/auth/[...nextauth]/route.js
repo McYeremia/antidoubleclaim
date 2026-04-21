@@ -9,7 +9,7 @@ const handler = NextAuth({
     }),
   ],
   session: {
-    maxAge: 86400, // 1 hari
+    maxAge: 10800, // 3 jam
   },
   callbacks: {
     async signIn({ user }) {

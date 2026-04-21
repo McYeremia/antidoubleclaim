@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { API, ConfirmModal } from "./shared";
+import { API, ConfirmModal, AlertModal } from "./shared";
 import ClaimSection from "./ClaimSection";
 
 export default function PengajuanClaim({ router }) {
@@ -11,6 +11,7 @@ export default function PengajuanClaim({ router }) {
   const [opId,          setOpId]          = useState(null);
   const [discardModal,  setDiscardModal]  = useState(null); // { id, name }
   const [approveModal,  setApproveModal]  = useState(null); // { id, name }
+  const [alertModal,    setAlertModal]    = useState(null); // { title, message }
 
   useEffect(() => {
     setOpId(localStorage.getItem("operator_id"));
@@ -45,7 +46,10 @@ export default function PengajuanClaim({ router }) {
 
     // Validasi Rekognisi: Harus ada estimasi dana
     if (claim?.kategori === "rekognisi" && (!claim.estimasi_reward || Number(claim.estimasi_reward) === 0)) {
-      alert(`Klaim "${claim.nama_lomba}" adalah kategori Rekognisi. Harap isi estimasi dana di halaman detail terlebih dahulu sebelum menyetujui.`);
+      setAlertModal({
+        title: "Estimasi Dana Belum Diisi",
+        message: <>Klaim &ldquo;{claim.nama_lomba}&rdquo; adalah kategori Rekognisi. Harap isi <strong>estimasi dana</strong> di halaman detail terlebih dahulu sebelum menyetujui.</>,
+      });
       return;
     }
 
@@ -220,6 +224,14 @@ export default function PengajuanClaim({ router }) {
         confirmLabel="YA, SETUJUI"
         onConfirm={handleApproveConfirm}
         onCancel={() => setApproveModal(null)}
+      />
+
+      <AlertModal
+        isOpen={!!alertModal}
+        title={alertModal?.title}
+        message={alertModal?.message}
+        variant="warning"
+        onClose={() => setAlertModal(null)}
       />
     </div>
   );

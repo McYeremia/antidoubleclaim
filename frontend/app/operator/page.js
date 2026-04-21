@@ -51,7 +51,7 @@ export default function OperatorDashboard() {
 
   useEffect(() => {
     const loginAt = localStorage.getItem("operator_login_at");
-    const expired = !loginAt || Date.now() - Number(loginAt) > 8 * 60 * 60 * 1000;
+    const expired = !loginAt || Date.now() - Number(loginAt) > 3 * 60 * 60 * 1000;
     if (localStorage.getItem("role") !== "operator" || expired) {
       ["role","operator_id","operator_nama","operator_username","operator_role","operator_login_at"]
         .forEach(k => localStorage.removeItem(k));
