@@ -102,19 +102,41 @@ export default function ArsipPeriode() {
   const archivable = (p) => p.status === "tutup" || p.status === "ditutup";
 
   const exportClaims = (data, periodeName) => {
-    const rows = data.map((c, i) => ({
-      "No.":           i + 1,
-      "ID Klaim":      c.id,
-      "Nama Lomba":    c.nama_lomba ?? "",
-      "Mahasiswa":     c.nama_display ?? "",
-      "Email":         c.mahasiswa_email ?? "",
-      "Tingkat":       c.tingkat ?? "",
-      "Peringkat":     c.peringkat ?? "",
-      "Status":        c.status ?? "",
-      "Tanggal":       c.tanggal ?? "",
-    }));
+    const rows = data.map((c, i) => {
+      const isKelompok = c.jenis_kepesertaan === "kelompok";
+      const anggotaParts = [];
+      if (isKelompok && c.nama_ketua) {
+        const nimKetua = c.mahasiswa_email?.split("@")[0] ?? "";
+        anggotaParts.push(`${c.nama_ketua} (${nimKetua}) - Ketua`);
+      }
+      if (isKelompok && c.anggota_list) {
+        c.anggota_list.split(";;").forEach(entry => {
+          const [nama, nim] = entry.split("|");
+          anggotaParts.push(nim ? `${nama} (${nim})` : nama);
+        });
+      }
+      return {
+        "No.":              i + 1,
+        "ID Klaim":         c.id,
+        "Nama Lomba":       c.nama_lomba ?? "",
+        "Mahasiswa":        c.nama_display ?? "",
+        "Email":            c.mahasiswa_email ?? "",
+        "Tingkat":          c.tingkat ?? "",
+        "Peringkat":        c.peringkat ?? "",
+        "Status":           c.status ?? "",
+        "Tanggal Kegiatan": c.tanggal ?? "",
+        "Tanggal Mulai":    c.tanggal_mulai ?? "",
+        "Tanggal Selesai":  c.tanggal_selesai ?? "",
+        "Jenis Kepesertaan": c.jenis_kepesertaan ?? "",
+        "Anggota Kelompok": anggotaParts.join(", "),
+      };
+    });
     const ws = XLSX.utils.json_to_sheet(rows);
-    ws["!cols"] = [{ wch: 5 }, { wch: 10 }, { wch: 35 }, { wch: 25 }, { wch: 28 }, { wch: 15 }, { wch: 15 }, { wch: 14 }, { wch: 14 }];
+    ws["!cols"] = [
+      { wch: 5 }, { wch: 10 }, { wch: 35 }, { wch: 25 }, { wch: 28 },
+      { wch: 15 }, { wch: 15 }, { wch: 14 }, { wch: 14 }, { wch: 14 },
+      { wch: 14 }, { wch: 18 }, { wch: 40 },
+    ];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Klaim");
     XLSX.writeFile(wb, `klaim_${periodeName}_${new Date().toISOString().slice(0, 10)}.xlsx`);
