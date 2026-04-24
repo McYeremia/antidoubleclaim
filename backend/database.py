@@ -562,6 +562,27 @@ def get_pengajuan_by_claim_id(claim_id: int):
     return dict(zip(cols, row))
 
 
+def get_klaim_sebagai_anggota(nim: str) -> list:
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT c.*, p.id AS pengajuan_id
+        FROM PENGAJUAN_ANGGOTA pa
+        JOIN PENGAJUAN p ON pa.pengajuan_id = p.id
+        JOIN CLAIMS c ON p.claim_id = c.id
+        WHERE pa.nim_anggota = ?
+          AND p.claim_id IS NOT NULL
+        ORDER BY c.id DESC
+    """, (nim,))
+    rows = cursor.fetchall()
+    cols = [d[0] for d in cursor.description]
+    conn.close()
+    result = [dict(zip(cols, row)) for row in rows]
+    for item in result:
+        item["is_anggota"] = True
+    return result
+
+
 def update_pengajuan(pengajuan_id: int, data: dict):
     # Kolom yang boleh diedit oleh operator
     EDITABLE = [

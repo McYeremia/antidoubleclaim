@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSession, signOut } from "next-auth/react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 const API_URL = "http://127.0.0.1:8000";
@@ -143,6 +143,8 @@ export default function KlaimDetailPage() {
   const { data: session, status: authStatus } = useSession();
   const router = useRouter();
   const { id }  = useParams();
+  const searchParams = useSearchParams();
+  const isReadonly   = searchParams.get("readonly") === "true";
 
   const [claim,     setClaim]     = useState(null);
   const [pengajuan, setPengajuan] = useState(null);
@@ -201,7 +203,7 @@ export default function KlaimDetailPage() {
   const isLomba      = pengajuan?.kategori_simkatmawa?.startsWith("lomba_mandiri");
   const isKarya      = pengajuan?.kategori_kegiatan?.startsWith("Karya Mahasiswa");
   const isKelompok   = pengajuan?.jenis_kepesertaan === "kelompok";
-  const canEdit      = pengajuan && (claim.status === "belum dicek" || claim.status === "perlu ditinjau");
+  const canEdit      = !isReadonly && pengajuan && (claim.status === "belum dicek" || claim.status === "perlu ditinjau");
 
   const openEdit = () => {
     setEditForm({
@@ -620,10 +622,18 @@ export default function KlaimDetailPage() {
                                 </>
                               )}
                             </div>
-                            {anggota.length > 0 && (
+                            {(pengajuan.nama_ketua || anggota.length > 0) && (
                               <div>
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Anggota Lainnya</p>
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Daftar Anggota</p>
                                 <div className="space-y-1.5">
+                                  {pengajuan.nama_ketua && (
+                                    <div className="flex gap-4 text-sm bg-gray-50 rounded-xl px-4 py-2.5 items-center">
+                                      <span className="text-gray-400 font-semibold w-5">1.</span>
+                                      <span className="font-semibold text-gray-900">{pengajuan.nama_ketua}</span>
+                                      <span className="text-gray-400 font-mono">{pengajuan.mahasiswa_email?.split("@")[0]}</span>
+                                      <span className="ml-auto text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-[#046137]/10 text-[#046137]">Ketua</span>
+                                    </div>
+                                  )}
                                   {anggota.map((a, i) => (
                                     <div key={i} className="flex gap-4 text-sm bg-gray-50 rounded-xl px-4 py-2.5">
                                       <span className="text-gray-400 font-semibold w-5">{i + 2}.</span>
