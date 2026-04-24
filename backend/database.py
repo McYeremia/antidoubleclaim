@@ -1320,15 +1320,30 @@ def get_claims_by_periode_id(periode_id: int) -> list:
         SELECT c.id, c.nama_lomba, c.tingkat, c.tanggal, c.peringkat,
                c.sertifikat_path, c.status, c.mahasiswa_email, c.nama_display,
                c.mirip_dengan_id, c.verified_by, c.verified_at,
-               u.nama AS verified_by_nama, c.flag_alasan, c.catatan_penolakan
+               u.nama AS verified_by_nama, c.flag_alasan, c.catatan_penolakan,
+               p.tanggal_mulai, p.tanggal_selesai, p.jenis_kepesertaan, p.nama_ketua,
+               GROUP_CONCAT(a.nama_anggota || '|' || a.nim_anggota, ';;') AS anggota_list
         FROM CLAIMS c
-        LEFT JOIN USERS u ON u.id = c.verified_by
+        LEFT JOIN USERS u             ON u.id            = c.verified_by
+        LEFT JOIN PENGAJUAN p         ON p.claim_id      = c.id
+        LEFT JOIN PENGAJUAN_ANGGOTA a ON a.pengajuan_id  = p.id
         WHERE c.periode_id = ?
+        GROUP BY c.id
         ORDER BY c.id DESC
     """, (periode_id,))
     rows = cursor.fetchall()
+    cols = [d[0] for d in cursor.description]
     conn.close()
-    return [_row_to_dict(row) for row in rows]
+    result = []
+    for row in rows:
+        d = _row_to_dict(row)
+        d["tanggal_mulai"]     = row[15]
+        d["tanggal_selesai"]   = row[16]
+        d["jenis_kepesertaan"] = row[17]
+        d["nama_ketua"]        = row[18]
+        d["anggota_list"]      = row[19]
+        result.append(d)
+    return result
 
 
 def get_rewards_by_periode_id(periode_id: int) -> list:
@@ -1396,10 +1411,14 @@ def get_export_data(
                c.mahasiswa_email, c.nama_display, c.verified_at, c.catatan_penolakan,
                u.nama  AS verified_by_nama,
                p.kategori_simkatmawa, p.jenis_kepesertaan, p.tahun_kegiatan,
-               p.nama_kegiatan, p.tingkatan AS tingkatan_p, p.capaian
+               p.nama_kegiatan, p.tingkatan AS tingkatan_p, p.capaian,
+               p.tanggal_mulai, p.tanggal_selesai, p.nama_ketua,
+               GROUP_CONCAT(a.nama_anggota || '|' || a.nim_anggota, ';;') AS anggota_list
         FROM CLAIMS c
-        LEFT JOIN USERS u    ON u.id       = c.verified_by
-        LEFT JOIN PENGAJUAN p ON p.claim_id = c.id
+        LEFT JOIN USERS u           ON u.id          = c.verified_by
+        LEFT JOIN PENGAJUAN p       ON p.claim_id    = c.id
+        LEFT JOIN PENGAJUAN_ANGGOTA a ON a.pengajuan_id = p.id
+        GROUP BY c.id
         ORDER BY c.id DESC
     """)
     rows = cursor.fetchall()
@@ -1410,7 +1429,8 @@ def get_export_data(
         (cid, nama_lomba, tingkat, tanggal, peringkat, status,
          email, nama_display, verified_at, catatan,
          verified_by_nama,
-         kat_simkat, kepesertaan, tahun_keg, nama_keg, tingkatan_p, capaian) = row
+         kat_simkat, kepesertaan, tahun_keg, nama_keg, tingkatan_p, capaian,
+         tanggal_mulai, tanggal_selesai, nama_ketua, anggota_list) = row
 
         parsed    = parse_nim(email)
         nim       = parsed.get("nim", email.split("@")[0]) if parsed.get("valid") else email.split("@")[0]
@@ -1449,6 +1469,22 @@ def get_export_data(
         else:
             kat_label = ""
 
+        # Susun daftar anggota kelompok (ketua + anggota lainnya)
+        anggota_gabung = ""
+        if kepesertaan == "kelompok":
+            parts = []
+            if nama_ketua:
+                nim_ketua = email.split("@")[0] if "@" in email else ""
+                parts.append(f"{nama_ketua} ({nim_ketua}) - Ketua")
+            if anggota_list:
+                for entry in anggota_list.split(";;"):
+                    if "|" in entry:
+                        nama_a, nim_a = entry.split("|", 1)
+                        parts.append(f"{nama_a} ({nim_a})")
+                    else:
+                        parts.append(entry)
+            anggota_gabung = ", ".join(parts)
+
         result.append({
             "NIM":                 nim,
             "Nama Mahasiswa":      nama_display or "",
@@ -1459,7 +1495,10 @@ def get_export_data(
             "Nama Kegiatan":       nama_keg_final or "",
             "Tingkatan":           tingkat_final or "",
             "Tahun Kegiatan":      tahun_final,
+            "Tanggal Mulai":       tanggal_mulai or "",
+            "Tanggal Selesai":     tanggal_selesai or "",
             "Jenis Kepesertaan":   kepesertaan or "",
+            "Anggota Kelompok":    anggota_gabung,
             "Kategori SIMKATMAWA": kat_label,
             "Capaian / Peringkat": capaian_final or "",
             "Status Klaim":        status_label,
