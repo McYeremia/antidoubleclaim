@@ -289,7 +289,8 @@ def create_database():
 # ---------------------------------------------------------------------------
 def insert_claim(nama_lomba, tingkat, tanggal, peringkat, sertifikat_path,
                  mahasiswa_email="placeholder@students.ukdw.ac.id",
-                 nama_display="Mahasiswa"):
+                 nama_display="Mahasiswa",
+                 kategori_simkatmawa=None):
 
     conn = _get_conn()
     cursor = conn.cursor()
@@ -304,40 +305,58 @@ def insert_claim(nama_lomba, tingkat, tanggal, peringkat, sertifikat_path,
     mirip_dengan_id = None
     detail          = {}
 
+    is_rekognisi = (kategori_simkatmawa == "rekognisi")
+
     for row in rows:
         old_id, old_nama, old_peringkat, old_phash_str = row
 
-        # Tahap 1 — Fuzzy nama lomba
-        sim_nama   = token_sort_ratio(nama_lomba, old_nama)
-        nama_mirip = sim_nama >= FUZZY_THRESHOLD
-        print(f"[Tahap 1] vs ID {old_id}: similarity nama={sim_nama}% (threshold={FUZZY_THRESHOLD}) → {'MIRIP' if nama_mirip else 'aman'}")
+        if is_rekognisi:
+            # Rekognisi: fuzzy nama kegiatan + exact kategori (tersimpan di peringkat)
+            sim_nama   = token_sort_ratio(nama_lomba, old_nama)
+            nama_mirip = sim_nama >= FUZZY_THRESHOLD
+            print(f"[Rekognisi] vs ID {old_id}: similarity nama={sim_nama}% → {'MIRIP' if nama_mirip else 'aman'}")
 
-        # Tahap 2 — pHash gambar sertifikat
-        old_hash   = imagehash.hex_to_hash(old_phash_str)
-        distance   = int(hamming_distance(new_hash, old_hash))
-        phash_mirip = distance <= PHASH_THRESHOLD
-        print(f"[Tahap 2] vs ID {old_id}: Hamming distance={distance} (threshold={PHASH_THRESHOLD}) → {'MIRIP' if phash_mirip else 'aman'}")
-
-        # Tahap 3 — Jika salah satu atau keduanya mirip, cek peringkat
-        if phash_mirip or nama_mirip:
-            alasan = []
-            if phash_mirip: alasan.append("gambar")
-            if nama_mirip:  alasan.append("nama lomba")
-            print(f"[Tahap 3] vs ID {old_id}: kemiripan terdeteksi ({', '.join(alasan)}) — cek peringkat...")
-
-            if peringkat == old_peringkat:
+            if nama_mirip and peringkat == old_peringkat:
                 flagged         = True
                 mirip_dengan_id = old_id
                 detail          = {
                     "duplikat_dengan_id": old_id,
                     "similarity_nama":    sim_nama,
-                    "distance_phash":     distance,
-                    "flag_alasan":        ", ".join(alasan),
+                    "distance_phash":     None,
+                    "flag_alasan":        "nama kegiatan + kategori rekognisi",
                 }
-                print(f"[FLAGGED] Mirip dengan ID {old_id} — alasan: {', '.join(alasan)}, peringkat sama ({peringkat})")
+                print(f"[FLAGGED] Rekognisi mirip dengan ID {old_id} — nama mirip ({sim_nama}%), kategori sama ({peringkat})")
                 break
-            else:
-                print(f"[Info] vs ID {old_id}: kemiripan terdeteksi tapi peringkat berbeda ({peringkat} vs {old_peringkat}) — tidak di-flag")
+        else:
+            # Lomba: pHash + fuzzy nama + peringkat (logika existing)
+            sim_nama   = token_sort_ratio(nama_lomba, old_nama)
+            nama_mirip = sim_nama >= FUZZY_THRESHOLD
+            print(f"[Tahap 1] vs ID {old_id}: similarity nama={sim_nama}% (threshold={FUZZY_THRESHOLD}) → {'MIRIP' if nama_mirip else 'aman'}")
+
+            old_hash    = imagehash.hex_to_hash(old_phash_str)
+            distance    = int(hamming_distance(new_hash, old_hash))
+            phash_mirip = distance <= PHASH_THRESHOLD
+            print(f"[Tahap 2] vs ID {old_id}: Hamming distance={distance} (threshold={PHASH_THRESHOLD}) → {'MIRIP' if phash_mirip else 'aman'}")
+
+            if phash_mirip or nama_mirip:
+                alasan = []
+                if phash_mirip: alasan.append("gambar")
+                if nama_mirip:  alasan.append("nama lomba")
+                print(f"[Tahap 3] vs ID {old_id}: kemiripan terdeteksi ({', '.join(alasan)}) — cek peringkat...")
+
+                if peringkat == old_peringkat:
+                    flagged         = True
+                    mirip_dengan_id = old_id
+                    detail          = {
+                        "duplikat_dengan_id": old_id,
+                        "similarity_nama":    sim_nama,
+                        "distance_phash":     distance,
+                        "flag_alasan":        ", ".join(alasan),
+                    }
+                    print(f"[FLAGGED] Mirip dengan ID {old_id} — alasan: {', '.join(alasan)}, peringkat sama ({peringkat})")
+                    break
+                else:
+                    print(f"[Info] vs ID {old_id}: kemiripan terdeteksi tapi peringkat berbeda ({peringkat} vs {old_peringkat}) — tidak di-flag")
 
     status = "perlu ditinjau" if flagged else "belum dicek"
 

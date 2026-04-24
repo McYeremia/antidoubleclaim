@@ -1354,13 +1354,14 @@ export default function TambahKlaimWizard({ session, profil, onClose, onSuccess 
 
     try {
       const uploadPayload = new FormData();
-      uploadPayload.append("nama_lomba",      data.nama_kegiatan);
-      uploadPayload.append("tingkat",         isLomba ? data.kategori_kegiatan : data.tingkatan);
-      uploadPayload.append("tanggal",         data.tanggal_selesai || data.tahun_kegiatan);
-      uploadPayload.append("peringkat",       isLomba ? data.capaian           : data.kategori_kegiatan);
-      uploadPayload.append("mahasiswa_email", session.user.email);
-      uploadPayload.append("nama_display",    session.user.name ?? session.user.email);
-      uploadPayload.append("file",            files.dokumen_sertifikat);
+      uploadPayload.append("nama_lomba",          data.nama_kegiatan);
+      uploadPayload.append("tingkat",             isLomba ? data.kategori_kegiatan : data.tingkatan);
+      uploadPayload.append("tanggal",             data.tanggal_selesai || data.tahun_kegiatan);
+      uploadPayload.append("peringkat",           isLomba ? data.capaian : data.kategori_kegiatan);
+      uploadPayload.append("mahasiswa_email",     session.user.email);
+      uploadPayload.append("nama_display",        session.user.name ?? session.user.email);
+      uploadPayload.append("kategori_simkatmawa", data.kategori_simkatmawa ?? "");
+      uploadPayload.append("file",                files.dokumen_sertifikat);
 
       const uploadRes  = await fetch("http://127.0.0.1:8000/upload", { method: "POST", body: uploadPayload });
       if (!uploadRes.ok) throw new Error("Upload sertifikat gagal");

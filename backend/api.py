@@ -277,7 +277,8 @@ async def upload_certificate(
     peringkat: str = Form(...),
     mahasiswa_email: str = Form(...),
     nama_display: str = Form(...),
-    file: UploadFile = File(...)
+    file: UploadFile = File(...),
+    kategori_simkatmawa: Optional[str] = Form(None),
 ):
     try:
         print(f"--- Menerima upload: {nama_lomba} dari {mahasiswa_email} ---")
@@ -293,7 +294,8 @@ async def upload_certificate(
         print(f"File disimpan di: {file_location}")
 
         result = insert_claim(nama_lomba, tingkat, tanggal, peringkat, file_location,
-                              mahasiswa_email=mahasiswa_email, nama_display=nama_display)
+                              mahasiswa_email=mahasiswa_email, nama_display=nama_display,
+                              kategori_simkatmawa=kategori_simkatmawa)
 
         return {
             "uploaded":           result.get("uploaded", True),
