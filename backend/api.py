@@ -26,8 +26,9 @@ from backend.database import (
     update_periode_status, update_periode_data, delete_periode, reset_semua_data,
     arsipkan_periode, get_claims_by_periode_id, get_rewards_by_periode_id,
     get_reward_konfirmasi_by_id,
+    get_klaim_sebagai_anggota,
 )
-from backend.nim_parser import parse_nim
+from backend.nim_parser import parse_nim, is_valid_student_email
 from backend.email_service import (
     kirim_email_klaim_disetujui,
     kirim_email_klaim_tidak_lolos,
@@ -222,6 +223,13 @@ async def list_claims(email: str = None):
     if email:
         return get_claims_by_email(email)
     return get_all_claims()
+
+@app.get("/klaim-sebagai-anggota")
+async def klaim_sebagai_anggota(email: str):
+    if not is_valid_student_email(email):
+        return []
+    nim = email.split("@")[0]
+    return get_klaim_sebagai_anggota(nim)
 
 @app.get("/claims/ditolak")
 async def get_claims_ditolak():

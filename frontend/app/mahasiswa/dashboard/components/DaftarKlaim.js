@@ -21,15 +21,25 @@ export default function DaftarKlaim({ session, search, onOpenForm, onTambahKlaim
   const fetchClaims = async () => {
     setLoading(true);
     try {
-      const [claimRes, rewardRes, pengajuanRes] = await Promise.all([
+      const [claimRes, rewardRes, pengajuanRes, anggotaRes] = await Promise.all([
         fetch(`${API_URL}/claims?email=${encodeURIComponent(session.user.email)}`),
         fetch(`${API_URL}/reward-konfirmasi?email=${encodeURIComponent(session.user.email)}`),
         fetch(`${API_URL}/pengajuan?email=${encodeURIComponent(session.user.email)}`),
+        fetch(`${API_URL}/klaim-sebagai-anggota?email=${encodeURIComponent(session.user.email)}`),
       ]);
-      const claimData     = await claimRes.json();
-      const rewardData    = rewardRes.ok     ? await rewardRes.json()    : [];
-      const pengajuanData = pengajuanRes.ok  ? await pengajuanRes.json() : [];
-      setClaims(claimData);
+      const claimData     = claimRes.ok     ? await claimRes.json()     : [];
+      const rewardData    = rewardRes.ok    ? await rewardRes.json()    : [];
+      const pengajuanData = pengajuanRes.ok ? await pengajuanRes.json() : [];
+      const anggotaData   = anggotaRes.ok   ? await anggotaRes.json()   : [];
+
+      // Merge: klaim sendiri + klaim sebagai anggota, hindari duplikat by id
+      const ownIds = new Set(claimData.map(c => c.id));
+      const merged = [
+        ...claimData,
+        ...anggotaData.filter(c => !ownIds.has(c.id)),
+      ];
+      setClaims(merged);
+
       const map = {};
       rewardData.forEach(r => { map[r.claim_id] = r; });
       setRewardMap(map);
@@ -138,7 +148,14 @@ export default function DaftarKlaim({ session, search, onOpenForm, onTambahKlaim
               </thead>
               <tbody>
                 {filtered.map((claim, idx) => (
-                  <tr key={claim.id} onClick={() => router.push("/mahasiswa/klaim/" + claim.id)}
+                  <tr key={claim.id}
+                      onClick={() => {
+                        const isAnggota = claim.mahasiswa_email !== session.user.email;
+                        const url = isAnggota
+                          ? `/mahasiswa/klaim/${claim.id}?readonly=true`
+                          : `/mahasiswa/klaim/${claim.id}`;
+                        router.push(url);
+                      }}
                       className="border-b border-gray-50 last:border-0 hover:bg-gray-50/60 cursor-pointer transition-colors">
                     <td className="px-5 py-4 text-gray-300 text-[12px] font-semibold tabular-nums">{String(idx + 1).padStart(2, "0")}</td>
                     <td className="px-5 py-4">
@@ -157,7 +174,7 @@ export default function DaftarKlaim({ session, search, onOpenForm, onTambahKlaim
                       </span>
                     </td>
                     <td className="px-5 py-4 text-[13px]" onClick={(e) => e.stopPropagation()}>
-                      {claim.status === "sudah dicek" && (
+                      {claim.status === "sudah dicek" && claim.mahasiswa_email === session.user.email && (
                         rewardMap[claim.id] ? (
                           <span className={`inline-flex items-center whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-semibold ${REWARD_STYLE[rewardMap[claim.id].reward_status] ?? "bg-gray-100 text-gray-600"}`}>
                             {REWARD_LABEL[rewardMap[claim.id].reward_status] ?? rewardMap[claim.id].reward_status}
@@ -170,6 +187,11 @@ export default function DaftarKlaim({ session, search, onOpenForm, onTambahKlaim
                             Isi Data Reward
                           </button>
                         )
+                      )}
+                      {claim.status === "sudah dicek" && claim.mahasiswa_email !== session.user.email && rewardMap[claim.id] && (
+                        <span className={`inline-flex items-center whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-semibold ${REWARD_STYLE[rewardMap[claim.id].reward_status] ?? "bg-gray-100 text-gray-600"}`}>
+                          {REWARD_LABEL[rewardMap[claim.id].reward_status] ?? rewardMap[claim.id].reward_status}
+                        </span>
                       )}
                     </td>
                   </tr>
