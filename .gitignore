@@ -6,3 +6,4 @@ __pycache__/
 .claude
 image.png
 /backend/uploads
+/docs
