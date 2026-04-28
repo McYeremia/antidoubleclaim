@@ -800,6 +800,8 @@ export default function DetailKlaim() {
                        ? "gambar sertifikat"
                        : claim.flag_alasan === "nama lomba"
                        ? "judul lomba"
+                       : claim.flag_alasan === "nama kegiatan + kategori rekognisi"
+                       ? "nama kegiatan dan kategori rekognisi"
                        : "kemiripan terdeteksi"}
                    </span>.
                  </p>
