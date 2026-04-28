@@ -127,9 +127,10 @@ export default function ComparePage() {
   }, [id]);
 
   const FLAG_LABEL = {
-    "gambar, nama lomba": <><strong>Gambar sertifikat</strong> dan <strong>judul lomba</strong> terdeteksi mirip dengan klaim sebelumnya</>,
-    "gambar":             <><strong>Gambar sertifikat</strong> terdeteksi mirip dengan klaim sebelumnya</>,
-    "nama lomba":         <><strong>Judul lomba</strong> terdeteksi mirip dengan klaim sebelumnya</>,
+    "gambar, nama lomba":              <><strong>Gambar sertifikat</strong> dan <strong>judul lomba</strong> terdeteksi mirip dengan klaim sebelumnya</>,
+    "gambar":                          <><strong>Gambar sertifikat</strong> terdeteksi mirip dengan klaim sebelumnya</>,
+    "nama lomba":                      <><strong>Judul lomba</strong> terdeteksi mirip dengan klaim sebelumnya</>,
+    "nama kegiatan + kategori rekognisi": <><strong>Nama kegiatan</strong> dan <strong>kategori rekognisi</strong> terdeteksi mirip dengan klaim sebelumnya</>,
   };
 
   if (loading) return (
