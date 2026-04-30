@@ -15,7 +15,11 @@ export default function KelolaOperator({ operatorId }) {
   const [saving,    setSaving]    = useState(false);
   const [formError, setFormError] = useState("");
   const [form,        setForm]        = useState({ username: "", password: "", nama: "", email: "", role: "operator" });
-  const [deleteModal, setDeleteModal] = useState(null); // { id, nama }
+  const [deleteModal,   setDeleteModal]   = useState(null); // { id, nama }
+  const [passwordModal, setPasswordModal] = useState(null); // { id, nama }
+  const [pwForm,        setPwForm]        = useState({ new_password: "", confirm: "" });
+  const [pwError,       setPwError]       = useState("");
+  const [pwSaving,      setPwSaving]      = useState(false);
 
   const headers = { "Content-Type": "application/json", "x-operator-id": String(operatorId) };
 
@@ -61,6 +65,36 @@ export default function KelolaOperator({ operatorId }) {
 
   const handleDelete = (id, nama) => {
     setDeleteModal({ id, nama });
+  };
+
+  const handleResetPassword = (op) => {
+    setPasswordModal({ id: op.id, nama: op.nama });
+    setPwForm({ new_password: "", confirm: "" });
+    setPwError("");
+  };
+
+  const handleResetPasswordConfirm = async (e) => {
+    e.preventDefault();
+    if (pwForm.new_password.length < 6) { setPwError("Password minimal 6 karakter."); return; }
+    if (pwForm.new_password !== pwForm.confirm) { setPwError("Konfirmasi password tidak cocok."); return; }
+    setPwSaving(true);
+    try {
+      const res = await fetch(`${API}/operators/${passwordModal.id}/password`, {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify({ new_password: pwForm.new_password }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setPwError(d.detail || "Gagal mengganti password.");
+        return;
+      }
+      setPasswordModal(null);
+    } catch {
+      setPwError("Tidak dapat terhubung ke server.");
+    } finally {
+      setPwSaving(false);
+    }
   };
 
   const handleDeleteConfirm = async () => {
@@ -169,16 +203,24 @@ export default function KelolaOperator({ operatorId }) {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    {String(op.id) !== String(operatorId) ? (
+                    <div className="flex items-center justify-end gap-2">
                       <button
-                        onClick={() => handleDelete(op.id, op.nama)}
-                        className="px-3 py-1.5 rounded-xl text-[11px] font-black bg-red-50 text-red-600 hover:bg-red-100 transition-colors border border-red-100"
+                        onClick={() => handleResetPassword(op)}
+                        className="px-3 py-1.5 rounded-xl text-[11px] font-black bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors border border-blue-100"
                       >
-                        HAPUS
+                        GANTI PASSWORD
                       </button>
-                    ) : (
-                      <span className="text-[11px] text-gray-300 font-black italic tracking-widest uppercase px-3">AKUN ANDA</span>
-                    )}
+                      {String(op.id) !== String(operatorId) ? (
+                        <button
+                          onClick={() => handleDelete(op.id, op.nama)}
+                          className="px-3 py-1.5 rounded-xl text-[11px] font-black bg-red-50 text-red-600 hover:bg-red-100 transition-colors border border-red-100"
+                        >
+                          HAPUS
+                        </button>
+                      ) : (
+                        <span className="text-[11px] text-gray-300 font-black italic tracking-widest uppercase px-3">AKUN ANDA</span>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -196,6 +238,74 @@ export default function KelolaOperator({ operatorId }) {
         onConfirm={handleDeleteConfirm}
         onCancel={() => setDeleteModal(null)}
       />
+
+      {/* Modal Reset Password */}
+      {passwordModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4"
+             onClick={() => setPasswordModal(null)}>
+          <div className="bg-white rounded-[28px] shadow-2xl w-full max-w-md p-8"
+               onClick={e => e.stopPropagation()}>
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center mb-5">
+              <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+              </svg>
+            </div>
+            <h3 className="text-[16px] font-black text-gray-900 mb-1">Reset Password</h3>
+            <p className="text-[13px] text-gray-400 mb-6">
+              Atur password baru untuk akun <span className="font-bold text-gray-700">{passwordModal.nama}</span>.
+            </p>
+            <form onSubmit={handleResetPasswordConfirm} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                  Password Baru <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="password"
+                  required
+                  autoFocus
+                  value={pwForm.new_password}
+                  onChange={e => { setPwForm(v => ({ ...v, new_password: e.target.value })); setPwError(""); }}
+                  placeholder="Minimal 6 karakter"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-[14px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                  Konfirmasi Password Baru <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={pwForm.confirm}
+                  onChange={e => { setPwForm(v => ({ ...v, confirm: e.target.value })); setPwError(""); }}
+                  placeholder="Ulangi password baru"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-[14px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
+                />
+              </div>
+              {pwError && (
+                <p className="text-[12px] font-bold text-red-600 italic">! {pwError}</p>
+              )}
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setPasswordModal(null)}
+                  className="px-5 py-2.5 text-[12px] font-bold text-gray-500 hover:text-gray-900 transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={pwSaving}
+                  className="px-6 py-2.5 rounded-xl text-[12px] font-black bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 transition-colors"
+                >
+                  {pwSaving ? "MENYIMPAN..." : "SIMPAN PASSWORD"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

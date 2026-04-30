@@ -27,6 +27,7 @@ from backend.database import (
     arsipkan_periode, get_claims_by_periode_id, get_rewards_by_periode_id,
     get_reward_konfirmasi_by_id,
     get_klaim_sebagai_anggota,
+    update_operator_password,
 )
 from backend.nim_parser import parse_nim, is_valid_student_email
 from backend.email_service import (
@@ -721,6 +722,38 @@ async def add_operator(
     if not ok:
         raise HTTPException(status_code=409, detail="Username atau email sudah digunakan")
     insert_audit_log(op["id"], op["nama"], "tambah_operator", "operator", None, body.username)
+    return {"success": True}
+
+class ChangePasswordRequest(BaseModel):
+    new_password: str
+    old_password: Optional[str] = None
+
+@app.patch("/operators/{operator_id}/password")
+async def change_operator_password(
+    operator_id: int,
+    body: ChangePasswordRequest,
+    x_operator_id: Optional[str] = Header(None),
+):
+    op = _require_operator(x_operator_id)
+    target = get_operator_by_id(operator_id)
+    if not target:
+        raise HTTPException(status_code=404, detail="Operator tidak ditemukan")
+
+    is_self = op["id"] == operator_id
+    if not is_self and op.get("role") != "superadmin":
+        raise HTTPException(status_code=403, detail="Akses ditolak: hanya Super Admin yang dapat mengubah password operator lain")
+
+    if is_self:
+        if not body.old_password:
+            raise HTTPException(status_code=400, detail="Password lama diperlukan")
+        if not authenticate_operator(target["username"], body.old_password):
+            raise HTTPException(status_code=401, detail="Password lama tidak sesuai")
+
+    if not body.new_password or len(body.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Password baru minimal 6 karakter")
+
+    update_operator_password(target["username"], body.new_password)
+    insert_audit_log(op["id"], op["nama"], "ganti_password", "operator", operator_id, target["username"])
     return {"success": True}
 
 @app.delete("/operators/{operator_id}")
