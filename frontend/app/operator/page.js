@@ -52,8 +52,13 @@ export default function OperatorDashboard() {
   const [operatorNama, setOperatorNama] = useState("");
   const [operatorRole, setOperatorRole] = useState("");
   const [operatorId,   setOperatorId]   = useState(null);
-  const [showUserMenu, setShowUserMenu] = useState(false);
-  const [periodeLabel, setPeriodeLabel] = useState(null);
+  const [showUserMenu,      setShowUserMenu]      = useState(false);
+  const [periodeLabel,      setPeriodeLabel]      = useState(null);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [pwForm,            setPwForm]            = useState({ old: "", new: "", confirm: "" });
+  const [pwError,           setPwError]           = useState("");
+  const [pwSaving,          setPwSaving]          = useState(false);
+  const [pwSuccess,         setPwSuccess]         = useState(false);
 
   useEffect(() => {
     const loginAt = localStorage.getItem("operator_login_at");
@@ -89,6 +94,33 @@ export default function OperatorDashboard() {
       ? window.location.pathname
       : `${window.location.pathname}?menu=${key}`;
     window.history.pushState({ menu: key }, "", url);
+  };
+
+  const handleSelfPassword = async (e) => {
+    e.preventDefault();
+    if (pwForm.new.length < 6) { setPwError("Password baru minimal 6 karakter."); return; }
+    if (pwForm.new !== pwForm.confirm) { setPwError("Konfirmasi password tidak cocok."); return; }
+    setPwSaving(true);
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/operators/${operatorId}/password`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "x-operator-id": String(operatorId) },
+        body: JSON.stringify({ old_password: pwForm.old, new_password: pwForm.new }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setPwError(d.detail || "Gagal mengganti password.");
+        return;
+      }
+      setPwSuccess(true);
+      setPwForm({ old: "", new: "", confirm: "" });
+      setPwError("");
+      setTimeout(() => { setShowPasswordModal(false); setPwSuccess(false); }, 1500);
+    } catch {
+      setPwError("Tidak dapat terhubung ke server.");
+    } finally {
+      setPwSaving(false);
+    }
   };
 
   const handleLogout = () => {
@@ -182,6 +214,16 @@ export default function OperatorDashboard() {
                 <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl border border-gray-100 shadow-2xl z-20 overflow-hidden animate-in zoom-in-95 duration-200">
                   <div className="p-1.5">
                     <button
+                      onClick={() => { setShowUserMenu(false); setShowPasswordModal(true); setPwForm({ old: "", new: "", confirm: "" }); setPwError(""); setPwSuccess(false); }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors text-left"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}
+                          d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                      </svg>
+                      Ganti Password
+                    </button>
+                    <button
                       onClick={handleLogout}
                       className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-red-600 hover:bg-red-50 transition-colors text-left"
                     >
@@ -208,6 +250,78 @@ export default function OperatorDashboard() {
           {activeMenu === "log"         && isSuperAdmin && <LogAktivitas operatorId={operatorId} />}
         </main>
       </div>
+
+      {/* Modal Ganti Password (Self-Service) */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4"
+             onClick={() => setShowPasswordModal(false)}>
+          <div className="bg-white rounded-[28px] shadow-2xl w-full max-w-md p-8"
+               onClick={e => e.stopPropagation()}>
+            {pwSuccess ? (
+              <div className="text-center py-4">
+                <div className="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-7 h-7 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <p className="text-[15px] font-black text-gray-900">Password berhasil diganti!</p>
+              </div>
+            ) : (
+              <>
+                <div className="w-12 h-12 rounded-2xl bg-[#f0f7f3] flex items-center justify-center mb-5">
+                  <svg className="w-6 h-6 text-[#046137]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                  </svg>
+                </div>
+                <h3 className="text-[16px] font-black text-gray-900 mb-1">Ganti Password</h3>
+                <p className="text-[13px] text-gray-400 mb-6">Masukkan password lama dan password baru Anda.</p>
+                <form onSubmit={handleSelfPassword} className="space-y-4">
+                  {[
+                    { label: "Password Lama",            key: "old",     placeholder: "Masukkan password saat ini" },
+                    { label: "Password Baru",            key: "new",     placeholder: "Minimal 6 karakter" },
+                    { label: "Konfirmasi Password Baru", key: "confirm", placeholder: "Ulangi password baru" },
+                  ].map(f => (
+                    <div key={f.key}>
+                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                        {f.label} <span className="text-red-400">*</span>
+                      </label>
+                      <input
+                        type="password"
+                        required
+                        autoFocus={f.key === "old"}
+                        value={pwForm[f.key]}
+                        onChange={e => { setPwForm(v => ({ ...v, [f.key]: e.target.value })); setPwError(""); }}
+                        placeholder={f.placeholder}
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-[14px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#046137]/30 focus:border-[#046137] transition-all"
+                      />
+                    </div>
+                  ))}
+                  {pwError && (
+                    <p className="text-[12px] font-bold text-red-600 italic">! {pwError}</p>
+                  )}
+                  <div className="flex items-center justify-end gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswordModal(false)}
+                      className="px-5 py-2.5 text-[12px] font-bold text-gray-500 hover:text-gray-900 transition-colors"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={pwSaving}
+                      className="px-6 py-2.5 rounded-xl text-[12px] font-black bg-[#046137] text-white hover:bg-[#035230] disabled:opacity-40 transition-colors"
+                    >
+                      {pwSaving ? "MENYIMPAN..." : "SIMPAN PASSWORD"}
+                    </button>
+                  </div>
+                </form>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

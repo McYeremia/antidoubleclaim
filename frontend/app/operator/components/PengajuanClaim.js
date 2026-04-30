@@ -12,6 +12,7 @@ export default function PengajuanClaim({ router }) {
   const [discardModal,  setDiscardModal]  = useState(null); // { id, name }
   const [approveModal,  setApproveModal]  = useState(null); // { id, name }
   const [alertModal,    setAlertModal]    = useState(null); // { title, message }
+  const [search,        setSearch]        = useState("");
 
   useEffect(() => {
     setOpId(localStorage.getItem("operator_id"));
@@ -82,9 +83,19 @@ export default function PengajuanClaim({ router }) {
     fetchClaims();
   };
 
-  const perluDitinjau = claims.filter(c => c.status === "perlu ditinjau");
-  const belumDicek    = claims.filter(c => c.status === "belum dicek");
-  const sudahDicek    = claims.filter(c => c.status === "sudah dicek");
+  const q = search.trim().toLowerCase();
+  const filterList = (list) => q
+    ? list.filter(c =>
+        c.nama_lomba.toLowerCase().includes(q) ||
+        c.nama_display.toLowerCase().includes(q) ||
+        c.mahasiswa_email.toLowerCase().includes(q)
+      )
+    : list;
+
+  const perluDitinjau   = filterList(claims.filter(c => c.status === "perlu ditinjau"));
+  const belumDicek      = filterList(claims.filter(c => c.status === "belum dicek"));
+  const sudahDicek      = filterList(claims.filter(c => c.status === "sudah dicek"));
+  const ditolakFiltered = filterList(ditolakClaims);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -107,21 +118,52 @@ export default function PengajuanClaim({ router }) {
       <div className="grid grid-cols-4 gap-6">
         <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
           <p className="text-[10px] font-black text-orange-400 uppercase tracking-[0.2em]">Perlu Ditinjau</p>
-          <p className="text-5xl font-black text-gray-900 mt-3 leading-none">{perluDitinjau.length}</p>
+          <p className="text-5xl font-black text-gray-900 mt-3 leading-none">{claims.filter(c => c.status === "perlu ditinjau").length}</p>
         </div>
         <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
           <p className="text-[10px] font-black text-[#046137] uppercase tracking-[0.2em]">Belum Dicek</p>
-          <p className="text-5xl font-black text-gray-900 mt-3 leading-none">{belumDicek.length}</p>
+          <p className="text-5xl font-black text-gray-900 mt-3 leading-none">{claims.filter(c => c.status === "belum dicek").length}</p>
         </div>
         <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
           <p className="text-[10px] font-black text-green-400 uppercase tracking-[0.2em]">Sudah Dicek</p>
-          <p className="text-5xl font-black text-gray-900 mt-3 leading-none">{sudahDicek.length}</p>
+          <p className="text-5xl font-black text-gray-900 mt-3 leading-none">{claims.filter(c => c.status === "sudah dicek").length}</p>
         </div>
         <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
           <p className="text-[10px] font-black text-red-400 uppercase tracking-[0.2em]">Ditolak</p>
           <p className="text-5xl font-black text-gray-900 mt-3 leading-none">{ditolakClaims.length}</p>
         </div>
       </div>
+
+      {/* Search / Filter */}
+      <div className="relative">
+        <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300 pointer-events-none"
+             fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}
+            d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" />
+        </svg>
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Cari nama kegiatan, nama mahasiswa, atau email…"
+          className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-2xl text-[13px] text-gray-900 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-[#046137]/30 focus:border-[#046137] transition-all shadow-sm"
+        />
+        {search && (
+          <button
+            onClick={() => setSearch("")}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
+      </div>
+      {q && (
+        <p className="text-[12px] text-gray-400 font-medium -mt-4">
+          Menampilkan hasil pencarian untuk <span className="font-black text-gray-700">&ldquo;{search}&rdquo;</span>
+        </p>
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center py-24">
@@ -155,10 +197,10 @@ export default function PengajuanClaim({ router }) {
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-8">
             <div className="px-6 py-4 border-b border-gray-50 flex items-center justify-between bg-red-50/30">
               <h2 className="font-bold text-[11px] uppercase tracking-widest text-red-600">Riwayat Ditolak</h2>
-              <span className="text-[11px] font-black bg-white/50 px-2 py-0.5 rounded-full text-red-600">{ditolakClaims.length}</span>
+              <span className="text-[11px] font-black bg-white/50 px-2 py-0.5 rounded-full text-red-600">{ditolakFiltered.length}</span>
             </div>
-            {ditolakClaims.length === 0 ? (
-              <p className="text-center text-gray-400 text-[13px] py-12">Belum ada klaim yang ditolak.</p>
+            {ditolakFiltered.length === 0 ? (
+              <p className="text-center text-gray-400 text-[13px] py-12">{q ? "Tidak ada hasil." : "Belum ada klaim yang ditolak."}</p>
             ) : (
               <table className="w-full text-sm text-left">
                 <thead>
@@ -171,7 +213,7 @@ export default function PengajuanClaim({ router }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {ditolakClaims.map(claim => (
+                  {ditolakFiltered.map(claim => (
                     <tr key={claim.id}
                         onClick={() => router.push(`/operator/${claim.id}`)}
                         className="hover:bg-gray-50/60 cursor-pointer transition-colors border-b border-gray-50 last:border-0">
