@@ -210,15 +210,17 @@ export default function KelolaOperator({ operatorId }) {
                       >
                         GANTI PASSWORD
                       </button>
-                      {String(op.id) !== String(operatorId) ? (
+                      {String(op.id) === String(operatorId) ? (
+                        <span className="text-[11px] text-gray-300 font-black italic tracking-widest uppercase px-3">AKUN ANDA</span>
+                      ) : op.role === "superadmin" ? (
+                        <span className="text-[11px] text-purple-300 font-black italic tracking-widest uppercase px-3">SUPER ADMIN</span>
+                      ) : (
                         <button
                           onClick={() => handleDelete(op.id, op.nama)}
                           className="px-3 py-1.5 rounded-xl text-[11px] font-black bg-red-50 text-red-600 hover:bg-red-100 transition-colors border border-red-100"
                         >
                           HAPUS
                         </button>
-                      ) : (
-                        <span className="text-[11px] text-gray-300 font-black italic tracking-widest uppercase px-3">AKUN ANDA</span>
                       )}
                     </div>
                   </td>

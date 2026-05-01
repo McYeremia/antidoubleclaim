@@ -13,6 +13,7 @@ export default function PengajuanClaim({ router }) {
   const [approveModal,  setApproveModal]  = useState(null); // { id, name }
   const [alertModal,    setAlertModal]    = useState(null); // { title, message }
   const [search,        setSearch]        = useState("");
+  const [statusFilter,  setStatusFilter]  = useState("semua");
 
   useEffect(() => {
     setOpId(localStorage.getItem("operator_id"));
@@ -134,6 +135,34 @@ export default function PengajuanClaim({ router }) {
         </div>
       </div>
 
+      {/* Status Filter Chips */}
+      <div className="flex flex-wrap gap-2">
+        {[
+          { key: "semua",          label: "Semua",           count: perluDitinjau.length + belumDicek.length + sudahDicek.length + ditolakFiltered.length },
+          { key: "perlu ditinjau", label: "Perlu Ditinjau",  count: perluDitinjau.length },
+          { key: "belum dicek",    label: "Belum Dicek",     count: belumDicek.length },
+          { key: "sudah dicek",    label: "Sudah Dicek",     count: sudahDicek.length },
+          { key: "ditolak",        label: "Ditolak",         count: ditolakFiltered.length },
+        ].map(chip => (
+          <button
+            key={chip.key}
+            onClick={() => setStatusFilter(chip.key)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[12px] font-black transition-all border ${
+              statusFilter === chip.key
+                ? "bg-[#046137] text-white border-[#046137] shadow-sm"
+                : "bg-white text-gray-500 border-gray-200 hover:border-gray-300 hover:text-gray-700"
+            }`}
+          >
+            {chip.label}
+            <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
+              statusFilter === chip.key ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"
+            }`}>
+              {chip.count}
+            </span>
+          </button>
+        ))}
+      </div>
+
       {/* Search / Filter */}
       <div className="relative">
         <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300 pointer-events-none"
@@ -174,27 +203,33 @@ export default function PengajuanClaim({ router }) {
         </div>
       ) : (
         <div>
-          <ClaimSection
-            title="Terdeteksi Mirip (Perlu Ditinjau)"
-            color="bg-orange-50/30 text-orange-600 border-orange-50"
-            items={perluDitinjau} showActions showMirip
-            router={router} onApprove={handleApprove} onDiscard={handleDiscard}
-          />
-          <ClaimSection
-            title="Menunggu Verifikasi (Belum Dicek)"
-            color="bg-[#f0f7f3]/30 text-[#046137] border-[#f0f7f3]"
-            items={belumDicek} showActions
-            router={router} onApprove={handleApprove} onDiscard={handleDiscard}
-          />
-          <ClaimSection
-            title="Riwayat Verifikasi (Sudah Dicek)"
-            color="bg-green-50/30 text-green-600 border-green-50"
-            items={sudahDicek} showVerified
-            router={router} onApprove={handleApprove} onDiscard={handleDiscard}
-          />
+          {(statusFilter === "semua" || statusFilter === "perlu ditinjau") && (
+            <ClaimSection
+              title="Terdeteksi Mirip (Perlu Ditinjau)"
+              color="bg-orange-50/30 text-orange-600 border-orange-50"
+              items={perluDitinjau} showActions showMirip
+              router={router} onApprove={handleApprove} onDiscard={handleDiscard}
+            />
+          )}
+          {(statusFilter === "semua" || statusFilter === "belum dicek") && (
+            <ClaimSection
+              title="Menunggu Verifikasi (Belum Dicek)"
+              color="bg-[#f0f7f3]/30 text-[#046137] border-[#f0f7f3]"
+              items={belumDicek} showActions
+              router={router} onApprove={handleApprove} onDiscard={handleDiscard}
+            />
+          )}
+          {(statusFilter === "semua" || statusFilter === "sudah dicek") && (
+            <ClaimSection
+              title="Riwayat Verifikasi (Sudah Dicek)"
+              color="bg-green-50/30 text-green-600 border-green-50"
+              items={sudahDicek} showVerified
+              router={router} onApprove={handleApprove} onDiscard={handleDiscard}
+            />
+          )}
 
           {/* Riwayat Ditolak */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-8">
+          {(statusFilter === "semua" || statusFilter === "ditolak") && <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-8">
             <div className="px-6 py-4 border-b border-gray-50 flex items-center justify-between bg-red-50/30">
               <h2 className="font-bold text-[11px] uppercase tracking-widest text-red-600">Riwayat Ditolak</h2>
               <span className="text-[11px] font-black bg-white/50 px-2 py-0.5 rounded-full text-red-600">{ditolakFiltered.length}</span>
@@ -241,7 +276,7 @@ export default function PengajuanClaim({ router }) {
                 </tbody>
               </table>
             )}
-          </div>
+          </div>}
         </div>
       )}
 

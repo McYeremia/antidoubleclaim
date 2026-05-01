@@ -764,6 +764,9 @@ async def remove_operator(
     op = _require_superadmin(x_operator_id)
     if str(operator_id) == str(x_operator_id):
         raise HTTPException(status_code=400, detail="Tidak dapat menghapus akun sendiri")
+    target = get_operator_by_id(operator_id)
+    if target and target["role"] == "superadmin":
+        raise HTTPException(status_code=403, detail="Akun Super Admin tidak dapat dihapus")
     ok = delete_operator(operator_id)
     if not ok:
         raise HTTPException(status_code=400, detail="Tidak dapat menghapus: akun tidak ditemukan atau superadmin terakhir")
