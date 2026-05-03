@@ -304,7 +304,8 @@ export default function VisualisasiDataOperator() {
   const [error,      setError]      = useState(null);
   const [filters,    setFilters]    = useState(EMPTY_FILTERS);
   const [filterOpts, setFilterOpts] = useState(null);
-  const [exporting,  setExporting]  = useState(false);
+  const [exporting,    setExporting]    = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
 
   const buildParams = useCallback((f) => {
     const p = new URLSearchParams();
@@ -377,6 +378,199 @@ export default function VisualisasiDataOperator() {
     }
   };
 
+  const handleExportPDF = async () => {
+    setExportingPdf(true);
+    try {
+      const qs  = buildParams(filters);
+      const res = await fetch(`${API_URL}/stats/export${qs ? "?" + qs : ""}`);
+      const data = await res.json();
+
+      if (!data || data.length === 0) {
+        alert("Tidak ada data untuk diekspor.");
+        return;
+      }
+
+      const { jsPDF }  = await import("jspdf");
+      const autoTable  = (await import("jspdf-autotable")).default;
+
+      const doc     = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+      const PW      = 297;
+      const PH      = 210;
+      const M       = 12;
+      const GREEN   = [4, 97, 55];
+      const _BULAN  = ["Januari","Februari","Maret","April","Mei","Juni",
+                        "Juli","Agustus","September","Oktober","November","Desember"];
+
+      const fmtNow = () => {
+        const d = new Date();
+        return `${d.getDate()} ${_BULAN[d.getMonth()]} ${d.getFullYear()}, ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+      };
+
+      const drawHeader = () => {
+        doc.setFillColor(...GREEN);
+        doc.rect(0, 0, PW, 22, "F");
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(13);
+        doc.setTextColor(255, 255, 255);
+        doc.text("UKDW", M, 9);
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7);
+        doc.setTextColor(180, 220, 200);
+        doc.text("Universitas Kristen Duta Wacana", M, 14);
+        doc.text("Kemahasiswaan — Divisi Bakat Minat", M, 18.5);
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(12);
+        doc.setTextColor(255, 255, 255);
+        doc.text("LAPORAN DATA KLAIM SERTIFIKAT", PW - M, 9.5, { align: "right" });
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7);
+        doc.setTextColor(180, 220, 200);
+        doc.text(`Digenerate pada: ${fmtNow()}`, PW - M, 15, { align: "right" });
+
+        const activeFilters = Object.entries(filters).filter(([, v]) => v);
+        if (activeFilters.length > 0) {
+          const FILTER_LABEL = { fakultas: "Fakultas", prodi: "Prodi", tahun: "Tahun", tingkatan: "Tingkatan", kategori: "Jenis", kepesertaan: "Kepesertaan" };
+          const str = activeFilters.map(([k, v]) => `${FILTER_LABEL[k] ?? k}: ${v}`).join("  ·  ");
+          doc.setFontSize(6.5);
+          doc.text(`Filter: ${str}`, PW - M, 19.5, { align: "right" });
+        }
+      };
+
+      const drawFooter = (pageNum, totalPages) => {
+        doc.setDrawColor(226, 232, 240);
+        doc.setLineWidth(0.3);
+        doc.line(M, PH - 8, PW - M, PH - 8);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(6.5);
+        doc.setTextColor(156, 163, 175);
+        doc.text("Kemahasiswaan UKDW  ·  Laporan Data Klaim Sertifikat", M, PH - 4.5);
+        doc.text(`Halaman ${pageNum} dari ${totalPages}`, PW - M, PH - 4.5, { align: "right" });
+      };
+
+      // ── Halaman pertama: header + summary boxes ────────────────────────────
+      drawHeader();
+
+      const statusMap   = Object.fromEntries((stats?.by_status ?? []).map(d => [d.name, d.count]));
+      const totalKlaim  = stats?.total ?? data.length;
+      const summaryItems = [
+        { label: "Total Klaim",    value: totalKlaim,                       color: [55, 65, 81]   },
+        { label: "Disetujui",      value: statusMap["Disetujui"]      ?? 0, color: [4, 97, 55]    },
+        { label: "Dalam Proses",   value: statusMap["Dalam Proses"]   ?? 0, color: [79, 70, 229]  },
+        { label: "Perlu Ditinjau", value: statusMap["Perlu Ditinjau"] ?? 0, color: [180, 83, 9]   },
+        { label: "Ditolak",        value: statusMap["Ditolak"]        ?? 0, color: [185, 28, 28]  },
+      ];
+
+      const BOX_Y = 25;
+      const BOX_H = 14;
+      const BOX_W = (PW - M * 2 - 4 * 3) / 5;
+      summaryItems.forEach((item, i) => {
+        const x = M + i * (BOX_W + 3);
+        doc.setFillColor(248, 250, 252);
+        doc.setDrawColor(226, 232, 240);
+        doc.setLineWidth(0.3);
+        doc.roundedRect(x, BOX_Y, BOX_W, BOX_H, 2, 2, "FD");
+
+        doc.setFillColor(...item.color);
+        doc.roundedRect(x, BOX_Y, 2.5, BOX_H, 1, 1, "F");
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+        doc.setTextColor(...item.color);
+        doc.text(String(item.value), x + BOX_W / 2 + 1.25, BOX_Y + 8.5, { align: "center" });
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(6.5);
+        doc.setTextColor(107, 114, 128);
+        doc.text(item.label, x + BOX_W / 2 + 1.25, BOX_Y + 12.5, { align: "center" });
+      });
+
+      // ── Tabel ──────────────────────────────────────────────────────────────
+      const HEAD_COLS = [
+        "No.", "NIM", "Nama Mahasiswa", "Fakultas", "Program Studi",
+        "Nama Kegiatan", "Tingkatan", "Tahun", "Kepesertaan",
+        "Kategori SIMKATMAWA", "Capaian", "Status",
+        "Diverifikasi Oleh", "Tgl. Verifikasi",
+      ];
+      const COL_W = [7, 17, 24, 18, 22, 35, 16, 10, 16, 28, 16, 16, 20, 26];
+
+      const body = data.map((r, i) => [
+        i + 1,
+        r["NIM"]                  ?? "",
+        r["Nama Mahasiswa"]       ?? "",
+        r["Fakultas"]             ?? "",
+        r["Program Studi"]        ?? "",
+        r["Nama Kegiatan"]        ?? "",
+        r["Tingkatan"]            ?? "",
+        r["Tahun Kegiatan"]       ?? "",
+        r["Jenis Kepesertaan"]    ?? "",
+        r["Kategori SIMKATMAWA"]  ?? "",
+        r["Capaian / Peringkat"]  ?? "",
+        r["Status Klaim"]         ?? "",
+        r["Diverifikasi Oleh"]    ?? "",
+        r["Tanggal Verifikasi"]   ?? "",
+      ]);
+
+      autoTable(doc, {
+        head: [HEAD_COLS],
+        body,
+        startY: BOX_Y + BOX_H + 4,
+        margin: { left: M, right: M, bottom: 14 },
+        styles: {
+          fontSize: 7,
+          cellPadding: { top: 2, bottom: 2, left: 2, right: 2 },
+          lineColor: [226, 232, 240],
+          lineWidth: 0.2,
+          textColor: [55, 65, 81],
+          font: "helvetica",
+          overflow: "ellipsize",
+        },
+        headStyles: {
+          fillColor: GREEN,
+          textColor: [255, 255, 255],
+          fontStyle: "bold",
+          fontSize: 7,
+          halign: "center",
+        },
+        alternateRowStyles: { fillColor: [249, 250, 251] },
+        columnStyles: Object.fromEntries(
+          COL_W.map((w, i) => [i, { cellWidth: w, halign: i === 0 ? "center" : "left" }])
+        ),
+        didParseCell: (info) => {
+          if (info.section === "body" && info.column.index === 11) {
+            const s = info.cell.raw;
+            if (s === "Disetujui")      { info.cell.styles.textColor = [4, 97, 55];   info.cell.styles.fontStyle = "bold"; }
+            else if (s === "Ditolak")   { info.cell.styles.textColor = [185, 28, 28]; info.cell.styles.fontStyle = "bold"; }
+            else if (s === "Perlu Ditinjau") { info.cell.styles.textColor = [180, 83, 9]; info.cell.styles.fontStyle = "bold"; }
+          }
+        },
+        didDrawPage: ({ pageNumber }) => {
+          if (pageNumber > 1) drawHeader();
+        },
+      });
+
+      // Footer semua halaman (setelah tabel selesai, total halaman sudah diketahui)
+      const totalPages = doc.getNumberOfPages();
+      for (let p = 1; p <= totalPages; p++) {
+        doc.setPage(p);
+        drawFooter(p, totalPages);
+      }
+
+      const filterLabel = Object.entries(filters)
+        .filter(([, v]) => v)
+        .map(([k, v]) => `${k}-${v}`)
+        .join("_") || "semua";
+      doc.save(`klaim_${filterLabel}_${new Date().toISOString().slice(0, 10)}.pdf`);
+    } catch (e) {
+      alert("Gagal mengekspor PDF: " + e);
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
   const activeCount  = Object.values(filters).filter(Boolean).length;
   const prodiOptions = filters.fakultas
     ? (filterOpts?.prodi_by_fakultas?.[filters.fakultas] ?? [])
@@ -391,27 +585,50 @@ export default function VisualisasiDataOperator() {
             Visualisasi Data
           </h1>
           <p className="text-gray-400 mt-3 text-[14px]">
-            Statistik klaim sertifikat — filter data lalu export ke Excel jika diperlukan.
+            Statistik klaim sertifikat — filter data lalu export ke Excel atau PDF.
           </p>
         </div>
-        <button
-          onClick={handleExport}
-          disabled={exporting || loading}
-          className="flex items-center gap-2.5 px-5 py-2.5 bg-[#046137] text-white text-[13px] font-semibold rounded-xl hover:bg-[#035230] disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex-shrink-0 mt-1"
-        >
-          {exporting ? (
-            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
-          ) : (
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-          )}
-          {exporting ? "Mengekspor..." : "Export Excel"}
-        </button>
+        <div className="flex items-center gap-2.5 flex-shrink-0 mt-1">
+          {/* Excel */}
+          <button
+            onClick={handleExport}
+            disabled={exporting || loading}
+            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-700 text-[13px] font-semibold rounded-xl hover:bg-gray-50 hover:border-gray-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            {exporting ? (
+              <svg className="w-4 h-4 animate-spin text-gray-400" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+            )}
+            {exporting ? "Mengekspor..." : "Excel"}
+          </button>
+
+          {/* PDF */}
+          <button
+            onClick={handleExportPDF}
+            disabled={exportingPdf || loading}
+            className="flex items-center gap-2 px-4 py-2.5 bg-[#046137] text-white text-[13px] font-semibold rounded-xl hover:bg-[#035230] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            {exportingPdf ? (
+              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+            )}
+            {exportingPdf ? "Membuat PDF..." : "PDF"}
+          </button>
+        </div>
       </div>
 
       {/* Filter Panel */}

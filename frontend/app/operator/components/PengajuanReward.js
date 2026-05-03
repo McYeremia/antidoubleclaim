@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import * as XLSX from "xlsx";
-import { API, KATEGORI_LABEL, ConfirmModal, AlertModal } from "./shared";
+import { API, KATEGORI_LABEL, ConfirmModal, AlertModal, formatDatetime } from "./shared";
 import RewardSection from "./RewardSection";
 import RewardDetailModal from "./RewardDetailModal";
 
@@ -85,6 +85,162 @@ export default function PengajuanReward() {
     fetchRewards();
   };
 
+  const exportToPDF = async (data, sectionTitle, filename) => {
+    if (!data || data.length === 0) { alert("Tidak ada data untuk diekspor."); return; }
+
+    const { jsPDF } = await import("jspdf");
+    const autoTable = (await import("jspdf-autotable")).default;
+
+    const doc    = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    const PW     = 297;
+    const PH     = 210;
+    const M      = 12;
+    const GREEN  = [4, 97, 55];
+    const _BULAN = ["Januari","Februari","Maret","April","Mei","Juni",
+                    "Juli","Agustus","September","Oktober","November","Desember"];
+
+    const fmtNow = () => {
+      const d = new Date();
+      return `${d.getDate()} ${_BULAN[d.getMonth()]} ${d.getFullYear()}, ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+    };
+    const fmtRupiah = (val) =>
+      val ? `Rp ${Number(val).toLocaleString("id-ID")}` : "—";
+
+    const drawHeader = () => {
+      doc.setFillColor(...GREEN);
+      doc.rect(0, 0, PW, 22, "F");
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(13);
+      doc.setTextColor(255, 255, 255);
+      doc.text("UKDW", M, 9);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
+      doc.setTextColor(180, 220, 200);
+      doc.text("Universitas Kristen Duta Wacana", M, 14);
+      doc.text("Kemahasiswaan — Divisi Bakat Minat", M, 18.5);
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.setTextColor(255, 255, 255);
+      doc.text("LAPORAN DATA REWARD PENGHARGAAN", PW - M, 8.5, { align: "right" });
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(180, 220, 200);
+      doc.text(sectionTitle, PW - M, 14, { align: "right" });
+      doc.setFontSize(7);
+      doc.text(`Digenerate pada: ${fmtNow()}`, PW - M, 19.5, { align: "right" });
+    };
+
+    const drawFooter = (pageNum, totalPages) => {
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.3);
+      doc.line(M, PH - 8, PW - M, PH - 8);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(6.5);
+      doc.setTextColor(156, 163, 175);
+      doc.text(`Kemahasiswaan UKDW  ·  Laporan Data Reward Penghargaan  ·  ${sectionTitle}`, M, PH - 4.5);
+      doc.text(`Halaman ${pageNum} dari ${totalPages}`, PW - M, PH - 4.5, { align: "right" });
+    };
+
+    drawHeader();
+
+    // ── Summary boxes ─────────────────────────────────────────────────────────
+    const totalDana = data.reduce((s, r) => s + (Number(r.estimasi_reward) || 0), 0);
+    const summaryItems = [
+      { label: "Total Data",    value: `${data.length} mahasiswa`,    color: [55, 65, 81]  },
+      { label: "Total Dana",    value: fmtRupiah(totalDana),          color: [4, 97, 55]   },
+    ];
+
+    const BOX_Y = 25;
+    const BOX_H = 14;
+    const BOX_W = (PW - M * 2 - 3) / 2;
+    summaryItems.forEach((item, i) => {
+      const x = M + i * (BOX_W + 3);
+      doc.setFillColor(248, 250, 252);
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(x, BOX_Y, BOX_W, BOX_H, 2, 2, "FD");
+
+      doc.setFillColor(...item.color);
+      doc.roundedRect(x, BOX_Y, 2.5, BOX_H, 1, 1, "F");
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.setTextColor(...item.color);
+      doc.text(String(item.value), x + BOX_W / 2 + 1.25, BOX_Y + 8, { align: "center" });
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(6.5);
+      doc.setTextColor(107, 114, 128);
+      doc.text(item.label, x + BOX_W / 2 + 1.25, BOX_Y + 12.5, { align: "center" });
+    });
+
+    // ── Tabel ─────────────────────────────────────────────────────────────────
+    const HEAD_COLS = [
+      "No.", "Nama Ketua", "NIM", "No. WA",
+      "Nama Lomba", "Kategori", "Periode",
+      "Nama Pemilik Rekening", "Bank", "Nomor Rekening",
+      "Dana (Rp)", "Tgl. Pengajuan",
+    ];
+    const COL_W = [7, 28, 18, 20, 40, 24, 15, 28, 14, 22, 22, 25];
+
+    const body = data.map((r, i) => [
+      i + 1,
+      r.nama_ketua            ?? "",
+      r.nim                   ?? "",
+      r.nomor_wa              ?? "",
+      r.nama_lomba            ?? "",
+      KATEGORI_LABEL[r.kategori_lomba] ?? r.kategori_lomba ?? "",
+      r.periode               ?? "",
+      r.nama_pemilik_rekening ?? "",
+      (r.bank ?? "").toUpperCase(),
+      r.nomor_rekening        ?? "",
+      r.estimasi_reward ? Number(r.estimasi_reward).toLocaleString("id-ID") : "—",
+      formatDatetime(r.created_at),
+    ]);
+
+    autoTable(doc, {
+      head: [HEAD_COLS],
+      body,
+      startY: BOX_Y + BOX_H + 4,
+      margin: { left: M, right: M, bottom: 14 },
+      styles: {
+        fontSize: 7,
+        cellPadding: { top: 2, bottom: 2, left: 2, right: 2 },
+        lineColor: [226, 232, 240],
+        lineWidth: 0.2,
+        textColor: [55, 65, 81],
+        font: "helvetica",
+        overflow: "ellipsize",
+      },
+      headStyles: {
+        fillColor: GREEN,
+        textColor: [255, 255, 255],
+        fontStyle: "bold",
+        fontSize: 7,
+        halign: "center",
+      },
+      alternateRowStyles: { fillColor: [249, 250, 251] },
+      columnStyles: Object.fromEntries(
+        COL_W.map((w, i) => [i, { cellWidth: w, halign: i === 0 || i === 10 ? "center" : "left" }])
+      ),
+      didDrawPage: ({ pageNumber }) => {
+        if (pageNumber > 1) drawHeader();
+      },
+    });
+
+    const totalPages = doc.getNumberOfPages();
+    for (let p = 1; p <= totalPages; p++) {
+      doc.setPage(p);
+      drawFooter(p, totalPages);
+    }
+
+    doc.save(`${filename}_${new Date().toISOString().slice(0, 10)}.pdf`);
+  };
+
   const exportToExcel = (data, filename) => {
     const rows = data.map((r, i) => ({
       "No.":                    i + 1,
@@ -101,7 +257,7 @@ export default function PengajuanReward() {
       "Bank":                   r.bank ?? "",
       "Nomor Rekening":         r.nomor_rekening ?? "",
       "Dana Penghargaan (Rp)":  r.estimasi_reward ?? "",
-      "Tanggal Pengajuan":      r.created_at ?? "",
+      "Tanggal Pengajuan":      formatDatetime(r.created_at),
     }));
 
     const ws = XLSX.utils.json_to_sheet(rows);
@@ -171,6 +327,7 @@ export default function PengajuanReward() {
             items={diproses}
             onBulkKirim={() => setConfirmKirimSemua(true)}
             onExport={() => exportToExcel(diproses, "reward_approved")}
+            onExportPDF={() => exportToPDF(diproses, "Approved", "reward_approved")}
             onSelectReward={setSelectedReward}
             rowActions={(r) => (
               <>
@@ -194,6 +351,7 @@ export default function PengajuanReward() {
             color="bg-green-50/30 text-green-600 border-green-50"
             items={selesai}
             onExport={() => exportToExcel(selesai, "reward_terkirim")}
+            onExportPDF={() => exportToPDF(selesai, "Arsip Selesai (Dana Terkirim)", "reward_terkirim")}
             onSelectReward={setSelectedReward}
           />
         </div>
