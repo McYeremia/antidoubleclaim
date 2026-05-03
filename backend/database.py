@@ -12,6 +12,27 @@ FUZZY_THRESHOLD  = 80   # Minimum skor fuzzy nama lomba (0–100) agar dianggap 
 # ---------------------------------------------------------------------------
 # Helper koneksi
 # ---------------------------------------------------------------------------
+def _fmt_datetime(value: str) -> str:
+    """Ubah ISO datetime dari SQLite menjadi format Indonesia, e.g. '3 Mei 2026, 14:30'."""
+    if not value:
+        return ""
+    from datetime import datetime
+    _BULAN = ["Januari","Februari","Maret","April","Mei","Juni",
+              "Juli","Agustus","September","Oktober","November","Desember"]
+    for fmt in ("%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%dT%H:%M:%S.%f",
+                "%Y-%m-%d %H:%M:%S",    "%Y-%m-%dT%H:%M:%S",
+                "%Y-%m-%d"):
+        try:
+            dt = datetime.strptime(value, fmt)
+            base = f"{dt.day} {_BULAN[dt.month - 1]} {dt.year}"
+            if fmt != "%Y-%m-%d":
+                base += f", {dt.strftime('%H:%M')}"
+            return base
+        except ValueError:
+            continue
+    return value
+
+
 def _get_conn():
     conn = sqlite3.connect("claims.db")
     conn.execute("PRAGMA foreign_keys = ON")
@@ -1522,7 +1543,7 @@ def get_export_data(
             "Capaian / Peringkat": capaian_final or "",
             "Status Klaim":        status_label,
             "Diverifikasi Oleh":   verified_by_nama or "",
-            "Tanggal Verifikasi":  verified_at or "",
+            "Tanggal Verifikasi":  _fmt_datetime(verified_at),
             "Catatan Penolakan":   catatan or "",
         })
 

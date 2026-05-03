@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import * as XLSX from "xlsx";
-import { API, ARSIP_STATUS_STYLE, STATUS_BADGE, KATEGORI_LABEL, formatTanggal, ConfirmModal } from "./shared";
+import { API, ARSIP_STATUS_STYLE, STATUS_BADGE, KATEGORI_LABEL, formatTanggal, ConfirmModal, formatDatetime } from "./shared";
 import ArsipDetailView from "./ArsipDetailView";
 
 export default function ArsipPeriode() {
@@ -101,6 +101,195 @@ export default function ArsipPeriode() {
   const closable   = (p) => p.status === "aktif";
   const archivable = (p) => p.status === "tutup" || p.status === "ditutup";
 
+  const exportPDF = async (data, periodeName, type) => {
+    if (!data || data.length === 0) { alert("Tidak ada data untuk diekspor."); return; }
+
+    const { jsPDF } = await import("jspdf");
+    const autoTable = (await import("jspdf-autotable")).default;
+
+    const doc    = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    const PW     = 297;
+    const PH     = 210;
+    const M      = 12;
+    const GREEN  = [4, 97, 55];
+    const _BULAN = ["Januari","Februari","Maret","April","Mei","Juni",
+                    "Juli","Agustus","September","Oktober","November","Desember"];
+
+    const fmtNow = () => {
+      const d = new Date();
+      return `${d.getDate()} ${_BULAN[d.getMonth()]} ${d.getFullYear()}, ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+    };
+
+    const typeLabel = type === "claims" ? "Data Klaim" : "Data Reward";
+
+    const drawHeader = () => {
+      doc.setFillColor(...GREEN);
+      doc.rect(0, 0, PW, 22, "F");
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(13);
+      doc.setTextColor(255, 255, 255);
+      doc.text("UKDW", M, 9);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
+      doc.setTextColor(180, 220, 200);
+      doc.text("Universitas Kristen Duta Wacana", M, 14);
+      doc.text("Kemahasiswaan — Divisi Bakat Minat", M, 18.5);
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.setTextColor(255, 255, 255);
+      doc.text(`LAPORAN ARSIP PERIODE — ${typeLabel.toUpperCase()}`, PW - M, 8.5, { align: "right" });
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(180, 220, 200);
+      doc.text(periodeName, PW - M, 14, { align: "right" });
+      doc.setFontSize(7);
+      doc.text(`Digenerate pada: ${fmtNow()}`, PW - M, 19.5, { align: "right" });
+    };
+
+    const drawFooter = (pageNum, totalPages) => {
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.3);
+      doc.line(M, PH - 8, PW - M, PH - 8);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(6.5);
+      doc.setTextColor(156, 163, 175);
+      doc.text(`Kemahasiswaan UKDW  ·  Arsip Periode: ${periodeName}  ·  ${typeLabel}`, M, PH - 4.5);
+      doc.text(`Halaman ${pageNum} dari ${totalPages}`, PW - M, PH - 4.5, { align: "right" });
+    };
+
+    drawHeader();
+
+    // ── Summary boxes ─────────────────────────────────────────────────────────
+    const BOX_Y = 25;
+    const BOX_H = 14;
+
+    let summaryItems;
+    if (type === "claims") {
+      const total      = data.length;
+      const disetujui  = data.filter(c => c.status === "sudah dicek").length;
+      const ditolak    = data.filter(c => c.status === "ditolak").length;
+      const lainnya    = total - disetujui - ditolak;
+      summaryItems = [
+        { label: "Total Klaim",  value: total,      color: [55, 65, 81]  },
+        { label: "Disetujui",    value: disetujui,  color: [4, 97, 55]   },
+        { label: "Ditolak",      value: ditolak,    color: [185, 28, 28] },
+        { label: "Lainnya",      value: lainnya,    color: [107, 114, 128] },
+      ];
+    } else {
+      const total   = data.length;
+      const selesai = data.filter(r => r.reward_status === "selesai").length;
+      const totalDana = data.reduce((s, r) => s + (Number(r.estimasi_reward) || 0), 0);
+      summaryItems = [
+        { label: "Total Reward",  value: total,    color: [55, 65, 81]  },
+        { label: "Selesai",       value: selesai,  color: [4, 97, 55]   },
+        { label: "Total Dana",    value: `Rp ${totalDana.toLocaleString("id-ID")}`, color: [79, 70, 229] },
+      ];
+    }
+
+    const BOX_W = (PW - M * 2 - (summaryItems.length - 1) * 3) / summaryItems.length;
+    summaryItems.forEach((item, i) => {
+      const x = M + i * (BOX_W + 3);
+      doc.setFillColor(248, 250, 252);
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(x, BOX_Y, BOX_W, BOX_H, 2, 2, "FD");
+      doc.setFillColor(...item.color);
+      doc.roundedRect(x, BOX_Y, 2.5, BOX_H, 1, 1, "F");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(type === "rewards" && i === 2 ? 9 : 13);
+      doc.setTextColor(...item.color);
+      doc.text(String(item.value), x + BOX_W / 2 + 1.25, BOX_Y + 8.5, { align: "center" });
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(6.5);
+      doc.setTextColor(107, 114, 128);
+      doc.text(item.label, x + BOX_W / 2 + 1.25, BOX_Y + 12.5, { align: "center" });
+    });
+
+    // ── Tabel ─────────────────────────────────────────────────────────────────
+    let headCols, colW, body;
+
+    if (type === "claims") {
+      headCols = ["No.", "ID", "Nama Lomba", "Mahasiswa", "Email", "Tingkat", "Peringkat", "Status", "Tgl. Kegiatan", "Kepesertaan"];
+      colW     = [7, 10, 50, 28, 45, 18, 18, 22, 25, 20];
+      body = data.map((c, i) => [
+        i + 1, `#${c.id}`,
+        c.nama_lomba     ?? "",
+        c.nama_display   ?? "",
+        c.mahasiswa_email ?? "",
+        c.tingkat        ?? "",
+        c.peringkat      ?? "",
+        c.status         ?? "",
+        formatTanggal(c.tanggal),
+        c.jenis_kepesertaan ?? "",
+      ]);
+    } else {
+      headCols = ["No.", "ID Klaim", "Nama Ketua", "NIM", "Nama Lomba", "Kategori", "Bank", "No. Rekening", "Dana (Rp)", "Status"];
+      colW     = [7, 14, 30, 18, 50, 28, 16, 24, 26, 18];
+      body = data.map((r, i) => [
+        i + 1, `#${r.claim_id}`,
+        r.nama_ketua    ?? "",
+        r.nim           ?? "",
+        r.nama_lomba    ?? "",
+        KATEGORI_LABEL[r.kategori_lomba] ?? r.kategori_lomba ?? "",
+        (r.bank ?? "").toUpperCase(),
+        r.nomor_rekening ?? "",
+        r.estimasi_reward ? Number(r.estimasi_reward).toLocaleString("id-ID") : "—",
+        r.reward_status  ?? "",
+      ]);
+    }
+
+    autoTable(doc, {
+      head: [headCols],
+      body,
+      startY: BOX_Y + BOX_H + 4,
+      margin: { left: M, right: M, bottom: 14 },
+      styles: {
+        fontSize: 7,
+        cellPadding: { top: 2, bottom: 2, left: 2, right: 2 },
+        lineColor: [226, 232, 240],
+        lineWidth: 0.2,
+        textColor: [55, 65, 81],
+        font: "helvetica",
+        overflow: "ellipsize",
+      },
+      headStyles: {
+        fillColor: GREEN,
+        textColor: [255, 255, 255],
+        fontStyle: "bold",
+        fontSize: 7,
+        halign: "center",
+      },
+      alternateRowStyles: { fillColor: [249, 250, 251] },
+      columnStyles: Object.fromEntries(
+        colW.map((w, i) => [i, { cellWidth: w, halign: i === 0 || i === 8 ? "center" : "left" }])
+      ),
+      didParseCell: (info) => {
+        if (info.section !== "body") return;
+        const statusCol = type === "claims" ? 7 : 9;
+        if (info.column.index === statusCol) {
+          const s = info.cell.raw;
+          if (s === "sudah dicek" || s === "selesai")
+            { info.cell.styles.textColor = [4, 97, 55];   info.cell.styles.fontStyle = "bold"; }
+          else if (s === "ditolak")
+            { info.cell.styles.textColor = [185, 28, 28]; info.cell.styles.fontStyle = "bold"; }
+        }
+      },
+      didDrawPage: ({ pageNumber }) => { if (pageNumber > 1) drawHeader(); },
+    });
+
+    const totalPages = doc.getNumberOfPages();
+    for (let pg = 1; pg <= totalPages; pg++) {
+      doc.setPage(pg);
+      drawFooter(pg, totalPages);
+    }
+
+    doc.save(`${type === "claims" ? "klaim" : "reward"}_${periodeName}_${new Date().toISOString().slice(0, 10)}.pdf`);
+  };
+
   const exportClaims = (data, periodeName) => {
     const rows = data.map((c, i) => {
       const isKelompok = c.jenis_kepesertaan === "kelompok";
@@ -124,9 +313,9 @@ export default function ArsipPeriode() {
         "Tingkat":          c.tingkat ?? "",
         "Peringkat":        c.peringkat ?? "",
         "Status":           c.status ?? "",
-        "Tanggal Kegiatan": c.tanggal ?? "",
-        "Tanggal Mulai":    c.tanggal_mulai ?? "",
-        "Tanggal Selesai":  c.tanggal_selesai ?? "",
+        "Tanggal Kegiatan": formatTanggal(c.tanggal),
+        "Tanggal Mulai":    formatTanggal(c.tanggal_mulai),
+        "Tanggal Selesai":  formatTanggal(c.tanggal_selesai),
         "Jenis Kepesertaan": c.jenis_kepesertaan ?? "",
         "Anggota Kelompok": anggotaParts.join(", "),
       };
@@ -286,12 +475,22 @@ export default function ArsipPeriode() {
                   <button
                     onClick={() => activeTab === "claims" ? exportClaims(filteredClaims, periodeName) : exportRewards(filteredRewards, periodeName)}
                     disabled={currentData.length === 0}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-700 text-[12px] font-black rounded-xl hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <svg className="w-3.5 h-3.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                    </svg>
+                    EXCEL
+                  </button>
+                  <button
+                    onClick={() => activeTab === "claims" ? exportPDF(filteredClaims, periodeName, "claims") : exportPDF(filteredRewards, periodeName, "rewards")}
+                    disabled={currentData.length === 0}
                     className="flex items-center gap-2 px-4 py-2.5 bg-[#046137] text-white text-[12px] font-black rounded-xl hover:bg-[#035230] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                     </svg>
-                    EXPORT EXCEL
+                    PDF
                   </button>
                   <div className="relative">
                     <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">

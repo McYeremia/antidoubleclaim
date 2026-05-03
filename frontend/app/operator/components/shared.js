@@ -117,16 +117,18 @@ export function ArsipSectionTitle({ children }) {
 export function ArsipFileLink({ label, path }) {
   if (!path) return null;
   const filename = path.split(/[\\/]/).pop();
+  const display  = filename.length > 36 ? filename.slice(0, 33) + "…" : filename;
   return (
-    <div>
+    <div className="min-w-0">
       <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{label}</p>
       <a
         href={`${API}/uploads/${filename}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-[13px] font-bold text-gray-900 underline underline-offset-4 hover:text-[#046137] mt-1 inline-block transition-colors"
+        title={filename}
+        className="text-[13px] font-bold text-gray-900 underline underline-offset-4 hover:text-[#046137] mt-1 inline-block transition-colors break-all max-w-full"
       >
-        {filename} ↗
+        {display} ↗
       </a>
     </div>
   );

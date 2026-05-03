@@ -44,7 +44,8 @@
       "Bash(python *)",
       "Bash(npm install *)",
       "Bash(sqlite3 claims.db \"SELECT id, nama_lomba, status, periode_id FROM CLAIMS WHERE nama_lomba LIKE '%INI PKM%';\")",
-      "Bash(python3 *)"
+      "Bash(python3 *)",
+      "Bash(npm list *)"
     ]
   }
 }
