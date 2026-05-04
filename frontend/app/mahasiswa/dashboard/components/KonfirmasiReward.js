@@ -227,9 +227,9 @@ export default function KonfirmasiReward({ session, initialClaimId = null, onCle
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-4xl font-black text-gray-900 leading-none tracking-tight">Konfirmasi Reward</h1>
+        <h1 className="text-4xl font-black text-gray-900 leading-none tracking-tight">Pencairan Reward</h1>
         <p className="text-gray-400 mt-3 text-[14px]">
-          Klaim yang telah disetujui operator memerlukan data rekening untuk pencairan reward.
+          Data rekening dibutuhkan untuk proses pencairan dana reward setelah klaim disetujui.
         </p>
       </div>
 

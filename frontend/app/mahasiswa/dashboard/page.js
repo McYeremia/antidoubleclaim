@@ -91,8 +91,8 @@ export default function MahasiswaDashboard() {
 
   const menus = [
     { key: "daftar",      label: "Daftar Klaim",      icon: <IconList />,   desc: "Riwayat klaim sertifikat prestasi"      },
-    { key: "reward",      label: "Konfirmasi Reward",  icon: <IconReward />, desc: "Pengajuan pencairan dana penghargaan"   },
-    { key: "visualisasi", label: "Visualisasi Data",   icon: <IconChart />,  desc: "Statistik klaim sertifikat"             },
+    { key: "reward",      label: "Pencairan Reward",  icon: <IconReward />, desc: "Pengajuan pencairan dana penghargaan"   },
+    { key: "visualisasi", label: "Statistik Prestasi",   icon: <IconChart />,  desc: "Statistik klaim sertifikat"             },
     { key: "sk-rektor",   label: "SK Rektor",          icon: <IconDoc />,    desc: "Peraturan pemberian penghargaan UKDW"   },
   ];
 
