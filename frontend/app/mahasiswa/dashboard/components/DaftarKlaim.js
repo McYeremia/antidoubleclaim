@@ -67,7 +67,6 @@ export default function DaftarKlaim({ session, search, onOpenForm, onTambahKlaim
       <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="text-4xl font-black text-gray-900 leading-none tracking-tight">Daftar Klaim</h1>
-          <p className="text-gray-400 mt-3 text-[14px]">Riwayat klaim sertifikat prestasi yang telah diajukan.</p>
         </div>
         <button
           onClick={profilLengkap ? onTambahKlaim : () => setShowProfilGate(true)}
@@ -142,7 +141,7 @@ export default function DaftarKlaim({ session, search, onOpenForm, onTambahKlaim
                   <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Tingkat</th>
                   <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Peringkat</th>
                   <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Tgl. Pengajuan</th>
-                  <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Status</th>
+                  <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Status Klaim</th>
                   <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Status Reward</th>
                 </tr>
               </thead>

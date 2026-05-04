@@ -414,11 +414,8 @@ export default function VisualisasiData() {
       {/* Header */}
       <div className="mb-7">
         <h1 className="text-4xl font-black text-gray-900 leading-none tracking-tight">
-          Visualisasi Data
+          Statistik Prestasi Mahasiswa
         </h1>
-        <p className="text-gray-400 mt-3 text-[14px]">
-          Statistik klaim sertifikat — gunakan filter untuk menelusuri data spesifik.
-        </p>
       </div>
 
       {/* Filter Panel */}
