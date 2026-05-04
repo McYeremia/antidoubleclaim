@@ -45,7 +45,17 @@
       "Bash(npm install *)",
       "Bash(sqlite3 claims.db \"SELECT id, nama_lomba, status, periode_id FROM CLAIMS WHERE nama_lomba LIKE '%INI PKM%';\")",
       "Bash(python3 *)",
-      "Bash(npm list *)"
+      "Bash(npm list *)",
+      "Bash(dir /b /a-d *.py)",
+      "Bash(dir /b /a-d *.txt)",
+      "Bash(dir /b /ad)",
+      "Bash(Get-ChildItem -Exclude venv,node_modules,.git)",
+      "Bash(Select-Object Name,Mode)",
+      "Bash(Format-Table -AutoSize)",
+      "PowerShell(cd \"C:\\\\01. Kuliah\\\\Semester 8\\\\01. Skripsi\\\\antidoubleclaim\"; Get-ChildItem backend -Recurse -Exclude __pycache__ | Where-Object { !$_.PSIsContainer } | Select-Object FullName | Format-Table -AutoSize -HideTableHeaders)",
+      "PowerShell(cd \"C:\\\\01. Kuliah\\\\Semester 8\\\\01. Skripsi\\\\antidoubleclaim\"; Get-ChildItem frontend\\\\src -Recurse | Where-Object { !$_.PSIsContainer } | Select-Object FullName | Format-Table -AutoSize -HideTableHeaders)",
+      "PowerShell(cd \"C:\\\\01. Kuliah\\\\Semester 8\\\\01. Skripsi\\\\antidoubleclaim\"; Get-ChildItem frontend\\\\src -Recurse -File | Select-Object -ExpandProperty FullName | ForEach-Object { $_.Replace\\(\"C:\\\\01. Kuliah\\\\Semester 8\\\\01. Skripsi\\\\antidoubleclaim\\\\frontend\\\\src\\\\\", \"\"\\) })",
+      "PowerShell(cd \"C:\\\\01. Kuliah\\\\Semester 8\\\\01. Skripsi\\\\antidoubleclaim\\\\frontend\"; Get-ChildItem src -Recurse -File | Select-Object -ExpandProperty FullName | ForEach-Object { $_ -replace [regex]::Escape\\(\"C:\\\\01. Kuliah\\\\Semester 8\\\\01. Skripsi\\\\antidoubleclaim\\\\frontend\\\\src\\\\\"\\), \"\" })"
     ]
   }
 }
