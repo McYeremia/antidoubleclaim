@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -13,7 +13,7 @@ const ERROR_MAP = {
   Default:               "Login gagal. Pastikan menggunakan email @students.ukdw.ac.id.",
 };
 
-export default function LoginPage() {
+function LoginContent() {
   const { status } = useSession();
   const router     = useRouter();
   const params     = useSearchParams();
@@ -134,5 +134,13 @@ export default function LoginPage() {
       </div>
 
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginContent />
+    </Suspense>
   );
 }
