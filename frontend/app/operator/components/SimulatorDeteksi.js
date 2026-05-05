@@ -1,7 +1,7 @@
 "use client";
 import { useState, useRef, useCallback } from "react";
 
-const API_URL = "http://127.0.0.1:8000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
 // ── SIMULATOR ─ Komponen ini adalah bagian sistem terpisah dari alur produksi.
 // Tidak menyimpan data ke database, tidak mempengaruhi klaim yang ada.
