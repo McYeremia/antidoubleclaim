@@ -14,23 +14,29 @@ Contoh: 71220001 → FTI / Informatika / Angkatan 2022 / Nomor 0001
 EMAIL_DOMAIN = "students.ukdw.ac.id"
 
 FAKULTAS = {
+    "0": "Fakultas Teologi",
     "1": "Fakultas Bisnis",
     "3": "Fakultas Bioteknologi",
     "4": "Fakultas Kedokteran",
     "6": "Fakultas Arsitektur dan Desain",
     "7": "Fakultas Teknologi Informasi",
-    "8": "Fakultas Humaniora",
+    "8": "Fakultas Kependidikan dan Humaniora",
 }
 
 PRODI = {
+    "0": {
+        "1": "Prodi Filsafat Keilahian",
+    },
     "1": {
         "1": "Prodi Manajemen",
         "2": "Prodi Akuntansi",
     },
     "3": {
-        "1": "Prodi Bioteknologi",
+        "1": "Prodi Biologi",
     },
-    "4": {},
+    "4": {
+        "1": "Prodi Kedokteran",
+    },
     "6": {
         "1": "Prodi Arsitektur",
         "2": "Prodi Desain Produk",
