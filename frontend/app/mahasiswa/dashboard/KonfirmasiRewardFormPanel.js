@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-const API = "http://127.0.0.1:8000";
+const API = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 const MAX_FILE_MB = 10;
 
 const _BULAN = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
