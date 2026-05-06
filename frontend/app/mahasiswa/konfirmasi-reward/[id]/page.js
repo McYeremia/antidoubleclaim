@@ -55,7 +55,7 @@ function Select({ children, error, ...props }) {
 
 function FileInput({ label, name, onChange, required, hint, currentFile, existingPath, error }) {
   const existingFilename = existingPath ? existingPath.split(/[\\/]/).pop() : null;
-  const existingUrl      = existingFilename ? `${API_URL}/uploads/${existingFilename}` : null;
+  const existingUrl      = existingFilename ? `${API_URL}/uploads/${existingFilename}?ngrok-skip-browser-warning=true` : null;
   const hasExisting      = !!existingUrl;
   const isRequired = required && !hasExisting;
 

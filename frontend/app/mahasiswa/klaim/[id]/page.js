@@ -82,7 +82,7 @@ function SectionTitle({ children }) {
 function FileLink({ label, path }) {
   if (!path) return null;
   const filename = path.split(/[\\/]/).pop();
-  const url = `${API_URL}/uploads/${filename}`;
+  const url = `${API_URL}/uploads/${filename}?ngrok-skip-browser-warning=true`;
   const match = filename.match(/^.+?_[0-9a-f]{32}_(.+)$/);
   const displayName = match ? match[1] : filename;
   return (
@@ -200,7 +200,7 @@ export default function KlaimDetailPage() {
     );
   }
 
-  const fileUrl      = `${API_URL}/uploads/${claim.sertifikat_filename}`;
+  const fileUrl      = `${API_URL}/uploads/${claim.sertifikat_filename}?ngrok-skip-browser-warning=true`;
   const isLomba      = pengajuan?.kategori_simkatmawa?.startsWith("lomba_mandiri");
   const isKarya      = pengajuan?.kategori_kegiatan?.startsWith("Karya Mahasiswa");
   const isKelompok   = pengajuan?.jenis_kepesertaan === "kelompok";
