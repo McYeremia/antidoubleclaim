@@ -2,6 +2,9 @@
 
 import { useState, useEffect, useRef } from "react";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+const apiFetch = (url, options = {}) => fetch(url, { ...options, headers: { "ngrok-skip-browser-warning": "true", ...(options.headers || {}) } });
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Konstanta
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1280,8 +1283,8 @@ export default function TambahKlaimWizard({ session, profil, onClose, onSuccess 
 
   useEffect(() => {
     Promise.all([
-      fetch(`http://127.0.0.1:8000/nim-info?email=${encodeURIComponent(session.user.email)}`),
-      fetch(`http://127.0.0.1:8000/periode/aktif`),
+      apiFetch(`${API_URL}/nim-info?email=${encodeURIComponent(session.user.email)}`),
+      apiFetch(`${API_URL}/periode/aktif`),
     ]).then(async ([nimRes, periodeRes]) => {
       nimRes.ok && setNimInfo(await nimRes.json());
       const p = periodeRes.ok ? await periodeRes.json() : { aktif: false };
@@ -1363,7 +1366,7 @@ export default function TambahKlaimWizard({ session, profil, onClose, onSuccess 
       uploadPayload.append("kategori_simkatmawa", data.kategori_simkatmawa ?? "");
       uploadPayload.append("file",                files.dokumen_sertifikat);
 
-      const uploadRes  = await fetch("http://127.0.0.1:8000/upload", { method: "POST", body: uploadPayload });
+      const uploadRes  = await apiFetch(`${API_URL}/upload`, { method: "POST", body: uploadPayload });
       if (!uploadRes.ok) throw new Error("Upload sertifikat gagal");
       const uploadData = await uploadRes.json();
       const claimId    = uploadData.id ?? null;
@@ -1410,7 +1413,7 @@ export default function TambahKlaimWizard({ session, profil, onClose, onSuccess 
       if (files.dokumen_lainnya)    pengajuanPayload.append("dokumen_lainnya",   files.dokumen_lainnya);
       pengajuanPayload.append("dokumen_sertifikat", files.dokumen_sertifikat);
 
-      const pengajuanRes = await fetch("http://127.0.0.1:8000/pengajuan", { method: "POST", body: pengajuanPayload });
+      const pengajuanRes = await apiFetch(`${API_URL}/pengajuan`, { method: "POST", body: pengajuanPayload });
       if (!pengajuanRes.ok) throw new Error("Simpan pengajuan gagal");
 
       onSuccess?.();

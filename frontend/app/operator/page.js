@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+const apiFetch = (url, options = {}) => fetch(url, { ...options, headers: { "ngrok-skip-browser-warning": "true", ...(options.headers || {}) } });
 import PengajuanClaim          from "./components/PengajuanClaim";
 import PengajuanReward          from "./components/PengajuanReward";
 import KelolaOperator            from "./components/KelolaOperator";
@@ -89,7 +92,7 @@ export default function OperatorDashboard() {
   }, [router]);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/periode/aktif")
+    apiFetch(`${API_URL}/periode/aktif`)
       .then(r => r.ok ? r.json() : { aktif: false })
       .then(p => setPeriodeLabel(p.aktif && p.periode?.nama ? p.periode.nama : null))
       .catch(() => setPeriodeLabel(null));
@@ -109,7 +112,7 @@ export default function OperatorDashboard() {
     if (pwForm.new !== pwForm.confirm) { setPwError("Konfirmasi password tidak cocok."); return; }
     setPwSaving(true);
     try {
-      const res = await fetch(`http://127.0.0.1:8000/operators/${operatorId}/password`, {
+      const res = await apiFetch(`${API_URL}/operators/${operatorId}/password`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", "x-operator-id": String(operatorId) },
         body: JSON.stringify({ old_password: pwForm.old, new_password: pwForm.new }),

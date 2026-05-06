@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+const apiFetch = (url, options = {}) => fetch(url, { ...options, headers: { "ngrok-skip-browser-warning": "true", ...(options.headers || {}) } });
 import OperatorSidebar, { OperatorTopbar } from "../../_sidebar";
 
 const STATUS_LABEL = {
@@ -27,7 +30,7 @@ function CertPanel({ claim, label, accent }) {
     </div>
   );
 
-  const fileUrl  = `http://127.0.0.1:8000/uploads/${claim.sertifikat_filename}`;
+  const fileUrl  = `${API_URL}/uploads/${claim.sertifikat_filename}`;
   const isPdf    = claim.sertifikat_filename?.toLowerCase().endsWith(".pdf");
   const accentBg = accent === "orange" ? "bg-orange-50 border-orange-200" : "bg-[#f0f7f3] border-[#d4ebe0]";
   const accentTxt = accent === "orange" ? "text-orange-600" : "text-[#046137]";
@@ -112,13 +115,13 @@ export default function ComparePage() {
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      const resA = await fetch(`http://127.0.0.1:8000/claims/${id}`);
+      const resA = await apiFetch(`${API_URL}/claims/${id}`);
       if (!resA.ok) { setNotFound(true); setLoading(false); return; }
       const a = await resA.json();
       setClaimA(a);
 
       if (a.mirip_dengan_id) {
-        const resB = await fetch(`http://127.0.0.1:8000/claims/${a.mirip_dengan_id}`);
+        const resB = await apiFetch(`${API_URL}/claims/${a.mirip_dengan_id}`);
         if (resB.ok) setClaimB(await resB.json());
       }
       setLoading(false);

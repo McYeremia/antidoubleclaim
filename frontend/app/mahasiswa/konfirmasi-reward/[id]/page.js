@@ -5,6 +5,9 @@ import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+const apiFetch = (url, options = {}) => fetch(url, { ...options, headers: { "ngrok-skip-browser-warning": "true", ...(options.headers || {}) } });
+
 // ── Konstanta ─────────────────────────────────────────────────────────────────
 const KOMPETISI_PUSPRESNAS = [
   "PKM", "PPK ORMAWA", "P2MW", "NUDC", "KDMI",
@@ -52,7 +55,7 @@ function Select({ children, error, ...props }) {
 
 function FileInput({ label, name, onChange, required, hint, currentFile, existingPath, error }) {
   const existingFilename = existingPath ? existingPath.split(/[\\/]/).pop() : null;
-  const existingUrl      = existingFilename ? `http://127.0.0.1:8000/uploads/${existingFilename}` : null;
+  const existingUrl      = existingFilename ? `${API_URL}/uploads/${existingFilename}` : null;
   const hasExisting      = !!existingUrl;
   const isRequired = required && !hasExisting;
 
@@ -204,9 +207,9 @@ export default function KonfirmasiRewardForm() {
 
   useEffect(() => {
     Promise.all([
-      fetch(`http://127.0.0.1:8000/claims/${id}`),
-      fetch(`http://127.0.0.1:8000/reward-konfirmasi/${id}`),
-      fetch(`http://127.0.0.1:8000/pengajuan/by-claim/${id}`),
+      apiFetch(`${API_URL}/claims/${id}`),
+      apiFetch(`${API_URL}/reward-konfirmasi/${id}`),
+      apiFetch(`${API_URL}/pengajuan/by-claim/${id}`),
     ]).then(async ([claimRes, rewardRes, pengajuanRes]) => {
       if (claimRes.status === 404) { setNotFound(true); return; }
       const claimData = await claimRes.json();
@@ -309,9 +312,9 @@ export default function KonfirmasiRewardForm() {
     Object.entries(form).forEach(([key, value]) => { if (value !== undefined && value !== null) formData.append(key, value); });
     Object.entries(files).forEach(([key, file]) => { if (file) formData.append(key, file); });
     try {
-      const url = isReturned ? `http://127.0.0.1:8000/reward-konfirmasi/${existingReward.id}` : "http://127.0.0.1:8000/reward-konfirmasi";
+      const url = isReturned ? `${API_URL}/reward-konfirmasi/${existingReward.id}` : `${API_URL}/reward-konfirmasi`;
       const method = isReturned ? "PUT" : "POST";
-      const res = await fetch(url, { method, body: formData });
+      const res = await apiFetch(url, { method, body: formData });
       if (res.ok) { setSubmitted(true); window.scrollTo({ top: 0, behavior: "smooth" }); }
       else { const err = await res.json(); alert("Gagal mengirim: " + err.detail); }
     } catch { alert("Terjadi kesalahan. Coba lagi."); }
