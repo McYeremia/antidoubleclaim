@@ -1083,8 +1083,14 @@ function Step4Lomba({ data, onChange, onBlur, onFileChange, files, errors }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Step 5 — Data Kelompok
 // ─────────────────────────────────────────────────────────────────────────────
-function Step5({ data, onChange, onBlur, errors }) {
+function Step5({ data, onChange, onBlur, errors, namaUser }) {
   const jumlah = parseInt(data.jumlah_anggota) || 0;
+
+  useEffect(() => {
+    if (namaUser && data.nama_ketua !== namaUser) onChange("nama_ketua", namaUser);
+    if (data.peran_pengeclaim !== "Ketua") onChange("peran_pengeclaim", "Ketua");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [namaUser]);
 
   const updateAnggota = (idx, field, value) => {
     const arr = [...(data.anggota || [])];
@@ -1099,7 +1105,7 @@ function Step5({ data, onChange, onBlur, errors }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
       <div style={{ background: "#f6fdf8", border: "1px solid #c2e8d0", borderRadius: "8px", padding: "10px 14px", fontSize: "12px", color: "#1a7a4a" }}>
-        Isi nama ketua di field di atas, lalu isi data anggota lainnya di bawah.
+        Pengupload diasumsikan sebagai <strong>ketua kelompok</strong>. Nama dan peran ketua diisi otomatis dari akun Anda. Isi data anggota lainnya di bawah.
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
@@ -1111,18 +1117,15 @@ function Step5({ data, onChange, onBlur, errors }) {
           error={errors?.jumlah_anggota} />
 
         <FInput id="nama_ketua" label="Nama Ketua" required
-          placeholder="Nama lengkap ketua tim"
-          value={data.nama_ketua} onChange={(e) => onChange("nama_ketua", e.target.value)}
-          onBlur={() => onBlur("nama_ketua")}
-          hint="Minimal 3 karakter" error={errors?.nama_ketua} maxLength={100} />
+          value={data.nama_ketua}
+          disabled
+          hint="Diambil otomatis dari akun Anda" />
       </div>
 
       <FInput id="peran_pengeclaim" label="Peran Anda dalam Kelompok" required
-        placeholder="Contoh: Ketua, Anggota, Lead Developer, Designer"
-        value={data.peran_pengeclaim} onChange={(e) => onChange("peran_pengeclaim", e.target.value)}
-        onBlur={() => onBlur("peran_pengeclaim")}
-        hint="Deskripsikan kontribusi Anda"
-        error={errors?.peran_pengeclaim} maxLength={50} />
+        value={data.peran_pengeclaim}
+        disabled
+        hint="Pengupload diasumsikan sebagai Ketua" />
 
       {anggotaFields.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
@@ -1482,7 +1485,7 @@ export default function TambahKlaimWizard({ session, profil, onClose, onSuccess 
           {step === 3 && <Step3 data={data} onChange={onChange} errors={fieldErrors} />}
           {step === 4 && data.kategori_simkatmawa === "rekognisi"          && <Step4Rekognisi data={data} onChange={onChange} onBlur={handleBlur} onFileChange={onFileChange} files={files} errors={fieldErrors} periodeTanggalSelesai={periodeTanggalSelesai} />}
           {step === 4 && isLombaMandiri(data.kategori_simkatmawa)          && <Step4Lomba     data={data} onChange={onChange} onBlur={handleBlur} onFileChange={onFileChange} files={files} errors={fieldErrors} />}
-          {step === 5 && showKelompok && <Step5 data={data} onChange={onChange} onBlur={handleBlur} errors={fieldErrors} />}
+          {step === 5 && showKelompok && <Step5 data={data} onChange={onChange} onBlur={handleBlur} errors={fieldErrors} namaUser={data.nama_lengkap} />}
           {isLastStep && <Step6 data={data} onChange={onChange} nimInfo={nimInfo} errors={fieldErrors} />}
         </div>
 
