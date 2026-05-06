@@ -12,7 +12,7 @@ import {
 function RewardDetailModal({ claim, reward, onClose }) {
   if (!claim || !reward) return null;
   const filename = (path) => path ? path.split(/[\\/]/).pop() : null;
-  const fileUrl  = (path) => { const f = filename(path); return f ? `${API_URL}/uploads/${f}?ngrok-skip-browser-warning=true` : null; };
+  const fileUrl  = (path) => { const f = filename(path); return f ? `/api/file?name=${f}` : null; };
 
   const docs = [
     { label: "Buku Tabungan",    path: reward.foto_buku_tabungan_path },

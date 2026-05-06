@@ -141,7 +141,7 @@ function CertPreview({ url, filename }) {
 function FileLink({ label, path }) {
   if (!path) return null;
   const filename = path.split(/[\\/]/).pop();
-  const url = `${API_URL}/uploads/${filename}?ngrok-skip-browser-warning=true`;
+  const url = `/api/file?name=${filename}`;
   // strip everything up to and including the 32-char uuid: prefix(_prefix)*_uuid32_originalname
   const match = filename.match(/^.+?_[0-9a-f]{32}_(.+)$/);
   const displayName = match ? match[1] : filename;
@@ -673,7 +673,7 @@ export default function DetailKlaim() {
     </div>
   );
 
-  const fileUrl = `${API_URL}/uploads/${claim.sertifikat_filename}?ngrok-skip-browser-warning=true`;
+  const fileUrl = `/api/file?name=${claim.sertifikat_filename}`;
   const canAct  = claim.status !== "sudah dicek" && claim.status !== "ditolak";
 
   // Validasi khusus Rekognisi: Harus ada estimasi dana
@@ -831,7 +831,7 @@ export default function DetailKlaim() {
               <div className="space-y-4">
                 <p className="text-[11px] font-black text-orange-400 uppercase tracking-widest mb-2">Visual Perbandingan</p>
                 <CertPreview
-                  url={`${API_URL}/uploads/${miripClaim.sertifikat_filename}?ngrok-skip-browser-warning=true`}
+                  url={`/api/file?name=${miripClaim.sertifikat_filename}`}
                   filename={miripClaim.sertifikat_filename}
                 />
               </div>

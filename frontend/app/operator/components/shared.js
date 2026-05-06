@@ -88,7 +88,7 @@ export function DocLink({ label, path }) {
     <div className="min-w-0 overflow-hidden">
       <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{label}</p>
       <a
-        href={`${API}/uploads/${filename}?ngrok-skip-browser-warning=true`}
+        href={`/api/file?name=${filename}`}
         target="_blank"
         rel="noopener noreferrer"
         className="text-[13px] font-bold text-[#046137] hover:text-[#035230] mt-1 flex items-center gap-1.5 overflow-hidden transition-colors"
@@ -129,7 +129,7 @@ export function ArsipFileLink({ label, path }) {
     <div className="min-w-0">
       <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{label}</p>
       <a
-        href={`${API}/uploads/${filename}?ngrok-skip-browser-warning=true`}
+        href={`/api/file?name=${filename}`}
         target="_blank"
         rel="noopener noreferrer"
         title={filename}
