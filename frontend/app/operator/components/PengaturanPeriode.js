@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { API, formatTanggal, ConfirmModal } from "./shared";
+import { API, apiFetch, formatTanggal, ConfirmModal } from "./shared";
 
 const STATE_STYLE = {
   aktif:       { badge: "bg-green-100 text-green-700",   label: "Aktif" },
@@ -41,7 +41,7 @@ export default function PengaturanPeriode({ operatorNama, operatorId }) {
   const fetchPeriode = async () => {
     setLoading(true);
     try {
-      const res  = await fetch(`${API}/periode`);
+      const res  = await apiFetch(`${API}/periode`);
       const data = await res.json();
       setPeriodeList(data);
     } catch { setPeriodeList([]); }
@@ -59,14 +59,14 @@ export default function PengaturanPeriode({ operatorNama, operatorId }) {
     setSaving(true);
     try {
       if (editingPeriode) {
-        const res = await fetch(`${API}/periode/${editingPeriode.id}`, {
+        const res = await apiFetch(`${API}/periode/${editingPeriode.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(form),
         });
         if (!res.ok) { alert("Gagal menyimpan perubahan."); return; }
       } else {
-        const res = await fetch(`${API}/periode`, {
+        const res = await apiFetch(`${API}/periode`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ...form, dibuat_oleh: operatorNama }),
@@ -89,7 +89,7 @@ export default function PengaturanPeriode({ operatorNama, operatorId }) {
       confirmLabel: newStatus === "aktif" ? "YA, AKTIFKAN" : "YA, TUTUP",
       onConfirm:    async () => {
         setConfirmModal(null);
-        const res = await fetch(`${API}/periode/${p.id}?status=${newStatus}`, {
+        const res = await apiFetch(`${API}/periode/${p.id}?status=${newStatus}`, {
           method: "PUT",
           headers: operatorId ? { "x-operator-id": String(operatorId) } : {},
         });
@@ -107,7 +107,7 @@ export default function PengaturanPeriode({ operatorNama, operatorId }) {
       confirmLabel: "YA, HAPUS",
       onConfirm:    async () => {
         setConfirmModal(null);
-        const res  = await fetch(`${API}/periode/${p.id}`, {
+        const res  = await apiFetch(`${API}/periode/${p.id}`, {
           method: "DELETE",
           headers: operatorId ? { "x-operator-id": String(operatorId) } : {},
         });
@@ -130,7 +130,7 @@ export default function PengaturanPeriode({ operatorNama, operatorId }) {
       confirmLabel:    "RESET SEMUA DATA",
       onConfirm:       async () => {
         setConfirmModal(null);
-        const res  = await fetch(`${API}/admin/reset-data`, {
+        const res  = await apiFetch(`${API}/admin/reset-data`, {
           method: "POST",
           headers: operatorId ? { "x-operator-id": String(operatorId) } : {},
         });

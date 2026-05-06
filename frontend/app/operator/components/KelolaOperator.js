@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { API, ConfirmModal } from "./shared";
+import { API, apiFetch, ConfirmModal } from "./shared";
 
 const ROLE_BADGE = {
   superadmin: "bg-purple-100 text-purple-700",
@@ -26,7 +26,7 @@ export default function KelolaOperator({ operatorId }) {
   const fetchOperators = async () => {
     setLoading(true);
     try {
-      const res  = await fetch(`${API}/operators`, { headers });
+      const res  = await apiFetch(`${API}/operators`, { headers });
       const data = await res.json();
       setOperators(data);
     } catch {
@@ -43,7 +43,7 @@ export default function KelolaOperator({ operatorId }) {
     setFormError("");
     setSaving(true);
     try {
-      const res = await fetch(`${API}/operators`, {
+      const res = await apiFetch(`${API}/operators`, {
         method: "POST",
         headers,
         body: JSON.stringify(form),
@@ -79,7 +79,7 @@ export default function KelolaOperator({ operatorId }) {
     if (pwForm.new_password !== pwForm.confirm) { setPwError("Konfirmasi password tidak cocok."); return; }
     setPwSaving(true);
     try {
-      const res = await fetch(`${API}/operators/${passwordModal.id}/password`, {
+      const res = await apiFetch(`${API}/operators/${passwordModal.id}/password`, {
         method: "PATCH",
         headers,
         body: JSON.stringify({ new_password: pwForm.new_password }),
@@ -100,7 +100,7 @@ export default function KelolaOperator({ operatorId }) {
   const handleDeleteConfirm = async () => {
     const { id } = deleteModal;
     setDeleteModal(null);
-    const res = await fetch(`${API}/operators/${id}`, { method: "DELETE", headers });
+    const res = await apiFetch(`${API}/operators/${id}`, { method: "DELETE", headers });
     if (!res.ok) {
       const d = await res.json().catch(() => ({}));
       alert(d.detail || "Gagal menghapus.");

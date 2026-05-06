@@ -2,6 +2,13 @@
 
 export const BULAN = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+
+export function apiFetch(url, options = {}) {
+  return fetch(url, {
+    ...options,
+    headers: { "ngrok-skip-browser-warning": "true", ...(options.headers || {}) },
+  });
+}
 export const KATEGORI_LABEL = { puspresnas: "PUSPRESNAS", non_puspresnas: "Non PUSPRESNAS", publikasi: "Publikasi / Karya / HKI" };
 
 export const STATUS_LABEL = (status) => {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { API, ConfirmModal, AlertModal } from "./shared";
+import { API, apiFetch, ConfirmModal, AlertModal } from "./shared";
 import ClaimSection from "./ClaimSection";
 
 export default function PengajuanClaim({ router }) {
@@ -24,8 +24,8 @@ export default function PengajuanClaim({ router }) {
     setLoading(true);
     try {
       const [res, resDitolak] = await Promise.all([
-        fetch(`${API}/claims`),
-        fetch(`${API}/claims/ditolak`),
+        apiFetch(`${API}/claims`),
+        apiFetch(`${API}/claims/ditolak`),
       ]);
       setClaims(res.ok ? await res.json() : []);
       setDitolakClaims(resDitolak.ok ? await resDitolak.json() : []);
@@ -61,7 +61,7 @@ export default function PengajuanClaim({ router }) {
   const handleApproveConfirm = async () => {
     const { id } = approveModal;
     setApproveModal(null);
-    const res = await fetch(`${API}/claims/${id}/approve`, { method: "PATCH", headers: opHeaders() });
+    const res = await apiFetch(`${API}/claims/${id}/approve`, { method: "PATCH", headers: opHeaders() });
     if (!res.ok) { alert("Gagal menyetujui klaim."); return; }
     fetchClaims();
   };
@@ -75,7 +75,7 @@ export default function PengajuanClaim({ router }) {
   const handleDiscardConfirm = async (note) => {
     const { id } = discardModal;
     setDiscardModal(null);
-    const res = await fetch(`${API}/claims/${id}`, {
+    const res = await apiFetch(`${API}/claims/${id}`, {
       method: "DELETE",
       headers: opHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({ catatan: note || null }),

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import * as XLSX from "xlsx";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+const apiFetch = (url, options = {}) => fetch(url, { ...options, headers: { "ngrok-skip-browser-warning": "true", ...(options.headers || {}) } });
 
 // ── Konstanta ─────────────────────────────────────────────────────────────────
 
@@ -454,7 +455,7 @@ export default function VisualisasiDataOperator() {
   const fetchStats = useCallback((f) => {
     setLoading(true);
     const qs = buildParams(f);
-    fetch(`${API_URL}/stats/visualisasi${qs ? "?" + qs : ""}`)
+    apiFetch(`${API_URL}/stats/visualisasi${qs ? "?" + qs : ""}`)
       .then(r => r.ok ? r.json() : Promise.reject("Gagal memuat data"))
       .then(data => {
         setStats(data);
@@ -487,7 +488,7 @@ export default function VisualisasiDataOperator() {
     setExporting(true);
     try {
       const qs  = buildParams(filters);
-      const res = await fetch(`${API_URL}/stats/export${qs ? "?" + qs : ""}`);
+      const res = await apiFetch(`${API_URL}/stats/export${qs ? "?" + qs : ""}`);
       const data = await res.json();
       if (!data || data.length === 0) { alert("Tidak ada data untuk diekspor."); return; }
       const ws = XLSX.utils.json_to_sheet(data);
@@ -509,7 +510,7 @@ export default function VisualisasiDataOperator() {
     setExportingPdf(true);
     try {
       const qs  = buildParams(filters);
-      const res = await fetch(`${API_URL}/stats/export${qs ? "?" + qs : ""}`);
+      const res = await apiFetch(`${API_URL}/stats/export${qs ? "?" + qs : ""}`);
       const data = await res.json();
       if (!data || data.length === 0) { alert("Tidak ada data untuk diekspor."); return; }
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import {
-  API, STATUS_BADGE, KATEGORI_LABEL, ARSIP_LABEL_KATEGORI, arsipIsLomba,
+  API, apiFetch, STATUS_BADGE, KATEGORI_LABEL, ARSIP_LABEL_KATEGORI, arsipIsLomba,
   ArsipField, ArsipSectionTitle, ArsipFileLink, ArsipCertPreview,
   formatTanggal, formatDatetime,
 } from "./shared";
@@ -14,7 +14,7 @@ export default function ArsipDetailView({ detailItem, rewards, onBack }) {
 
   useEffect(() => {
     setPLoading(true);
-    fetch(`${API}/pengajuan/by-claim/${detailItem.id}`)
+    apiFetch(`${API}/pengajuan/by-claim/${detailItem.id}`)
       .then(r => r.ok ? r.json() : null)
       .then(setPengajuan)
       .catch(() => setPengajuan(null))

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { API, formatDatetime } from "./shared";
+import { API, apiFetch, formatDatetime } from "./shared";
 
 const AKSI_LABEL = {
   approve_klaim:      { label: "Approve Klaim",       style: "bg-green-100 text-green-700"   },
@@ -62,7 +62,7 @@ export default function LogAktivitas({ operatorId }) {
       const params = new URLSearchParams();
       if (from) params.set("date_from", from);
       if (to)   params.set("date_to",   to);
-      const res  = await fetch(`${API}/audit-log?${params}`, {
+      const res  = await apiFetch(`${API}/audit-log?${params}`, {
         headers: { "x-operator-id": String(operatorId) },
       });
       const data = res.ok ? await res.json() : [];

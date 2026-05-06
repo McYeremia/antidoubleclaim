@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import KonfirmasiRewardFormPanel from "../KonfirmasiRewardFormPanel";
 import {
-  API_URL,
+  API_URL, apiFetch,
   REWARD_LABEL, REWARD_STYLE,
   KATEGORI_LABEL,
   InfoRow,
@@ -120,9 +120,9 @@ export default function KonfirmasiReward({ session, initialClaimId = null, onCle
   const fetchAll = () => {
     setLoading(true);
     Promise.all([
-      fetch(`${API_URL}/claims?email=${encodeURIComponent(session.user.email)}`),
-      fetch(`${API_URL}/reward-konfirmasi?email=${encodeURIComponent(session.user.email)}`),
-      fetch(`${API_URL}/pengajuan?email=${encodeURIComponent(session.user.email)}`),
+      apiFetch(`${API_URL}/claims?email=${encodeURIComponent(session.user.email)}`),
+      apiFetch(`${API_URL}/reward-konfirmasi?email=${encodeURIComponent(session.user.email)}`),
+      apiFetch(`${API_URL}/pengajuan?email=${encodeURIComponent(session.user.email)}`),
     ]).then(async ([claimRes, rewardRes, pengajuanRes]) => {
       const claimData     = await claimRes.json();
       const rewardData    = rewardRes.ok    ? await rewardRes.json()    : [];

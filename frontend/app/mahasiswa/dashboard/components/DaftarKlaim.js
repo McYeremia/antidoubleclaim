@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
-  API_URL,
+  API_URL, apiFetch,
   STATUS_LABEL, STATUS_STYLE,
   REWARD_LABEL, REWARD_STYLE,
   formatTanggal, formatDatetime,
@@ -22,10 +22,10 @@ export default function DaftarKlaim({ session, search, onOpenForm, onTambahKlaim
     setLoading(true);
     try {
       const [claimRes, rewardRes, pengajuanRes, anggotaRes] = await Promise.all([
-        fetch(`${API_URL}/claims?email=${encodeURIComponent(session.user.email)}`),
-        fetch(`${API_URL}/reward-konfirmasi?email=${encodeURIComponent(session.user.email)}`),
-        fetch(`${API_URL}/pengajuan?email=${encodeURIComponent(session.user.email)}`),
-        fetch(`${API_URL}/klaim-sebagai-anggota?email=${encodeURIComponent(session.user.email)}`),
+        apiFetch(`${API_URL}/claims?email=${encodeURIComponent(session.user.email)}`),
+        apiFetch(`${API_URL}/reward-konfirmasi?email=${encodeURIComponent(session.user.email)}`),
+        apiFetch(`${API_URL}/pengajuan?email=${encodeURIComponent(session.user.email)}`),
+        apiFetch(`${API_URL}/klaim-sebagai-anggota?email=${encodeURIComponent(session.user.email)}`),
       ]);
       const claimData     = claimRes.ok     ? await claimRes.json()     : [];
       const rewardData    = rewardRes.ok    ? await rewardRes.json()    : [];

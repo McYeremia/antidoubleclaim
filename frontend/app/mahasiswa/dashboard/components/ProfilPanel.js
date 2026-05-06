@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { API_URL } from "./shared";
+import { API_URL, apiFetch } from "./shared";
 
 function validateNomorWA(nomor) {
   if (!nomor) return { status: "empty", msg: "" };
@@ -32,8 +32,8 @@ export default function ProfilPanel({ session, onBack }) {
 
   useEffect(() => {
     Promise.all([
-      fetch(`${API_URL}/nim-info?email=${encodeURIComponent(session.user.email)}`),
-      fetch(`${API_URL}/profil?email=${encodeURIComponent(session.user.email)}`),
+      apiFetch(`${API_URL}/nim-info?email=${encodeURIComponent(session.user.email)}`),
+      apiFetch(`${API_URL}/profil?email=${encodeURIComponent(session.user.email)}`),
     ]).then(async ([nimRes, profilRes]) => {
       const nim  = nimRes.ok    ? await nimRes.json()    : {};
       const prof = profilRes.ok ? await profilRes.json() : {};
@@ -57,7 +57,7 @@ export default function ProfilPanel({ session, onBack }) {
     e.preventDefault();
     setSaving(true);
     try {
-      await fetch(`${API_URL}/profil?email=${encodeURIComponent(session.user.email)}`, {
+      await apiFetch(`${API_URL}/profil?email=${encodeURIComponent(session.user.email)}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
