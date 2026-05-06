@@ -3,6 +3,9 @@
 import { useState, useEffect } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+const apiFetch = (url, options = {}) => fetch(url, { ...options, headers: { "ngrok-skip-browser-warning": "true", ...(options.headers || {}) } });
 import TambahKlaimWizard from "./TambahKlaimWizard";
 import DaftarKlaim from "./components/DaftarKlaim";
 import KonfirmasiReward from "./components/KonfirmasiReward";
@@ -63,7 +66,7 @@ export default function MahasiswaDashboard() {
 
   useEffect(() => {
     if (status !== "authenticated" || !session?.user?.email) return;
-    fetch(`http://127.0.0.1:8000/profil?email=${encodeURIComponent(session.user.email)}`)
+    apiFetch(`${API_URL}/profil?email=${encodeURIComponent(session.user.email)}`)
       .then(r => r.ok ? r.json() : {})
       .then(p => setProfil(p))
       .catch(() => {});

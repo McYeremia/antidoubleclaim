@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+const apiFetch = (url, options = {}) => fetch(url, { ...options, headers: { "ngrok-skip-browser-warning": "true", ...(options.headers || {}) } });
+
 const IconClaim = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -50,7 +53,7 @@ export function OperatorTopbar() {
   useEffect(() => {
     setOperatorNama(localStorage.getItem("operator_nama") || "Operator");
     setOperatorRole(localStorage.getItem("operator_role") || "operator");
-    fetch("http://127.0.0.1:8000/periode/aktif")
+    apiFetch(`${API_URL}/periode/aktif`)
       .then(r => r.ok ? r.json() : { aktif: false })
       .then(p => setPeriodeLabel(p.aktif && p.periode?.nama ? p.periode.nama : null))
       .catch(() => setPeriodeLabel(null));

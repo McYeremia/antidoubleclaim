@@ -6,6 +6,9 @@ import { useParams, useRouter } from "next/navigation";
 import OperatorSidebar, { OperatorTopbar } from "../_sidebar";
 import { ConfirmModal } from "../components/shared";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+const apiFetch = (url, options = {}) => fetch(url, { ...options, headers: { "ngrok-skip-browser-warning": "true", ...(options.headers || {}) } });
+
 const STATUS_STYLE = {
   "belum dicek":    "bg-blue-100 text-blue-700",
   "perlu ditinjau": "bg-orange-100 text-orange-700",
@@ -138,7 +141,7 @@ function CertPreview({ url, filename }) {
 function FileLink({ label, path }) {
   if (!path) return null;
   const filename = path.split(/[\\/]/).pop();
-  const url = `http://127.0.0.1:8000/uploads/${filename}`;
+  const url = `${API_URL}/uploads/${filename}`;
   // strip everything up to and including the 32-char uuid: prefix(_prefix)*_uuid32_originalname
   const match = filename.match(/^.+?_[0-9a-f]{32}_(.+)$/);
   const displayName = match ? match[1] : filename;
@@ -251,7 +254,7 @@ function PengajuanDetail({ p, onSaved, claimId }) {
       if (payload[k] !== p[k]) changed[k] = payload[k] === "" ? null : payload[k];
     }
     if (Object.keys(changed).length === 0) { setEditing(false); setSaving(false); return; }
-    await fetch(`http://127.0.0.1:8000/pengajuan/${p.id}`, {
+    await apiFetch(`${API_URL}/pengajuan/${p.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(changed),
@@ -595,18 +598,18 @@ export default function DetailKlaim() {
 
   const fetchAll = async () => {
     setLoading(true);
-    const res = await fetch(`http://127.0.0.1:8000/claims/${id}`);
+    const res = await apiFetch(`${API_URL}/claims/${id}`);
     if (res.status === 404) { setNotFound(true); setLoading(false); return; }
     const data = await res.json();
     setClaim(data);
 
     // Ambil data pengajuan lengkap
-    const pRes = await fetch(`http://127.0.0.1:8000/pengajuan/by-claim/${id}`);
+    const pRes = await apiFetch(`${API_URL}/pengajuan/by-claim/${id}`);
     if (pRes.ok) setPengajuan(await pRes.json());
 
     // Ambil klaim mirip jika ada
     if (data.mirip_dengan_id) {
-      const r2 = await fetch(`http://127.0.0.1:8000/claims/${data.mirip_dengan_id}`);
+      const r2 = await apiFetch(`${API_URL}/claims/${data.mirip_dengan_id}`);
       if (r2.ok) setMiripClaim(await r2.json());
     }
     setLoading(false);
@@ -623,7 +626,7 @@ export default function DetailKlaim() {
     setApproveModal(false);
     setActionLoading(true);
     try {
-      const res = await fetch(`http://127.0.0.1:8000/claims/${id}/approve`, { method: "PATCH", headers: opHeaders });
+      const res = await apiFetch(`${API_URL}/claims/${id}/approve`, { method: "PATCH", headers: opHeaders });
       if (!res.ok) throw new Error(`Server error ${res.status}`);
       await fetchAll();
     } catch (err) {
@@ -639,7 +642,7 @@ export default function DetailKlaim() {
     setDiscardModal(false);
     setActionLoading(true);
     try {
-      const res = await fetch(`http://127.0.0.1:8000/claims/${id}`, {
+      const res = await apiFetch(`${API_URL}/claims/${id}`, {
         method: "DELETE",
         headers: { ...opHeaders, "Content-Type": "application/json" },
         body: JSON.stringify({ catatan: note || null }),
@@ -670,7 +673,7 @@ export default function DetailKlaim() {
     </div>
   );
 
-  const fileUrl = `http://127.0.0.1:8000/uploads/${claim.sertifikat_filename}`;
+  const fileUrl = `${API_URL}/uploads/${claim.sertifikat_filename}`;
   const canAct  = claim.status !== "sudah dicek" && claim.status !== "ditolak";
 
   // Validasi khusus Rekognisi: Harus ada estimasi dana
@@ -828,7 +831,7 @@ export default function DetailKlaim() {
               <div className="space-y-4">
                 <p className="text-[11px] font-black text-orange-400 uppercase tracking-widest mb-2">Visual Perbandingan</p>
                 <CertPreview
-                  url={`http://127.0.0.1:8000/uploads/${miripClaim.sertifikat_filename}`}
+                  url={`${API_URL}/uploads/${miripClaim.sertifikat_filename}`}
                   filename={miripClaim.sertifikat_filename}
                 />
               </div>
