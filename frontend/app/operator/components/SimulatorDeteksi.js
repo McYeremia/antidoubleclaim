@@ -2,6 +2,7 @@
 import { useState, useRef, useCallback } from "react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+const apiFetch = (url, options = {}) => fetch(url, { ...options, headers: { "ngrok-skip-browser-warning": "true", ...(options.headers || {}) } });
 
 // ── SIMULATOR ─ Komponen ini adalah bagian sistem terpisah dari alur produksi.
 // Tidak menyimpan data ke database, tidak mempengaruhi klaim yang ada.
@@ -238,7 +239,7 @@ function TabPhash() {
       form.append("image1", image1);
       form.append("image2", image2);
       const operatorId = localStorage.getItem("operator_id") || "";
-      const res = await fetch(`${API_URL}/simulator/phash`, {
+      const res = await apiFetch(`${API_URL}/simulator/phash`, {
         method: "POST",
         headers: { "x-operator-id": operatorId },
         body: form,
@@ -369,7 +370,7 @@ function TabFuzzy() {
     setLoading(true); setError(""); setResult(null);
     try {
       const operatorId = localStorage.getItem("operator_id") || "";
-      const res = await fetch(`${API_URL}/simulator/fuzzy`, {
+      const res = await apiFetch(`${API_URL}/simulator/fuzzy`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-operator-id": operatorId },
         body: JSON.stringify({ title1, title2 }),

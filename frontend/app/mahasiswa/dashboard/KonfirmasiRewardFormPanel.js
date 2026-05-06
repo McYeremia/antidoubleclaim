@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+const apiFetch = (url, options = {}) => fetch(url, { ...options, headers: { "ngrok-skip-browser-warning": "true", ...(options.headers || {}) } });
 const MAX_FILE_MB = 10;
 
 const _BULAN = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
@@ -200,11 +201,11 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
   useEffect(() => {
     if (!claimId) return;
     Promise.all([
-      fetch(`${API}/claims/${claimId}`),
-      fetch(`${API}/reward-konfirmasi/${claimId}`),
-      fetch(`${API}/pengajuan/by-claim/${claimId}`),
-      fetch(`${API}/profil?email=${encodeURIComponent(session.user.email)}`),
-      fetch(`${API}/periode/terkini`),
+      apiFetch(`${API}/claims/${claimId}`),
+      apiFetch(`${API}/reward-konfirmasi/${claimId}`),
+      apiFetch(`${API}/pengajuan/by-claim/${claimId}`),
+      apiFetch(`${API}/profil?email=${encodeURIComponent(session.user.email)}`),
+      apiFetch(`${API}/periode/terkini`),
     ]).then(async ([claimRes, rewardRes, pengajuanRes, profilRes, periodeRes]) => {
       if (claimRes.status === 404) { setNotFound(true); return; }
 

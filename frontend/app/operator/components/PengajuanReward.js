@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import * as XLSX from "xlsx";
-import { API, KATEGORI_LABEL, ConfirmModal, AlertModal, formatDatetime } from "./shared";
+import { API, apiFetch, KATEGORI_LABEL, ConfirmModal, AlertModal, formatDatetime } from "./shared";
 import RewardSection from "./RewardSection";
 import RewardDetailModal from "./RewardDetailModal";
 
@@ -20,7 +20,7 @@ export default function PengajuanReward() {
   const fetchRewards = async () => {
     setLoading(true);
     try {
-      const res  = await fetch(`${API}/reward-konfirmasi`);
+      const res  = await apiFetch(`${API}/reward-konfirmasi`);
       const data = await res.json();
       setRewards(data);
     } catch {
@@ -46,7 +46,7 @@ export default function PengajuanReward() {
   };
 
   const doKirimReward = async (id) => {
-    const res = await fetch(`${API}/reward-konfirmasi/${id}/status`, {
+    const res = await apiFetch(`${API}/reward-konfirmasi/${id}/status`, {
       method: "PATCH",
       headers: opHeaders(),
       body: JSON.stringify({ status: "selesai" }),
@@ -58,7 +58,7 @@ export default function PengajuanReward() {
   const doKirimSemuaReward = async () => {
     try {
       await Promise.all(diproses.map(r =>
-        fetch(`${API}/reward-konfirmasi/${r.id}/status`, {
+        apiFetch(`${API}/reward-konfirmasi/${r.id}/status`, {
           method: "PATCH",
           headers: opHeaders(),
           body: JSON.stringify({ status: "selesai" }),
@@ -73,7 +73,7 @@ export default function PengajuanReward() {
   const handleKonfirmasiBermasalah = async () => {
     if (!bermasalahCatatan.trim()) return;
     setBermasalahLoading(true);
-    const res = await fetch(`${API}/reward-konfirmasi/${bermasalahTarget.id}/status`, {
+    const res = await apiFetch(`${API}/reward-konfirmasi/${bermasalahTarget.id}/status`, {
       method: "PATCH",
       headers: opHeaders(),
       body: JSON.stringify({ status: "dikembalikan", catatan: bermasalahCatatan }),

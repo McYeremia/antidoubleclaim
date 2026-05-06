@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { API, KATEGORI_LABEL, REWARD_STATUS_BADGE, ConfirmModal, InfoRow, DocLink, formatTanggal, formatDatetime } from "./shared";
+import { API, apiFetch, KATEGORI_LABEL, REWARD_STATUS_BADGE, ConfirmModal, InfoRow, DocLink, formatTanggal, formatDatetime } from "./shared";
 
 export default function RewardDetailModal({ reward, onClose, onStatusUpdate }) {
   const [claim,          setClaim]          = useState(null);
@@ -13,11 +13,11 @@ export default function RewardDetailModal({ reward, onClose, onStatusUpdate }) {
 
   useEffect(() => {
     if (!reward.claim_id) return;
-    fetch(`${API}/claims/${reward.claim_id}`)
+    apiFetch(`${API}/claims/${reward.claim_id}`)
       .then(r => r.ok ? r.json() : null)
       .then(setClaim)
       .catch(() => {});
-    fetch(`${API}/pengajuan/by-claim/${reward.claim_id}`)
+    apiFetch(`${API}/pengajuan/by-claim/${reward.claim_id}`)
       .then(r => r.ok ? r.json() : null)
       .then(setPengajuan)
       .catch(() => {});
@@ -26,7 +26,7 @@ export default function RewardDetailModal({ reward, onClose, onStatusUpdate }) {
   const handleStatus = async (status) => {
     setUpdating(true);
     const opId = localStorage.getItem("operator_id");
-    const res = await fetch(`${API}/reward-konfirmasi/${reward.id}/status`, {
+    const res = await apiFetch(`${API}/reward-konfirmasi/${reward.id}/status`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",

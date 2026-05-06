@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import * as XLSX from "xlsx";
-import { API, ARSIP_STATUS_STYLE, STATUS_BADGE, KATEGORI_LABEL, formatTanggal, ConfirmModal, formatDatetime } from "./shared";
+import { API, apiFetch, ARSIP_STATUS_STYLE, STATUS_BADGE, KATEGORI_LABEL, formatTanggal, ConfirmModal, formatDatetime } from "./shared";
 import ArsipDetailView from "./ArsipDetailView";
 
 export default function ArsipPeriode() {
@@ -22,7 +22,7 @@ export default function ArsipPeriode() {
   const fetchPeriode = async () => {
     setLoading(true);
     try {
-      const res  = await fetch(`${API}/periode`);
+      const res  = await apiFetch(`${API}/periode`);
       const data = await res.json();
       setPeriodeList(data);
     } catch { setPeriodeList([]); }
@@ -38,8 +38,8 @@ export default function ArsipPeriode() {
     setDataLoading(true);
     try {
       const [rClaims, rRewards] = await Promise.all([
-        fetch(`${API}/periode/${p.id}/claims`),
-        fetch(`${API}/periode/${p.id}/rewards`),
+        apiFetch(`${API}/periode/${p.id}/claims`),
+        apiFetch(`${API}/periode/${p.id}/rewards`),
       ]);
       setClaims(await rClaims.json());
       setRewards(await rRewards.json());
@@ -57,7 +57,7 @@ export default function ArsipPeriode() {
         setConfirmModal(null);
         setActionLoading(true);
         const opId = localStorage.getItem("operator_id");
-        const res = await fetch(`${API}/periode/${p.id}?status=ditutup`, {
+        const res = await apiFetch(`${API}/periode/${p.id}?status=ditutup`, {
           method: "PUT",
           headers: opId ? { "x-operator-id": opId } : {},
         });
@@ -83,7 +83,7 @@ export default function ArsipPeriode() {
         setConfirmModal(null);
         const opId = localStorage.getItem("operator_id");
         setActionLoading(true);
-        const res = await fetch(`${API}/periode/${p.id}/arsip`, {
+        const res = await apiFetch(`${API}/periode/${p.id}/arsip`, {
           method: "POST",
           headers: opId ? { "x-operator-id": opId } : {},
         });

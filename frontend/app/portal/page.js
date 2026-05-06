@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 const API        = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const apiFetch = (url, options = {}) => fetch(url, { ...options, headers: { "ngrok-skip-browser-warning": "true", ...(options.headers || {}) } });
 const SESSION_MS = 3 * 60 * 60 * 1000;
 
 function isOperatorSessionValid() {
@@ -32,7 +33,7 @@ export default function OperatorLoginPage() {
     setError("");
     setLoading(true);
     try {
-      const res = await fetch(`${API}/login-operator`, {
+      const res = await apiFetch(`${API}/login-operator`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),

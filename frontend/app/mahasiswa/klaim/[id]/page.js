@@ -6,6 +6,7 @@ import { useRouter, useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+const apiFetch = (url, options = {}) => fetch(url, { ...options, headers: { "ngrok-skip-browser-warning": "true", ...(options.headers || {}) } });
 
 const STATUS_LABEL = (s) => s === "sudah dicek" ? "Selesai" : s === "ditolak" ? "Ditolak" : "Dalam Proses";
 const STATUS_STYLE = (s) => s === "sudah dicek" ? "bg-green-100 text-green-700" : s === "ditolak" ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700";
@@ -161,9 +162,9 @@ export default function KlaimDetailPage() {
     if (authStatus !== "authenticated" || !id) return;
 
     Promise.all([
-      fetch(`${API_URL}/claims/${id}`),
-      fetch(`${API_URL}/pengajuan/by-claim/${id}`),
-      fetch(`${API_URL}/reward-konfirmasi?email=${encodeURIComponent(session.user.email)}`),
+      apiFetch(`${API_URL}/claims/${id}`),
+      apiFetch(`${API_URL}/pengajuan/by-claim/${id}`),
+      apiFetch(`${API_URL}/reward-konfirmasi?email=${encodeURIComponent(session.user.email)}`),
     ]).then(async ([cRes, pRes, rRes]) => {
       const claimData    = cRes.ok ? await cRes.json() : null;
       const pengajuanData = pRes.ok ? await pRes.json() : null;
@@ -242,7 +243,7 @@ export default function KlaimDetailPage() {
     setSaving(true);
     setSaveMsg("");
     try {
-      const res = await fetch(`${API_URL}/pengajuan/${pengajuan.id}`, {
+      const res = await apiFetch(`${API_URL}/pengajuan/${pengajuan.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editForm),

@@ -4,6 +4,13 @@ import { useState, useEffect } from "react";
 
 export const API = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
+export function apiFetch(url, options = {}) {
+  return fetch(url, {
+    ...options,
+    headers: { "ngrok-skip-browser-warning": "true", ...(options.headers || {}) },
+  });
+}
+
 const BULAN = [
   "Januari","Februari","Maret","April","Mei","Juni",
   "Juli","Agustus","September","Oktober","November","Desember",
