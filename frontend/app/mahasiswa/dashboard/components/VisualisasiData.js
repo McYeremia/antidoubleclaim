@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { API_URL } from "./shared";
+import { API_URL, apiFetch } from "./shared";
 
 // ── Konstanta ────────────────────────────────────────────────────────────────
 
@@ -383,7 +383,7 @@ export default function VisualisasiData() {
 
   const fetchStats = useCallback((f) => {
     setLoading(true);
-    fetch(buildUrl(f))
+    apiFetch(buildUrl(f))
       .then(r => r.ok ? r.json() : Promise.reject("Gagal memuat data"))
       .then(data => {
         setStats(data);
