@@ -56,7 +56,8 @@
       "PowerShell(cd \"C:\\\\01. Kuliah\\\\Semester 8\\\\01. Skripsi\\\\antidoubleclaim\"; Get-ChildItem frontend\\\\src -Recurse | Where-Object { !$_.PSIsContainer } | Select-Object FullName | Format-Table -AutoSize -HideTableHeaders)",
       "PowerShell(cd \"C:\\\\01. Kuliah\\\\Semester 8\\\\01. Skripsi\\\\antidoubleclaim\"; Get-ChildItem frontend\\\\src -Recurse -File | Select-Object -ExpandProperty FullName | ForEach-Object { $_.Replace\\(\"C:\\\\01. Kuliah\\\\Semester 8\\\\01. Skripsi\\\\antidoubleclaim\\\\frontend\\\\src\\\\\", \"\"\\) })",
       "PowerShell(cd \"C:\\\\01. Kuliah\\\\Semester 8\\\\01. Skripsi\\\\antidoubleclaim\\\\frontend\"; Get-ChildItem src -Recurse -File | Select-Object -ExpandProperty FullName | ForEach-Object { $_ -replace [regex]::Escape\\(\"C:\\\\01. Kuliah\\\\Semester 8\\\\01. Skripsi\\\\antidoubleclaim\\\\frontend\\\\src\\\\\"\\), \"\" })",
-      "Bash(dir /b \"C:\\\\01. Kuliah\\\\Semester 8\\\\01. Skripsi\\\\antidoubleclaim\")"
+      "Bash(dir /b \"C:\\\\01. Kuliah\\\\Semester 8\\\\01. Skripsi\\\\antidoubleclaim\")",
+      "PowerShell(Get-ChildItem \"C:\\\\01. Kuliah\\\\Semester 8\\\\01. Skripsi\\\\antidoubleclaim\" | Where-Object { $_.Name -notmatch \"^\\(venv|node_modules|frontend\\)\" } | Select-Object Name, PSIsContainer)"
     ]
   }
 }
