@@ -271,7 +271,13 @@ export default function KonfirmasiRewardForm() {
 
   const handleFileChange = (e) => {
     const { name, files: fileList } = e.target;
-    setFiles(f => ({ ...f, [name]: fileList[0] || null }));
+    const file = fileList[0] || null;
+    if (file && file.size > 3 * 1024 * 1024) {
+      setErrors(prev => ({ ...prev, [name]: "Ukuran file maksimal 3 MB" }));
+      e.target.value = "";
+      return;
+    }
+    setFiles(f => ({ ...f, [name]: file }));
     setErrors({});
   };
 
