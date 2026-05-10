@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import OperatorSidebar from "./_sidebar";
 
@@ -16,7 +16,7 @@ import LogAktivitas              from "./components/LogAktivitas";
 import SimulatorDeteksi         from "./components/SimulatorDeteksi";
 
 
-export default function OperatorDashboard() {
+function OperatorDashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeMenu = searchParams.get("menu") || "claim";
@@ -239,5 +239,13 @@ export default function OperatorDashboard() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function OperatorDashboard() {
+  return (
+    <Suspense fallback={null}>
+      <OperatorDashboardContent />
+    </Suspense>
   );
 }
