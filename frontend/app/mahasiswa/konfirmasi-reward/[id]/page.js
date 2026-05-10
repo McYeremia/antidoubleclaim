@@ -266,13 +266,13 @@ export default function KonfirmasiRewardForm() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm(f => ({ ...f, [name]: value }));
-    setErrors(prev => ({ ...prev, [name]: "" }));
+    setErrors({});
   };
 
   const handleFileChange = (e) => {
     const { name, files: fileList } = e.target;
     setFiles(f => ({ ...f, [name]: fileList[0] || null }));
-    setErrors(prev => ({ ...prev, [name]: "" }));
+    setErrors({});
   };
 
   const validate = () => {
@@ -499,14 +499,14 @@ export default function KonfirmasiRewardForm() {
             <div className="space-y-6">
               <div className="bg-[#046137] rounded-[32px] p-8 text-white space-y-4">
                 <label className="flex items-start gap-4 cursor-pointer group">
-                  <input type="checkbox" checked={bersedia} onChange={e => { setBersedia(e.target.checked); setErrors(prev => ({ ...prev, bersedia: "" })); }} className="hidden" />
+                  <input type="checkbox" checked={bersedia} onChange={e => { setBersedia(e.target.checked); setErrors({}); }} className="hidden" />
                   <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all ${bersedia ? "bg-[#046137] border-[#046137] shadow-lg shadow-[#046137]/30" : "border-gray-700"}`}>
                     {bersedia && <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>}
                   </div>
                   <span className="text-[13px] font-bold text-gray-300 group-hover:text-white transition-colors">Saya bersedia mengikuti prosedur administrasi yang ditetapkan.</span>
                 </label>
                 <label className="flex items-start gap-4 cursor-pointer group">
-                  <input type="checkbox" checked={dataBenar} onChange={e => { setDataBenar(e.target.checked); setErrors(prev => ({ ...prev, data_benar: "" })); }} className="hidden" />
+                  <input type="checkbox" checked={dataBenar} onChange={e => { setDataBenar(e.target.checked); setErrors({}); }} className="hidden" />
                   <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all ${dataBenar ? "bg-[#046137] border-[#046137] shadow-lg shadow-[#046137]/30" : "border-gray-700"}`}>
                     {dataBenar && <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>}
                   </div>

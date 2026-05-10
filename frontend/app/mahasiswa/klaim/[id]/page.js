@@ -164,14 +164,14 @@ export default function KlaimDetailPage() {
     Promise.all([
       apiFetch(`${API_URL}/claims/${id}`),
       apiFetch(`${API_URL}/pengajuan/by-claim/${id}`),
-      apiFetch(`${API_URL}/reward-konfirmasi?email=${encodeURIComponent(session.user.email)}`),
+      apiFetch(`${API_URL}/reward-konfirmasi/${id}`),
     ]).then(async ([cRes, pRes, rRes]) => {
       const claimData    = cRes.ok ? await cRes.json() : null;
       const pengajuanData = pRes.ok ? await pRes.json() : null;
-      const rewardData   = rRes.ok ? await rRes.json() : [];
+      const rewardData   = rRes.ok ? await rRes.json() : null;
       setClaim(claimData);
       setPengajuan(pengajuanData);
-      setReward(Array.isArray(rewardData) ? rewardData.find(r => r.claim_id === Number(id)) : null);
+      setReward(rewardData);
     }).catch(() => {}).finally(() => setLoading(false));
   }, [authStatus, id, session]);
 

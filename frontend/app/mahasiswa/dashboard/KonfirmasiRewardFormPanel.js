@@ -157,6 +157,7 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
   const [submitting,     setSubmitting]     = useState(false);
   const [submitted,      setSubmitted]      = useState(false);
   const [errors,         setErrors]         = useState({});
+  const [showBanner,     setShowBanner]     = useState(false);
   const [periodeAktif,   setPeriodeAktif]   = useState(null);
   // Kumpulan field yang di-prefill dari pengajuan (tidak boleh diubah)
   const [prefilledFields, setPrefilledFields] = useState(new Set());
@@ -343,6 +344,7 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
     const { name, value } = e.target;
     setForm(f => ({ ...f, [name]: value }));
     setErrors(prev => ({ ...prev, [name]: "" }));
+    setShowBanner(false);
   };
 
   const handleFileChange = (e) => {
@@ -355,6 +357,7 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
     }
     setFiles(f => ({ ...f, [name]: file }));
     setErrors(prev => ({ ...prev, [name]: "" }));
+    setShowBanner(false);
   };
 
   const validate = () => {
@@ -385,6 +388,7 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
     const errs = validate();
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
+      setShowBanner(true);
       return;
     }
     setSubmitting(true);
@@ -479,9 +483,6 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
     </div>
   );
 
-  // ── Form ──────────────────────────────────────────────────────────────────
-  const hasErrors = Object.keys(errors).length > 0;
-
   return (
     <div className="space-y-5">
 
@@ -522,7 +523,7 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
       )}
 
       {/* Error summary */}
-      {hasErrors && (
+      {showBanner && (
         <div className="bg-red-50 border border-red-300 rounded-xl px-5 py-3 text-sm text-red-700">
           Terdapat beberapa field yang belum diisi dengan benar. Mohon periksa kembali.
         </div>
@@ -851,7 +852,7 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
                 <input
                   type="checkbox"
                   checked={bersedia}
-                  onChange={e => { setBersedia(e.target.checked); setErrors(p => ({ ...p, bersedia: "" })); }}
+                  onChange={e => { setBersedia(e.target.checked); setErrors(p => ({ ...p, bersedia: "" })); setShowBanner(false); }}
                   className="mt-0.5 accent-[#046137] w-4 h-4 flex-shrink-0"
                 />
                 <span className="text-sm text-gray-700">Saya bersedia mengikuti proses yang ada.</span>
@@ -862,7 +863,7 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
                 <input
                   type="checkbox"
                   checked={dataBenar}
-                  onChange={e => { setDataBenar(e.target.checked); setErrors(p => ({ ...p, data_benar: "" })); }}
+                  onChange={e => { setDataBenar(e.target.checked); setErrors(p => ({ ...p, data_benar: "" })); setShowBanner(false); }}
                   className="mt-0.5 accent-[#046137] w-4 h-4 flex-shrink-0"
                 />
                 <span className="text-sm text-gray-700">

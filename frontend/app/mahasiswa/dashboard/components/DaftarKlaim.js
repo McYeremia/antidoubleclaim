@@ -55,12 +55,15 @@ export default function DaftarKlaim({ session, search, onOpenForm, onTambahKlaim
 
   useEffect(() => { fetchClaims(); }, []);
 
-  // Fix: null-safe filter agar tidak crash jika field kosong
-  const filtered = claims.filter((c) =>
+  const filterFn = (c) =>
     [c.nama_lomba, c.tingkat, c.peringkat, c.status].some((v) =>
       (v ?? "").toLowerCase().includes(search.toLowerCase())
-    )
-  );
+    );
+
+  const ownClaims     = claims.filter(c => !c.is_anggota);
+  const anggotaClaims = claims.filter(c =>  c.is_anggota);
+  const filteredOwn     = ownClaims.filter(filterFn);
+  const filteredAnggota = anggotaClaims.filter(filterFn);
 
   return (
     <div>
@@ -106,101 +109,159 @@ export default function DaftarKlaim({ session, search, onOpenForm, onTambahKlaim
             <span className="text-sm">Memuat data...</span>
           </div>
         </div>
-      ) : filtered.length === 0 ? (
+      ) : claims.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 bg-white rounded-2xl border border-gray-100">
           <div className="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center mb-4">
             <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
           </div>
-          <p className="text-sm font-semibold text-gray-600">
-            {claims.length === 0 ? "Belum ada klaim yang diajukan" : "Tidak ada hasil pencarian"}
-          </p>
-          {claims.length === 0 && (
-            <p className="text-xs text-gray-400 mt-1.5">Klik tombol "Tambah Klaim" untuk mulai mengajukan</p>
-          )}
+          <p className="text-sm font-semibold text-gray-600">Belum ada klaim yang diajukan</p>
+          <p className="text-xs text-gray-400 mt-1.5">Klik tombol &quot;Tambah Klaim&quot; untuk mulai mengajukan</p>
+        </div>
+      ) : (filteredOwn.length === 0 && filteredAnggota.length === 0) ? (
+        <div className="flex flex-col items-center justify-center py-24 bg-white rounded-2xl border border-gray-100">
+          <div className="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center mb-4">
+            <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <p className="text-sm font-semibold text-gray-600">Tidak ada hasil pencarian</p>
         </div>
       ) : (
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-[11px] font-bold text-gray-400 tracking-widest uppercase">Riwayat Aktivitas</h2>
-            <button className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-400 hover:text-gray-600 tracking-wider uppercase">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h18M7 8h10M10 12h4" />
-              </svg>
-              Filter
-            </button>
+        <div className="space-y-8">
+
+          {/* ── Klaim Saya ──────────────────────────────────────────────── */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-[11px] font-bold text-gray-400 tracking-widest uppercase">
+                {anggotaClaims.length > 0 ? "Klaim Saya" : "Riwayat Aktivitas"}
+              </h2>
+            </div>
+
+            {filteredOwn.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 bg-white rounded-2xl border border-gray-100">
+                <p className="text-sm font-semibold text-gray-500">Belum ada klaim yang diajukan sendiri</p>
+                <p className="text-xs text-gray-400 mt-1">Klik &quot;Tambah Klaim&quot; untuk mulai mengajukan</p>
+              </div>
+            ) : (
+              <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+                <table className="w-full text-sm text-left">
+                  <thead>
+                    <tr className="border-b border-gray-100">
+                      <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest w-14">No</th>
+                      <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Nama Lomba</th>
+                      <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Tingkat</th>
+                      <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Peringkat</th>
+                      <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Tgl. Pengajuan</th>
+                      <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Status Klaim</th>
+                      <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Status Reward</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredOwn.map((claim, idx) => (
+                      <tr key={claim.id}
+                          onClick={() => router.push(`/mahasiswa/klaim/${claim.id}`)}
+                          className="border-b border-gray-50 last:border-0 hover:bg-gray-50/60 cursor-pointer transition-colors">
+                        <td className="px-5 py-4 text-gray-300 text-[12px] font-semibold tabular-nums">{String(idx + 1).padStart(2, "0")}</td>
+                        <td className="px-5 py-4">
+                          <p className="font-semibold text-gray-900 text-[13px]">{claim.nama_lomba}</p>
+                        </td>
+                        <td className="px-5 py-4 text-[13px] text-gray-500">{claim.tingkat}</td>
+                        <td className="px-5 py-4">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#046137] text-white">
+                            {claim.peringkat}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4 text-[12px] text-gray-400">{pengajuanMap[claim.id]?.created_at ? formatTanggal(pengajuanMap[claim.id].created_at) : formatTanggal(claim.tanggal)}</td>
+                        <td className="px-5 py-4">
+                          <span className={`inline-flex items-center whitespace-nowrap px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${STATUS_STYLE(claim.status)}`}>
+                            {STATUS_LABEL(claim.status)}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4 text-[13px]" onClick={(e) => e.stopPropagation()}>
+                          {claim.status === "sudah dicek" && (
+                            rewardMap[claim.id] ? (
+                              <span className={`inline-flex items-center whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-semibold ${REWARD_STYLE[rewardMap[claim.id].reward_status] ?? "bg-gray-100 text-gray-600"}`}>
+                                {REWARD_LABEL[rewardMap[claim.id].reward_status] ?? rewardMap[claim.id].reward_status}
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => onOpenForm?.(claim.id)}
+                                className="text-[13px] font-semibold text-[#046137] hover:text-[#035230] transition-colors underline underline-offset-2"
+                              >
+                                Isi Data Reward
+                              </button>
+                            )
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div className="px-5 py-3 border-t border-gray-50">
+                  <p className="text-[11px] text-gray-300 font-medium">{filteredOwn.length} klaim ditemukan</p>
+                </div>
+              </div>
+            )}
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-            <table className="w-full text-sm text-left">
-              <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest w-14">No</th>
-                  <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Nama Lomba</th>
-                  <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Tingkat</th>
-                  <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Peringkat</th>
-                  <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Tgl. Pengajuan</th>
-                  <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Status Klaim</th>
-                  <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Status Reward</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((claim, idx) => (
-                  <tr key={claim.id}
-                      onClick={() => {
-                        const isAnggota = claim.mahasiswa_email !== session.user.email;
-                        const url = isAnggota
-                          ? `/mahasiswa/klaim/${claim.id}?readonly=true`
-                          : `/mahasiswa/klaim/${claim.id}`;
-                        router.push(url);
-                      }}
-                      className="border-b border-gray-50 last:border-0 hover:bg-gray-50/60 cursor-pointer transition-colors">
-                    <td className="px-5 py-4 text-gray-300 text-[12px] font-semibold tabular-nums">{String(idx + 1).padStart(2, "0")}</td>
-                    <td className="px-5 py-4">
-                      <p className="font-semibold text-gray-900 text-[13px]">{claim.nama_lomba}</p>
-                    </td>
-                    <td className="px-5 py-4 text-[13px] text-gray-500">{claim.tingkat}</td>
-                    <td className="px-5 py-4">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#046137] text-white">
-                        {claim.peringkat}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4 text-[12px] text-gray-400">{pengajuanMap[claim.id]?.created_at ? formatTanggal(pengajuanMap[claim.id].created_at) : formatTanggal(claim.tanggal)}</td>
-                    <td className="px-5 py-4">
-                      <span className={`inline-flex items-center whitespace-nowrap px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${STATUS_STYLE(claim.status)}`}>
-                        {STATUS_LABEL(claim.status)}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4 text-[13px]" onClick={(e) => e.stopPropagation()}>
-                      {claim.status === "sudah dicek" && claim.mahasiswa_email === session.user.email && (
-                        rewardMap[claim.id] ? (
-                          <span className={`inline-flex items-center whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-semibold ${REWARD_STYLE[rewardMap[claim.id].reward_status] ?? "bg-gray-100 text-gray-600"}`}>
-                            {REWARD_LABEL[rewardMap[claim.id].reward_status] ?? rewardMap[claim.id].reward_status}
+          {/* ── Klaim Tim (Anggota) ─────────────────────────────────────── */}
+          {filteredAnggota.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2.5 mb-1">
+                <h2 className="text-[11px] font-bold text-gray-400 tracking-widest uppercase">
+                  Klaim Tim
+                </h2>
+              </div>
+              <p className="text-[12px] text-gray-400 mb-4">
+               Anda ditambahkan sebagai anggota oleh ketua tim anda.
+              </p>
+              <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+                <table className="w-full text-sm text-left">
+                  <thead>
+                    <tr className="border-b border-gray-100">
+                      <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest w-14">No</th>
+                      <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Nama Lomba</th>
+                      <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Tingkat</th>
+                      <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Peringkat</th>
+                      <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Tgl. Pengajuan</th>
+                      <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Status Klaim</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredAnggota.map((claim, idx) => (
+                      <tr key={claim.id}
+                          onClick={() => router.push(`/mahasiswa/klaim/${claim.id}?readonly=true`)}
+                          className="border-b border-gray-50 last:border-0 hover:bg-gray-50/60 cursor-pointer transition-colors">
+                        <td className="px-5 py-4 text-gray-300 text-[12px] font-semibold tabular-nums">{String(idx + 1).padStart(2, "0")}</td>
+                        <td className="px-5 py-4">
+                          <p className="font-semibold text-gray-900 text-[13px]">{claim.nama_lomba}</p>
+                          <p className="text-[11px] text-gray-400 mt-0.5">Ketua: {claim.nama_display}</p>
+                        </td>
+                        <td className="px-5 py-4 text-[13px] text-gray-500">{claim.tingkat}</td>
+                        <td className="px-5 py-4">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#046137] text-white">
+                            {claim.peringkat}
                           </span>
-                        ) : (
-                          <button
-                            onClick={() => onOpenForm?.(claim.id)}
-                            className="text-[13px] font-semibold text-[#046137] hover:text-[#035230] transition-colors underline underline-offset-2"
-                          >
-                            Isi Data Reward
-                          </button>
-                        )
-                      )}
-                      {claim.status === "sudah dicek" && claim.mahasiswa_email !== session.user.email && rewardMap[claim.id] && (
-                        <span className={`inline-flex items-center whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-semibold ${REWARD_STYLE[rewardMap[claim.id].reward_status] ?? "bg-gray-100 text-gray-600"}`}>
-                          {REWARD_LABEL[rewardMap[claim.id].reward_status] ?? rewardMap[claim.id].reward_status}
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="px-5 py-3 border-t border-gray-50">
-              <p className="text-[11px] text-gray-300 font-medium">{filtered.length} klaim ditemukan</p>
+                        </td>
+                        <td className="px-5 py-4 text-[12px] text-gray-400">{formatTanggal(claim.tanggal)}</td>
+                        <td className="px-5 py-4">
+                          <span className={`inline-flex items-center whitespace-nowrap px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${STATUS_STYLE(claim.status)}`}>
+                            {STATUS_LABEL(claim.status)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div className="px-5 py-3 border-t border-gray-50">
+                  <p className="text-[11px] text-gray-300 font-medium">{filteredAnggota.length} klaim tim ditemukan</p>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
+
         </div>
       )}
 
