@@ -59,7 +59,7 @@ app.add_middleware(
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+MAX_FILE_SIZE = 3 * 1024 * 1024  # 3 MB
 
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
@@ -101,7 +101,7 @@ async def simulator_phash(
     contents2 = await image2.read()
 
     if len(contents1) > MAX_FILE_SIZE or len(contents2) > MAX_FILE_SIZE:
-        raise HTTPException(status_code=413, detail="Ukuran file melebihi batas 10 MB")
+        raise HTTPException(status_code=413, detail="Ukuran file melebihi batas 3 MB")
 
     try:
         img1 = _open_image_from_bytes(image1.filename or "image1.jpg", contents1)
@@ -411,7 +411,7 @@ async def upload_certificate(
 
         contents = await file.read()
         if len(contents) > MAX_FILE_SIZE:
-            raise HTTPException(status_code=413, detail="Ukuran file melebihi batas maksimal 10 MB")
+            raise HTTPException(status_code=413, detail="Ukuran file melebihi batas maksimal 3 MB")
 
         unique_name   = f"{uuid.uuid4().hex}_{file.filename}"
         file_location = os.path.join(UPLOAD_FOLDER, unique_name)
@@ -486,7 +486,7 @@ async def submit_pengajuan(
                 return None
             contents = upload.file.read()
             if len(contents) > MAX_FILE_SIZE:
-                raise HTTPException(status_code=413, detail=f"File '{upload.filename}' melebihi batas maksimal 10 MB")
+                raise HTTPException(status_code=413, detail=f"File '{upload.filename}' melebihi batas maksimal 3 MB")
             fname    = f"{prefix}_{uuid.uuid4().hex}_{upload.filename}"
             fpath    = os.path.join(UPLOAD_FOLDER, fname)
             with open(fpath, "wb") as buf:
@@ -640,7 +640,7 @@ async def submit_reward_konfirmasi(
                 return None
             contents = upload.file.read()
             if len(contents) > MAX_FILE_SIZE:
-                raise HTTPException(status_code=413, detail=f"File '{upload.filename}' melebihi batas maksimal 10 MB")
+                raise HTTPException(status_code=413, detail=f"File '{upload.filename}' melebihi batas maksimal 3 MB")
             fname = f"{prefix}_{uuid.uuid4().hex}_{upload.filename}"
             fpath = os.path.join(UPLOAD_FOLDER, fname)
             with open(fpath, "wb") as buf:
@@ -764,7 +764,7 @@ async def resubmit_reward(
             return None
         contents = upload.file.read()
         if len(contents) > MAX_FILE_SIZE:
-            raise HTTPException(status_code=413, detail=f"File '{upload.filename}' melebihi batas maksimal 10 MB")
+            raise HTTPException(status_code=413, detail=f"File '{upload.filename}' melebihi batas maksimal 3 MB")
         path = os.path.join(UPLOAD_FOLDER, f"{uuid.uuid4().hex}_{upload.filename}")
         with open(path, "wb") as f:
             f.write(contents)

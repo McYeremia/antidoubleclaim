@@ -100,7 +100,7 @@ function FileLink({ label, path }) {
   );
 }
 
-function EditInput({ label, name, value, onChange, type = "text" }) {
+function EditInput({ label, name, value, onChange, type = "text", min, max }) {
   return (
     <div>
       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">{label}</p>
@@ -108,8 +108,23 @@ function EditInput({ label, name, value, onChange, type = "text" }) {
         type={type}
         value={value ?? ""}
         onChange={e => onChange(name, e.target.value)}
+        min={min}
+        max={max}
         className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-[13px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#046137]/30 transition-all"
       />
+    </div>
+  );
+}
+
+function LockedRow({ label, value }) {
+  if (!value && value !== 0) return null;
+  return (
+    <div>
+      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 flex items-center gap-1.5">
+        {label}
+        <span className="text-[8px] bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded font-black tracking-widest">TERKUNCI</span>
+      </p>
+      <p className="text-gray-500 text-[13px] font-medium">{value}</p>
     </div>
   );
 }
@@ -205,6 +220,11 @@ export default function KlaimDetailPage() {
   const isKarya      = pengajuan?.kategori_kegiatan?.startsWith("Karya Mahasiswa");
   const isKelompok   = pengajuan?.jenis_kepesertaan === "kelompok";
   const canEdit      = !isReadonly && pengajuan && (claim.status === "belum dicek" || claim.status === "perlu ditinjau");
+
+  const _now = new Date();
+  const todayStr = `${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,"0")}-${String(_now.getDate()).padStart(2,"0")}`;
+  const _batas = new Date(_now); _batas.setFullYear(_batas.getFullYear() - 1);
+  const batasLaluStr = `${_batas.getFullYear()}-${String(_batas.getMonth()+1).padStart(2,"0")}-${String(_batas.getDate()).padStart(2,"0")}`;
 
   const openEdit = () => {
     setEditForm({
@@ -507,21 +527,24 @@ export default function KlaimDetailPage() {
                           {editOpen ? (
                             <>
                               <div className="col-span-2">
-                                <EditInput label="Nama Lengkap Kegiatan" name="nama_kegiatan" value={ef.nama_kegiatan} onChange={setField} />
+                                <LockedRow label="Nama Lengkap Kegiatan" value={pengajuan.nama_kegiatan} />
                               </div>
-                              <EditSelect label="Kategori SIMKATMAWA" name="kategori_simkatmawa" value={ef.kategori_simkatmawa} onChange={setField} options={OPT_KATEGORI_SIMKATMAWA} />
-                              <EditSelect label="Jenis Kepesertaan"   name="jenis_kepesertaan"   value={ef.jenis_kepesertaan}   onChange={setField} options={OPT_JENIS_KEPESERTAAN} />
-                              <EditSelect label="Tahun Kegiatan"      name="tahun_kegiatan"      value={ef.tahun_kegiatan}      onChange={setField} options={OPT_TAHUN} />
+                              <LockedRow label="Kategori SIMKATMAWA" value={
+                                pengajuan.kategori_simkatmawa === "lomba_mandiri_puspresnas"     ? "Lomba Mandiri — Puspresnas (DIKTI)" :
+                                pengajuan.kategori_simkatmawa === "lomba_mandiri_non_puspresnas" ? "Lomba Mandiri — Non Puspresnas (Non DIKTI)" :
+                                "Rekognisi Non-Lomba"
+                              } />
+                              <LockedRow label="Jenis Kepesertaan" value={pengajuan.jenis_kepesertaan} />
+                              <EditSelect label="Tahun Kegiatan" name="tahun_kegiatan" value={ef.tahun_kegiatan} onChange={setField} options={OPT_TAHUN} />
                               <div className="col-span-2">
-                                <EditSelect label="Kategori Kegiatan" name="kategori_kegiatan" value={ef.kategori_kegiatan} onChange={setField}
-                                  options={efLomba ? OPT_KATEGORI_LOMBA : OPT_KATEGORI_REKOGNISI} />
+                                <LockedRow label="Kategori Kegiatan" value={pengajuan.kategori_kegiatan} />
                               </div>
                               {!efLomba && <EditSelect label="Tingkatan" name="tingkatan" value={ef.tingkatan} onChange={setField} options={OPT_TINGKATAN} />}
                               {efLomba  && <EditSelect label="Model Pelaksanaan" name="model_pelaksanaan" value={ef.model_pelaksanaan} onChange={setField} options={OPT_MODEL_PELAKSANAAN} />}
                               {efLomba  && <EditInput  label="Jumlah Peserta"    name="jumlah_peserta"    value={ef.jumlah_peserta}    onChange={setField} type="number" />}
-                              {efLomba  && <div className="col-span-2"><EditSelect label="Capaian / Peringkat" name="capaian" value={ef.capaian} onChange={setField} options={OPT_CAPAIAN} /></div>}
-                              <EditInput label="Tanggal Mulai"   name="tanggal_mulai"   value={ef.tanggal_mulai}   onChange={setField} type="date" />
-                              <EditInput label="Tanggal Selesai" name="tanggal_selesai" value={ef.tanggal_selesai} onChange={setField} type="date" />
+                              {efLomba  && <div className="col-span-2"><LockedRow label="Capaian / Peringkat" value={pengajuan.capaian} /></div>}
+                              <EditInput label="Tanggal Mulai"   name="tanggal_mulai"   value={ef.tanggal_mulai}   onChange={setField} type="date" min={batasLaluStr} max={todayStr} />
+                              <EditInput label="Tanggal Selesai" name="tanggal_selesai" value={ef.tanggal_selesai} onChange={setField} type="date" min={ef.tanggal_mulai || batasLaluStr} max={todayStr} />
                               <div className="col-span-2">
                                 <EditInput label="URL Website Penyelenggara" name="url_penyelenggara" value={ef.url_penyelenggara} onChange={setField} />
                               </div>
@@ -586,7 +609,7 @@ export default function KlaimDetailPage() {
                                   <EditInput label="Judul/Jenis Karya"      name="jenis_karya_teks"    value={ef.jenis_karya_teks}    onChange={setField} />
                                   <EditSelect label="Kategori Karya"        name="jenis_karya_pilihan" value={ef.jenis_karya_pilihan} onChange={setField} options={OPT_JENIS_KARYA} />
                                   <EditInput label="Nomor Surat Keterangan" name="nomor_surat"         value={ef.nomor_surat}         onChange={setField} />
-                                  <EditInput label="Tanggal Surat"          name="tanggal_surat"       value={ef.tanggal_surat}       onChange={setField} type="date" />
+                                  <EditInput label="Tanggal Surat"          name="tanggal_surat"       value={ef.tanggal_surat}       onChange={setField} type="date" max={todayStr} />
                                   <div className="col-span-2"><EditInput label="Deskripsi Karya" name="deskripsi_karya" value={ef.deskripsi_karya} onChange={setField} /></div>
                                   <div className="col-span-2"><EditInput label="Manfaat Karya"   name="manfaat_karya"   value={ef.manfaat_karya}   onChange={setField} /></div>
                                 </>

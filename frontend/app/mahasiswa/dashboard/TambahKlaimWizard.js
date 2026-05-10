@@ -136,7 +136,7 @@ const isLombaMandiri = (kat) =>
   kat === "lomba_mandiri_puspresnas" || kat === "lomba_mandiri_non_puspresnas";
 
 // Ukuran file maks
-const MAX_FILE_MB = 10;
+const MAX_FILE_MB = 3;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "application/pdf", "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
 
@@ -247,10 +247,26 @@ function validateStep(step, data, files, showKelompok, totalSteps) {
     } else {
       // rekognisi
       if (!data.tingkatan)       e.tingkatan = "Tingkatan kegiatan wajib dipilih.";
-      if (!data.tanggal_mulai)   e.tanggal_mulai = "Tanggal mulai wajib diisi.";
-      if (!data.tanggal_selesai) e.tanggal_selesai = "Tanggal selesai wajib diisi.";
-      else if (data.tanggal_mulai && data.tanggal_selesai < data.tanggal_mulai)
-        e.tanggal_selesai = "Tanggal selesai harus sama atau setelah tanggal mulai.";
+
+      const _now2 = new Date();
+      const todayStr2 = `${_now2.getFullYear()}-${String(_now2.getMonth() + 1).padStart(2, "0")}-${String(_now2.getDate()).padStart(2, "0")}`;
+      const _batas2 = new Date(_now2); _batas2.setFullYear(_batas2.getFullYear() - 1);
+      const batasLaluStr2 = `${_batas2.getFullYear()}-${String(_batas2.getMonth() + 1).padStart(2, "0")}-${String(_batas2.getDate()).padStart(2, "0")}`;
+
+      if (!data.tanggal_mulai) {
+        e.tanggal_mulai = "Tanggal mulai wajib diisi.";
+      } else {
+        if (data.tanggal_mulai > todayStr2)      e.tanggal_mulai = "Tanggal mulai tidak boleh di masa depan.";
+        else if (data.tanggal_mulai < batasLaluStr2) e.tanggal_mulai = "Melebihi batas 12 bulan pengajuan (SK Rektor Pasal 5).";
+      }
+
+      if (!data.tanggal_selesai) {
+        e.tanggal_selesai = "Tanggal selesai wajib diisi.";
+      } else {
+        if (data.tanggal_selesai > todayStr2) e.tanggal_selesai = "Tanggal selesai tidak boleh di masa depan.";
+        else if (data.tanggal_mulai && data.tanggal_selesai < data.tanggal_mulai)
+          e.tanggal_selesai = "Tanggal selesai harus sama atau setelah tanggal mulai.";
+      }
 
       // Karya Mahasiswa
       const isKarya = data.kategori_kegiatan ===
@@ -450,11 +466,11 @@ function FFile({ id, label, required, hint, error, onChange, currentFile }) {
     ev.preventDefault();
     setDragging(false);
     const f = ev.dataTransfer.files?.[0];
-    if (f) onChange({ target: { files: [f] } });
+    if (f) onChange({ target: { files: [f], value: "" } });
   };
 
   return (
-    <div>
+    <div style={{ minWidth: 0 }}>
       {label && <FieldLabel required={required} htmlFor={id}>{label}</FieldLabel>}
       <div
         onClick={() => inputRef.current?.click()}
@@ -471,20 +487,22 @@ function FFile({ id, label, required, hint, error, onChange, currentFile }) {
           alignItems: "center",
           gap: "10px",
           transition: "border-color 0.15s",
+          minWidth: 0,
+          overflow: "hidden",
         }}
       >
-        <svg width="16" height="16" fill="none" stroke={currentFile ? "#1a7a4a" : T.hintText} viewBox="0 0 24 24">
+        <svg width="16" height="16" fill="none" stroke={currentFile ? "#1a7a4a" : T.hintText} viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
           {currentFile
             ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
           }
         </svg>
-        <div style={{ minWidth: 0 }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
           <p style={{ fontSize: "12px", fontWeight: 500, color: currentFile ? "#1a7a4a" : "#7a756e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {currentFile ? currentFile.name : "Klik atau seret file ke sini"}
           </p>
           <p style={{ fontSize: "10px", color: T.hintText, marginTop: "1px" }}>
-            {currentFile ? `${(currentFile.size / 1024).toFixed(0)} KB` : "JPG, PNG, PDF, DOC — maks. 10 MB"}
+            {currentFile ? `${(currentFile.size / 1024).toFixed(0)} KB` : "JPG, PNG, PDF, DOC — maks. 3 MB"}
           </p>
         </div>
         {currentFile && (
@@ -678,7 +696,7 @@ function Step2({ data, onChange, onBlur, onFileChange, files, errors }) {
           <FFile
             id="surat_tugas_dospem"
             label="Surat Tugas Dosen Pembimbing (opsional)"
-            onChange={(e) => onFileChange("surat_tugas_dospem", e.target.files[0])}
+            onChange={(e) => onFileChange("surat_tugas_dospem", e)}
             currentFile={files?.surat_tugas_dospem}
             hint="PDF, JPG, PNG, atau DOC"
             error={errors?.surat_tugas_dospem}
@@ -820,25 +838,28 @@ function Step4Rekognisi({ data, onChange, onBlur, onFileChange, files, errors, p
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
         <FInput id="tanggal_mulai_rek" label="Tanggal Mulai" required
           type="date"
-          max={periodeTanggalSelesai || undefined}
+          min={(() => { const d = new Date(); d.setFullYear(d.getFullYear() - 1); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; })()}
+          max={(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; })()}
           value={data.tanggal_mulai} onChange={(e) => onChange("tanggal_mulai", e.target.value)}
           onBlur={() => onBlur("tanggal_mulai")}
+          hint="Tidak boleh di masa depan, maks. 12 bulan yang lalu (SK Rektor)"
           error={errors?.tanggal_mulai} />
         <FInput id="tanggal_selesai_rek" label="Tanggal Selesai" required
           type="date"
           min={data.tanggal_mulai || undefined}
-          max={periodeTanggalSelesai || undefined}
+          max={(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; })()}
           value={data.tanggal_selesai} onChange={(e) => onChange("tanggal_selesai", e.target.value)}
           onBlur={() => onBlur("tanggal_selesai")}
+          hint="Harus sama atau setelah tanggal mulai"
           error={errors?.tanggal_selesai} />
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
         <FFile id="dokumen_sertifikat" label="Dokumen Sertifikat / Karya" required
-          onChange={(e) => onFileChange("dokumen_sertifikat", e.target.files[0])}
+          onChange={(e) => onFileChange("dokumen_sertifikat", e)}
           currentFile={files?.dokumen_sertifikat} error={errors?.dokumen_sertifikat} />
         <FFile id="foto_penyerahan" label="Bukti Foto Penyerahan Sertifikat" required
-          onChange={(e) => onFileChange("foto_penyerahan", e.target.files[0])}
+          onChange={(e) => onFileChange("foto_penyerahan", e)}
           currentFile={files?.foto_penyerahan} error={errors?.foto_penyerahan} />
       </div>
 
@@ -849,7 +870,7 @@ function Step4Rekognisi({ data, onChange, onBlur, onFileChange, files, errors, p
         hint="Harus diawali https:// atau http://" error={errors?.url_penyelenggara} />
 
       <FFile id="dokumen_lainnya" label="Dokumen Pendukung Lainnya" required
-        onChange={(e) => onFileChange("dokumen_lainnya", e.target.files[0])}
+        onChange={(e) => onFileChange("dokumen_lainnya", e)}
         currentFile={files?.dokumen_lainnya}
         hint="Surat tugas, LoA, atau dokumen relevan lainnya"
         error={errors?.dokumen_lainnya} />
@@ -1035,6 +1056,7 @@ function Step4Lomba({ data, onChange, onBlur, onFileChange, files, errors }) {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
         <FInput id="tanggal_mulai" label="Tanggal Mulai" required
           type="date"
+          min={(() => { const d = new Date(); d.setFullYear(d.getFullYear() - 1); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; })()}
           max={(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; })()}
           value={data.tanggal_mulai} onChange={(e) => onChange("tanggal_mulai", e.target.value)}
           onBlur={() => onBlur("tanggal_mulai")}
@@ -1053,10 +1075,10 @@ function Step4Lomba({ data, onChange, onBlur, onFileChange, files, errors }) {
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
         <FFile id="dokumen_sertifikat" label="Dokumen Sertifikat" required
-          onChange={(e) => onFileChange("dokumen_sertifikat", e.target.files[0])}
+          onChange={(e) => onFileChange("dokumen_sertifikat", e)}
           currentFile={files?.dokumen_sertifikat} error={errors?.dokumen_sertifikat} />
         <FFile id="foto_penyerahan" label="Foto Penyerahan Sertifikat" required
-          onChange={(e) => onFileChange("foto_penyerahan", e.target.files[0])}
+          onChange={(e) => onFileChange("foto_penyerahan", e)}
           currentFile={files?.foto_penyerahan} error={errors?.foto_penyerahan} />
       </div>
 
@@ -1067,7 +1089,7 @@ function Step4Lomba({ data, onChange, onBlur, onFileChange, files, errors }) {
         hint="Harus diawali https:// atau http://" error={errors?.url_penyelenggara} />
 
       <FFile id="dokumen_lainnya" label="Dokumen Pendukung Lainnya" required
-        onChange={(e) => onFileChange("dokumen_lainnya", e.target.files[0])}
+        onChange={(e) => onFileChange("dokumen_lainnya", e)}
         currentFile={files?.dokumen_lainnya}
         hint="Surat tugas, LoA, atau bukti partisipasi"
         error={errors?.dokumen_lainnya} />
@@ -1317,7 +1339,14 @@ export default function TambahKlaimWizard({ session, profil, onClose, onSuccess 
     if (fieldErrors[key]) setFieldErrors((prev) => { const n = { ...prev }; delete n[key]; return n; });
   };
 
-  const onFileChange = (key, file) => {
+  const onFileChange = (key, e) => {
+    const file = e.target.files[0];
+    const err = validateFile(file);
+    if (err) {
+      setFieldErrors((prev) => ({ ...prev, [key]: err }));
+      e.target.value = "";
+      return;
+    }
     setFiles((prev) => ({ ...prev, [key]: file }));
     if (fieldErrors[key]) setFieldErrors((prev) => { const n = { ...prev }; delete n[key]; return n; });
   };
