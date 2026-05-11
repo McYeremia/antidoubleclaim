@@ -22,7 +22,7 @@ function validateRekeningBNI(nomor) {
   return { status: "valid", msg: "Format nomor rekening BNI valid" };
 }
 
-export default function ProfilPanel({ session, onBack }) {
+export default function ProfilPanel({ session, onBack, onProfilSaved }) {
   const [nimInfo, setNimInfo] = useState(null);
   const [profil,  setProfil]  = useState(null);
   const [form,    setForm]    = useState({ nomor_wa: "", nama_pemilik_rekening: "", nomor_rekening: "" });
@@ -63,6 +63,7 @@ export default function ProfilPanel({ session, onBack }) {
         body: JSON.stringify(form),
       });
       setSaved(true);
+      onProfilSaved?.(form);
     } catch {
       alert("Gagal menyimpan. Coba lagi.");
     } finally {

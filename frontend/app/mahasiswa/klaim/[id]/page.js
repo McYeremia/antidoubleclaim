@@ -671,7 +671,7 @@ export default function KlaimDetailPage() {
 
                 {/* Timeline — mengisi ruang kosong di bawah sejajar estimasi */}
                 <div className="bg-white rounded-[28px] shadow-sm border border-gray-100 p-7">
-                  <SectionTitle>Riwayat Status</SectionTitle>
+                  <SectionTitle>Timeline</SectionTitle>
                   <div className="flex items-start gap-0">
                     {[
                       {
