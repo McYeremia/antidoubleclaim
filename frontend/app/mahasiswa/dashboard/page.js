@@ -159,7 +159,7 @@ function MahasiswaDashboardContent() {
           {activeMenu === "reward"      && <KonfirmasiReward session={session} initialClaimId={rewardOpenId} onClearInitial={() => setRewardOpenId(null)} />}
           {activeMenu === "visualisasi" && <VisualisasiData />}
           {activeMenu === "sk-rektor"   && <SKRektor />}
-          {activeMenu === "profil"      && <ProfilPanel session={session} onBack={() => navigateTo("daftar")} />}
+          {activeMenu === "profil"      && <ProfilPanel session={session} onBack={() => navigateTo("daftar")} onProfilSaved={(data) => setProfil(p => ({ ...p, ...data }))} />}
         </main>
       </div>
 
