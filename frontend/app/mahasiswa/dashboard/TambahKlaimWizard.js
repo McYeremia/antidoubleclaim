@@ -858,7 +858,7 @@ function Step4Rekognisi({ data, onChange, onBlur, onFileChange, files, errors, p
         <FFile id="dokumen_sertifikat" label="Dokumen Sertifikat / Karya" required
           onChange={(e) => onFileChange("dokumen_sertifikat", e)}
           currentFile={files?.dokumen_sertifikat} error={errors?.dokumen_sertifikat} />
-        <FFile id="foto_penyerahan" label="Bukti Foto Penyerahan Sertifikat" required
+        <FFile id="foto_penyerahan" label="Bukti Pendukung Sertifikat" required
           onChange={(e) => onFileChange("foto_penyerahan", e)}
           currentFile={files?.foto_penyerahan} error={errors?.foto_penyerahan} />
       </div>
