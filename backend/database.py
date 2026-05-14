@@ -173,6 +173,7 @@ def create_database():
         "ALTER TABLE CLAIMS ADD COLUMN flag_alasan TEXT",
         "ALTER TABLE CLAIMS ADD COLUMN periode_id INTEGER",
         "ALTER TABLE PENGAJUAN ADD COLUMN kompetisi_puspresnas TEXT",
+        "ALTER TABLE CLAIMS ADD COLUMN kategori_simkatmawa TEXT",
     ]:
         try:
             cursor.execute(migration)
@@ -319,65 +320,59 @@ def insert_claim(nama_lomba, tingkat, tanggal, peringkat, sertifikat_path,
     new_hash = generate_phash(sertifikat_path)
 
     # Bandingkan dengan klaim aktif (exclude ditolak agar mahasiswa bisa re-submit)
-    cursor.execute("SELECT id, nama_lomba, peringkat, phash FROM CLAIMS WHERE status != 'ditolak'")
+    cursor.execute("SELECT id, nama_lomba, peringkat, phash, kategori_simkatmawa FROM CLAIMS WHERE status != 'ditolak'")
     rows = cursor.fetchall()
 
     flagged         = False
     mirip_dengan_id = None
     detail          = {}
 
+    _LOMBA_GRUP = {"lomba_mandiri_puspresnas", "lomba_mandiri_non_puspresnas"}
     is_rekognisi = (kategori_simkatmawa == "rekognisi")
+    is_lomba     = (kategori_simkatmawa in _LOMBA_GRUP)
 
     for row in rows:
-        old_id, old_nama, old_peringkat, old_phash_str = row
+        old_id, old_nama, old_peringkat, old_phash_str, old_kategori = row
 
-        if is_rekognisi:
-            # Rekognisi: fuzzy nama kegiatan + exact kategori (tersimpan di peringkat)
-            sim_nama   = token_sort_ratio(nama_lomba, old_nama)
-            nama_mirip = sim_nama >= FUZZY_THRESHOLD
-            print(f"[Rekognisi] vs ID {old_id}: similarity nama={sim_nama}% → {'MIRIP' if nama_mirip else 'aman'}")
+        # Hanya bandingkan dalam grup yang sama; klaim lama tanpa kategori dilewati
+        if old_kategori is None:
+            continue
+        old_is_rekognisi = (old_kategori == "rekognisi")
+        old_is_lomba     = (old_kategori in _LOMBA_GRUP)
+        if is_rekognisi and not old_is_rekognisi:
+            continue
+        if is_lomba and not old_is_lomba:
+            continue
 
-            if nama_mirip and peringkat == old_peringkat:
+        # Deteksi kemiripan: TSR + pHash untuk semua kategori
+        sim_nama   = token_sort_ratio(nama_lomba, old_nama)
+        nama_mirip = sim_nama >= FUZZY_THRESHOLD
+        print(f"[Tahap 1] vs ID {old_id} ({old_kategori}): similarity nama={sim_nama}% → {'MIRIP' if nama_mirip else 'aman'}")
+
+        old_hash    = imagehash.hex_to_hash(old_phash_str)
+        distance    = int(hamming_distance(new_hash, old_hash))
+        phash_mirip = distance <= PHASH_THRESHOLD
+        print(f"[Tahap 2] vs ID {old_id}: Hamming distance={distance} → {'MIRIP' if phash_mirip else 'aman'}")
+
+        if phash_mirip or nama_mirip:
+            alasan = []
+            if phash_mirip: alasan.append("gambar")
+            if nama_mirip:  alasan.append("nama")
+            print(f"[Tahap 3] vs ID {old_id}: kemiripan terdeteksi ({', '.join(alasan)}) — cek peringkat/kategori...")
+
+            if peringkat == old_peringkat:
                 flagged         = True
                 mirip_dengan_id = old_id
                 detail          = {
                     "duplikat_dengan_id": old_id,
                     "similarity_nama":    sim_nama,
-                    "distance_phash":     None,
-                    "flag_alasan":        "nama kegiatan + kategori rekognisi",
+                    "distance_phash":     distance,
+                    "flag_alasan":        ", ".join(alasan),
                 }
-                print(f"[FLAGGED] Rekognisi mirip dengan ID {old_id} — nama mirip ({sim_nama}%), kategori sama ({peringkat})")
+                print(f"[FLAGGED] Mirip dengan ID {old_id} — alasan: {', '.join(alasan)}, peringkat/kategori sama ({peringkat})")
                 break
-        else:
-            # Lomba: pHash + fuzzy nama + peringkat (logika existing)
-            sim_nama   = token_sort_ratio(nama_lomba, old_nama)
-            nama_mirip = sim_nama >= FUZZY_THRESHOLD
-            print(f"[Tahap 1] vs ID {old_id}: similarity nama={sim_nama}% (threshold={FUZZY_THRESHOLD}) → {'MIRIP' if nama_mirip else 'aman'}")
-
-            old_hash    = imagehash.hex_to_hash(old_phash_str)
-            distance    = int(hamming_distance(new_hash, old_hash))
-            phash_mirip = distance <= PHASH_THRESHOLD
-            print(f"[Tahap 2] vs ID {old_id}: Hamming distance={distance} (threshold={PHASH_THRESHOLD}) → {'MIRIP' if phash_mirip else 'aman'}")
-
-            if phash_mirip or nama_mirip:
-                alasan = []
-                if phash_mirip: alasan.append("gambar")
-                if nama_mirip:  alasan.append("nama lomba")
-                print(f"[Tahap 3] vs ID {old_id}: kemiripan terdeteksi ({', '.join(alasan)}) — cek peringkat...")
-
-                if peringkat == old_peringkat:
-                    flagged         = True
-                    mirip_dengan_id = old_id
-                    detail          = {
-                        "duplikat_dengan_id": old_id,
-                        "similarity_nama":    sim_nama,
-                        "distance_phash":     distance,
-                        "flag_alasan":        ", ".join(alasan),
-                    }
-                    print(f"[FLAGGED] Mirip dengan ID {old_id} — alasan: {', '.join(alasan)}, peringkat sama ({peringkat})")
-                    break
-                else:
-                    print(f"[Info] vs ID {old_id}: kemiripan terdeteksi tapi peringkat berbeda ({peringkat} vs {old_peringkat}) — tidak di-flag")
+            else:
+                print(f"[Info] vs ID {old_id}: kemiripan terdeteksi tapi peringkat/kategori berbeda ({peringkat} vs {old_peringkat}) — tidak di-flag")
 
     status = "perlu ditinjau" if flagged else "belum dicek"
 
@@ -396,11 +391,13 @@ def insert_claim(nama_lomba, tingkat, tanggal, peringkat, sertifikat_path,
     cursor.execute("""
         INSERT INTO CLAIMS
             (nama_lomba, tingkat, tanggal, peringkat, sertifikat_path,
-             phash, status, mahasiswa_email, nama_display, mirip_dengan_id, flag_alasan, periode_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             phash, status, mahasiswa_email, nama_display, mirip_dengan_id, flag_alasan, periode_id,
+             kategori_simkatmawa)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         nama_lomba, tingkat, tanggal, peringkat, sertifikat_path,
         str(new_hash), status, mahasiswa_email, nama_display, mirip_dengan_id, flag_alasan, periode_id,
+        kategori_simkatmawa,
     ))
 
     claim_id = cursor.lastrowid
