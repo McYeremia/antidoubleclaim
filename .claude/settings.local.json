@@ -62,7 +62,9 @@
       "Bash(where python *)",
       "Bash(pip list *)",
       "Bash(findstr -i \"fuzz\\\\|venv\\\\|rapid\")",
-      "Bash(.venvScriptspython.exe -c ' *)"
+      "Bash(.venvScriptspython.exe -c ' *)",
+      "Bash(sqlite3 claims.db \"SELECT id, nama_lomba, mahasiswa_email, status, mirip_dengan_id FROM CLAIMS WHERE id = 93 OR mirip_dengan_id = 93;\")",
+      "Bash(dir *)"
     ]
   }
 }
