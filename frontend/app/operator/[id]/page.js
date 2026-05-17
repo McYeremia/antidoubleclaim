@@ -797,15 +797,15 @@ export default function DetailKlaim() {
                    Klaim <span className="font-bold">#{claim.id}</span> terdeteksi mirip dengan klaim{" "}
                    <span className="font-bold">#{miripClaim.id}</span> berdasarkan{" "}
                    <span className="font-bold underline underline-offset-2">
-                     {claim.flag_alasan === "gambar, nama lomba"
-                       ? "judul lomba dan gambar sertifikat"
+                     {claim.flag_alasan === "gambar, nama" || claim.flag_alasan === "gambar, nama lomba"
+                       ? "gambar sertifikat dan nama lomba"
                        : claim.flag_alasan === "gambar"
                        ? "gambar sertifikat"
-                       : claim.flag_alasan === "nama lomba"
-                       ? "judul lomba"
+                       : claim.flag_alasan === "nama" || claim.flag_alasan === "nama lomba"
+                       ? "nama lomba/kegiatan"
                        : claim.flag_alasan === "nama kegiatan + kategori rekognisi"
                        ? "nama kegiatan dan kategori rekognisi"
-                       : "kemiripan terdeteksi"}
+                       : claim.flag_alasan || "kemiripan terdeteksi"}
                    </span>.
                  </p>
                </div>

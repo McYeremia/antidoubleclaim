@@ -25,8 +25,9 @@ export default function ClaimSection({
               <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Peringkat</th>
               <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Tanggal</th>
               {showMirip    && <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Mirip Dengan</th>}
+              {showMirip    && <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Alasan</th>}
               {showVerified && <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Diverifikasi Oleh</th>}
-              {showActions  && <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest text-right">Aksi</th>}
+              <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest text-right">Aksi</th>
             </tr>
           </thead>
           <tbody>
@@ -60,6 +61,26 @@ export default function ClaimSection({
                     ) : <span className="text-gray-200">—</span>}
                   </td>
                 )}
+                {showMirip && (
+                  <td className="px-6 py-4">
+                    {claim.flag_alasan ? (() => {
+                      const a = claim.flag_alasan;
+                      const isBoth = a === "gambar, nama" || a === "gambar, nama lomba";
+                      const isImg  = a === "gambar";
+                      const label  = isBoth ? "Gambar + Nama" : isImg ? "Gambar" : "Nama";
+                      const style  = isBoth
+                        ? "bg-red-100 text-red-700"
+                        : isImg
+                        ? "bg-orange-100 text-orange-700"
+                        : "bg-blue-100 text-blue-700";
+                      return (
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide ${style}`}>
+                          {label}
+                        </span>
+                      );
+                    })() : <span className="text-gray-200">—</span>}
+                  </td>
+                )}
                 {showVerified && (
                   <td className="px-6 py-4">
                     {claim.verified_by_nama ? (
@@ -70,22 +91,33 @@ export default function ClaimSection({
                     ) : <span className="text-gray-200">—</span>}
                   </td>
                 )}
-                {showActions && (
-                  <td className="px-6 py-4 text-right space-x-2" onClick={e => e.stopPropagation()}>
+                <td className="px-6 py-4 text-right" onClick={e => e.stopPropagation()}>
+                  <div className="flex items-center justify-end gap-2">
+                    {showActions && (
+                      <>
+                        <button
+                          onClick={e => onApprove(claim.id, e)}
+                          className="px-3 py-1.5 rounded-xl text-[11px] font-black bg-[#046137] text-white hover:bg-[#035230] transition-colors"
+                        >
+                          APPROVE
+                        </button>
+                        <button
+                          onClick={e => onDiscard(claim.id, e)}
+                          className="px-3 py-1.5 rounded-xl text-[11px] font-black bg-red-50 text-red-600 hover:bg-red-100 transition-colors border border-red-100"
+                        >
+                          DISCARD
+                        </button>
+                        <div className="w-px h-5 bg-gray-200 mx-1 flex-shrink-0" />
+                      </>
+                    )}
                     <button
-                      onClick={e => onApprove(claim.id, e)}
-                      className="px-3 py-1.5 rounded-xl text-[11px] font-black bg-[#046137] text-white hover:bg-[#035230] transition-colors"
+                      onClick={() => router.push(`/operator/${claim.id}`)}
+                      className="px-3 py-1.5 rounded-xl text-[11px] font-black bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors border border-gray-200"
                     >
-                      APPROVE
+                      DETAIL
                     </button>
-                    <button
-                      onClick={e => onDiscard(claim.id, e)}
-                      className="px-3 py-1.5 rounded-xl text-[11px] font-black bg-red-50 text-red-600 hover:bg-red-100 transition-colors border border-red-100"
-                    >
-                      DISCARD
-                    </button>
-                  </td>
-                )}
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
