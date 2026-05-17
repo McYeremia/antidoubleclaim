@@ -867,6 +867,8 @@ async def change_operator_password(
     is_self = op["id"] == operator_id
     if not is_self and op.get("role") != "superadmin":
         raise HTTPException(status_code=403, detail="Akses ditolak: hanya Super Admin yang dapat mengubah password operator lain")
+    if not is_self and target.get("role") == "superadmin":
+        raise HTTPException(status_code=403, detail="Akses ditolak: password Super Admin tidak dapat diubah oleh Super Admin lain")
 
     if is_self:
         if not body.old_password:

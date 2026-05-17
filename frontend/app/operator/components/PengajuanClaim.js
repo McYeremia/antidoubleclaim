@@ -245,6 +245,7 @@ export default function PengajuanClaim({ router }) {
                     <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Mahasiswa</th>
                     <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Ditolak Oleh</th>
                     <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Alasan</th>
+                    <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest text-right">Aksi</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -270,6 +271,14 @@ export default function PengajuanClaim({ router }) {
                         {claim.catatan_penolakan
                           ? <p className="text-[12px] text-gray-500 italic leading-relaxed line-clamp-2">{claim.catatan_penolakan}</p>
                           : <span className="text-gray-200">—</span>}
+                      </td>
+                      <td className="px-6 py-4 text-right" onClick={e => e.stopPropagation()}>
+                        <button
+                          onClick={() => router.push(`/operator/${claim.id}`)}
+                          className="px-3 py-1.5 rounded-xl text-[11px] font-black bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors border border-gray-200"
+                        >
+                          DETAIL
+                        </button>
                       </td>
                     </tr>
                   ))}

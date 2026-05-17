@@ -204,12 +204,14 @@ export default function KelolaOperator({ operatorId }) {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => handleResetPassword(op)}
-                        className="px-3 py-1.5 rounded-xl text-[11px] font-black bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors border border-blue-100"
-                      >
-                        GANTI PASSWORD
-                      </button>
+                      {(String(op.id) === String(operatorId) || op.role !== "superadmin") && (
+                        <button
+                          onClick={() => handleResetPassword(op)}
+                          className="px-3 py-1.5 rounded-xl text-[11px] font-black bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors border border-blue-100"
+                        >
+                          GANTI PASSWORD
+                        </button>
+                      )}
                       {String(op.id) === String(operatorId) ? (
                         <span className="text-[11px] text-gray-300 font-black italic tracking-widest uppercase px-3">AKUN ANDA</span>
                       ) : op.role === "superadmin" ? (
