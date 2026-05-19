@@ -422,6 +422,9 @@ function PengajuanDetail({ p, onSaved, claimId }) {
                 </>}
 
                 {isLomba && <>
+                  {p.kategori_simkatmawa === "lomba_mandiri_puspresnas" && (
+                    <InfoRow label="Kompetisi PUSPRESNAS" value={p.kompetisi_puspresnas} />
+                  )}
                   <InfoRow label="Model Pelaksanaan" value={p.model_pelaksanaan} />
                   <InfoRow label="Jumlah Peserta"    value={p.jumlah_peserta} />
                   <InfoRow label="Capaian / Peringkat" value={p.capaian} />

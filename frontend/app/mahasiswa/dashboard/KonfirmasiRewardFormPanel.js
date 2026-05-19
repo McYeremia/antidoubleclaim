@@ -496,7 +496,7 @@ export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, on
         </button>
         <div>
           <h2 className="text-xl font-bold text-gray-900">
-            {isReturned ? "Perbaiki Data Reward" : "Isi Data Reward"}
+            {isReturned ? "Perbaiki Data Rekening" : "Isi Data Rekening"}
           </h2>
           <p className="text-sm text-gray-500 mt-0.5">
             Klaim: <span className="font-medium text-gray-700">{claim?.nama_lomba}</span>

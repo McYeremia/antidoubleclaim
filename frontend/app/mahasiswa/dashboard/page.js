@@ -22,6 +22,7 @@ function MahasiswaDashboardContent() {
 
   const [showTambah,       setShowTambah]       = useState(false);
   const [search,           setSearch]           = useState("");
+  const [searchReward,     setSearchReward]     = useState("");
   const [claimsRefreshKey, setClaimsRefreshKey] = useState(0);
   const [rewardOpenId,     setRewardOpenId]     = useState(null);
   const [showUserMenu,     setShowUserMenu]     = useState(false);
@@ -50,6 +51,7 @@ function MahasiswaDashboardContent() {
 
   const navigateTo = (key) => {
     if (key !== "daftar") setSearch("");
+    if (key !== "reward") setSearchReward("");
     const url = key === "daftar"
       ? "/mahasiswa/dashboard"
       : `/mahasiswa/dashboard?menu=${key}`;
@@ -71,16 +73,16 @@ function MahasiswaDashboardContent() {
         {/* Top bar */}
         <header className="h-16 bg-[#f0f7f3] border-b border-[#d4ebe0] flex items-center justify-between px-8 flex-shrink-0">
           <div className="flex-1">
-            {activeMenu === "daftar" && (
+            {(activeMenu === "daftar" || activeMenu === "reward") && (
               <div className="flex items-center gap-2.5 bg-white border border-[#d4ebe0] rounded-xl px-4 py-2.5 w-[480px]">
                 <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
                 <input
                   type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Cari klaim..."
+                  value={activeMenu === "daftar" ? search : searchReward}
+                  onChange={(e) => activeMenu === "daftar" ? setSearch(e.target.value) : setSearchReward(e.target.value)}
+                  placeholder="Cari nama lomba, tingkat, peringkat..."
                   className="flex-1 bg-transparent text-sm text-gray-700 placeholder-gray-400 focus:outline-none"
                 />
               </div>
@@ -156,7 +158,7 @@ function MahasiswaDashboardContent() {
                                               onOpenForm={(id) => { setRewardOpenId(id); navigateTo("reward"); }}
                                               onTambahKlaim={() => setShowTambah(true)}
                                               onGoProfil={() => navigateTo("profil")} />}
-          {activeMenu === "reward"      && <KonfirmasiReward session={session} initialClaimId={rewardOpenId} onClearInitial={() => setRewardOpenId(null)} />}
+          {activeMenu === "reward"      && <KonfirmasiReward session={session} search={searchReward} initialClaimId={rewardOpenId} onClearInitial={() => setRewardOpenId(null)} />}
           {activeMenu === "visualisasi" && <VisualisasiData />}
           {activeMenu === "sk-rektor"   && <SKRektor />}
           {activeMenu === "profil"      && <ProfilPanel session={session} onBack={() => navigateTo("daftar")} onProfilSaved={(data) => setProfil(p => ({ ...p, ...data }))} />}

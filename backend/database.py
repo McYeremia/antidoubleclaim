@@ -247,6 +247,12 @@ def create_database():
     except Exception:
         pass  # kolom sudah ada
 
+    try:
+        cursor.execute("ALTER TABLE REWARD_KONFIRMASI ADD COLUMN diproses_at TEXT")
+        conn.commit()
+    except Exception:
+        pass  # kolom sudah ada
+
     # ── Tabel MAHASISWA_PROFIL ────────────────────────────────────────────────
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS MAHASISWA_PROFIL (
@@ -603,10 +609,11 @@ def get_klaim_sebagai_anggota(nim: str) -> list:
     conn = _get_conn()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT c.*, p.id AS pengajuan_id
+        SELECT c.*, p.id AS pengajuan_id, rk.reward_status AS reward_status_tim
         FROM PENGAJUAN_ANGGOTA pa
         JOIN PENGAJUAN p ON pa.pengajuan_id = p.id
         JOIN CLAIMS c ON p.claim_id = c.id
+        LEFT JOIN REWARD_KONFIRMASI rk ON rk.claim_id = c.id
         WHERE pa.nim_anggota = ?
           AND p.claim_id IS NOT NULL
         ORDER BY c.id DESC
@@ -839,14 +846,15 @@ def get_reward_konfirmasi_by_id(reward_id: int):
 
 def update_reward_status(reward_id: int, status: str, catatan: str = None):
     conn = _get_conn()
+    ts = "DATETIME('now', 'localtime')" if status == "diproses" else "NULL"
     if catatan is not None:
         conn.execute(
-            "UPDATE REWARD_KONFIRMASI SET reward_status = ?, catatan_operator = ? WHERE id = ?",
+            f"UPDATE REWARD_KONFIRMASI SET reward_status = ?, catatan_operator = ?, diproses_at = {ts} WHERE id = ?",
             (status, catatan, reward_id)
         )
     else:
         conn.execute(
-            "UPDATE REWARD_KONFIRMASI SET reward_status = ? WHERE id = ?",
+            f"UPDATE REWARD_KONFIRMASI SET reward_status = ?, diproses_at = {ts} WHERE id = ?",
             (status, reward_id)
         )
     conn.commit()

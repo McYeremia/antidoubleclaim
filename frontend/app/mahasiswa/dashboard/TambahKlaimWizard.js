@@ -924,7 +924,7 @@ function Step4Rekognisi({ data, onChange, onBlur, onFileChange, files, errors, p
               hint="Sesuai nomor pada surat keterangan resmi"
               error={errors?.nomor_surat} />
             <FInput id="tanggal_surat" label="Tanggal Surat Keterangan" required
-              type="datetime-local"
+              type="date"
               value={data.tanggal_surat} onChange={(e) => onChange("tanggal_surat", e.target.value)}
               onBlur={() => onBlur("tanggal_surat")}
               error={errors?.tanggal_surat} />

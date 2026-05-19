@@ -101,7 +101,7 @@ function RewardDetailModal({ claim, reward, onClose }) {
   );
 }
 
-export default function KonfirmasiReward({ session, initialClaimId = null, onClearInitial }) {
+export default function KonfirmasiReward({ session, search = "", initialClaimId = null, onClearInitial }) {
   const [claims,            setClaims]            = useState([]);
   const [rewardMap,         setRewardMap]         = useState({});
   const [pengajuanMap,      setPengajuanMap]      = useState({});
@@ -140,9 +140,18 @@ export default function KonfirmasiReward({ session, initialClaimId = null, onCle
 
   useEffect(() => { fetchAll(); }, []);
 
-  const belumDiisi   = claims.filter(c => !rewardMap[c.id]);
-  const dikembalikan = claims.filter(c => rewardMap[c.id]?.reward_status === "dikembalikan");
-  const sudahDiisi   = claims.filter(c => rewardMap[c.id] && rewardMap[c.id].reward_status !== "dikembalikan");
+  const filterFn = (c) =>
+    [c.nama_lomba, c.tingkat, c.peringkat].some(v =>
+      (v ?? "").toLowerCase().includes(search.toLowerCase())
+    );
+
+  const allBelum      = claims.filter(c => !rewardMap[c.id]);
+  const allDikembali  = claims.filter(c => rewardMap[c.id]?.reward_status === "dikembalikan");
+  const allSudah      = claims.filter(c => rewardMap[c.id] && rewardMap[c.id].reward_status !== "dikembalikan");
+
+  const belumDiisi   = allBelum.filter(filterFn);
+  const dikembalikan = allDikembali.filter(filterFn);
+  const sudahDiisi   = allSudah.filter(filterFn);
 
   const ClaimTable = ({ items, mode, onDetail }) => (
     <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
@@ -154,9 +163,10 @@ export default function KonfirmasiReward({ session, initialClaimId = null, onCle
             <th className="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Tingkat</th>
             <th className="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Peringkat</th>
             <th className="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Estimasi Dana</th>
-            <th className="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider text-right">
-              {mode === "status" ? "Status Reward" : "Aksi"}
-            </th>
+            {mode === "status" && (
+              <th className="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Status Reward</th>
+            )}
+            <th className="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider text-right">Aksi</th>
           </tr>
         </thead>
         <tbody>
@@ -174,13 +184,20 @@ export default function KonfirmasiReward({ session, initialClaimId = null, onCle
                     ? <span className="font-semibold text-blue-600">{"Rp " + Number(estimasi).toLocaleString("id-ID")}</span>
                     : <span className="text-gray-300">—</span>}
                 </td>
+                {mode === "status" && (
+                  <td className="px-4 py-3.5">
+                    <span className={`inline-flex items-center whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-semibold ${REWARD_STYLE[reward?.reward_status] ?? "bg-gray-100 text-gray-600"}`}>
+                      {REWARD_LABEL[reward?.reward_status] ?? "—"}
+                    </span>
+                  </td>
+                )}
                 <td className="px-4 py-3.5 text-right">
                   {mode === "isi" && (
                     <button
                       onClick={() => setSelectedClaimId(claim.id)}
-                      className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#046137] text-white hover:bg-[#035230] transition-colors"
+                      className="px-3 py-1.5 rounded-xl text-[11px] font-black bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors border border-orange-200"
                     >
-                      + Isi Data Reward
+                      Isi Data Rekening
                     </button>
                   )}
                   {mode === "kembali" && (
@@ -188,21 +205,16 @@ export default function KonfirmasiReward({ session, initialClaimId = null, onCle
                       onClick={() => setSelectedClaimId(claim.id)}
                       className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-orange-500 text-white hover:bg-orange-600 transition-colors"
                     >
-                      Perbaiki & Kirim Ulang
+                      Perbaiki &amp; Kirim Ulang
                     </button>
                   )}
                   {mode === "status" && (
-                    <div className="flex items-center justify-end gap-2">
-                      <span className={`inline-flex items-center whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-semibold ${REWARD_STYLE[reward?.reward_status] ?? "bg-gray-100 text-gray-600"}`}>
-                        {REWARD_LABEL[reward?.reward_status] ?? "—"}
-                      </span>
-                      <button
-                        onClick={() => onDetail?.(claim)}
-                        className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
-                      >
-                        Detail
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => onDetail?.(claim)}
+                      className="px-3 py-1.5 rounded-xl text-[11px] font-black bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors border border-gray-200"
+                    >
+                      Detail
+                    </button>
                   )}
                 </td>
               </tr>
@@ -224,6 +236,9 @@ export default function KonfirmasiReward({ session, initialClaimId = null, onCle
     );
   }
 
+  const noResults = !loading && claims.length > 0 &&
+    belumDiisi.length === 0 && dikembalikan.length === 0 && sudahDiisi.length === 0;
+
   return (
     <div className="space-y-6">
       <div>
@@ -244,6 +259,15 @@ export default function KonfirmasiReward({ session, initialClaimId = null, onCle
           </div>
           <p className="text-sm font-medium text-gray-500">Belum ada klaim yang disetujui</p>
           <p className="text-xs text-gray-400 mt-0.5">Klaim perlu diverifikasi operator terlebih dahulu</p>
+        </div>
+      ) : noResults ? (
+        <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-gray-100">
+          <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mb-2">
+            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <p className="text-sm font-semibold text-gray-500">Tidak ada hasil pencarian</p>
         </div>
       ) : (
         <>
@@ -280,7 +304,7 @@ export default function KonfirmasiReward({ session, initialClaimId = null, onCle
           {belumDiisi.length > 0 && (
             <div>
               <h3 className="text-sm font-semibold text-orange-600 mb-2">
-                Belum Diisi ({belumDiisi.length})
+                Belum Dilengkapi ({belumDiisi.length})
               </h3>
               <ClaimTable items={belumDiisi} mode="isi" />
             </div>
@@ -289,7 +313,7 @@ export default function KonfirmasiReward({ session, initialClaimId = null, onCle
           {sudahDiisi.length > 0 && (
             <div>
               <h3 className="text-sm font-semibold text-gray-500 mb-2">
-                Sudah Diisi ({sudahDiisi.length})
+                Sudah Dilengkapi ({sudahDiisi.length})
               </h3>
               <ClaimTable items={sudahDiisi} mode="status" onDetail={c => setDetailRewardClaim(c)} />
             </div>
