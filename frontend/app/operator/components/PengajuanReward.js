@@ -322,20 +322,20 @@ export default function PengajuanReward() {
             onSelectReward={setSelectedReward}
           />
           <RewardSection
-            title="Approved"
+            title="Data Diterima"
             color="bg-[#f0f7f3]/30 text-[#046137] border-[#f0f7f3]"
             items={diproses}
             onBulkKirim={() => setConfirmKirimSemua(true)}
             onExport={() => exportToExcel(diproses, "reward_approved")}
-            onExportPDF={() => exportToPDF(diproses, "Approved", "reward_approved")}
+            onExportPDF={() => exportToPDF(diproses, "Data Diterima", "reward_approved")}
             onSelectReward={setSelectedReward}
             rowActions={(r) => (
               <>
                 <button
                   onClick={() => setConfirmKirim(r)}
-                  className="px-3 py-1.5 rounded-xl text-[11px] font-black bg-green-600 text-white hover:bg-green-700 transition-colors"
+                  className="px-3 py-1.5 rounded-xl text-[11px] font-black bg-[#046137] text-white hover:bg-[#035230] transition-colors"
                 >
-                  REWARD DIKIRIM
+                  KIRIM REWARD
                 </button>
                 <button
                   onClick={() => { setBermasalahTarget(r); setBermasalahCatatan(""); }}
@@ -347,7 +347,7 @@ export default function PengajuanReward() {
             )}
           />
           <RewardSection
-            title="Arsip Selesai (Dana Terkirim)"
+            title="Data Selesai (Dana Terkirim)"
             color="bg-green-50/30 text-green-600 border-green-50"
             items={selesai}
             onExport={() => exportToExcel(selesai, "reward_terkirim")}
@@ -378,7 +378,7 @@ export default function PengajuanReward() {
       <ConfirmModal
         isOpen={confirmKirimSemua}
         title="Kirim Semua Dana?"
-        message={`Konfirmasi bahwa dana penghargaan sudah dikirim ke semua ${diproses.length} mahasiswa di bagian Approved.`}
+        message={`Konfirmasi bahwa dana penghargaan sudah dikirim ke semua ${diproses.length} mahasiswa di bagian Data Diterima.`}
         variant="success"
         confirmLabel="YA, SEMUA SUDAH DIKIRIM"
         onConfirm={() => { setConfirmKirimSemua(false); doKirimSemuaReward(); }}
