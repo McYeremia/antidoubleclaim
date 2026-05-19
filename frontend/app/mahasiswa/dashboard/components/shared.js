@@ -24,8 +24,8 @@ export const STATUS_STYLE = (status) => {
 };
 
 export const REWARD_LABEL = {
-  menunggu:     "Diproses",
-  diproses:     "Data Diterima",
+  menunggu:     "Dalam Proses",
+  diproses:     "Data Disetujui",
   selesai:      "Reward Dikirim",
   dikembalikan: "Perlu Diperbaiki",
   ditolak:      "Ditolak",

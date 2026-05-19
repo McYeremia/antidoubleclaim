@@ -146,16 +146,27 @@ export default function DaftarKlaim({ session, search, onOpenForm, onTambahKlaim
               </div>
             ) : (
               <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-                <table className="w-full text-sm text-left">
+                <table className="w-full table-fixed text-sm text-left">
+                  <colgroup>
+                    <col className="w-14" />
+                    <col className="w-[160px]" />
+                    <col className="w-[120px]" />
+                    <col className="w-[160px]" />
+                    <col className="w-[120px]" />
+                    <col className="w-[130px]" />
+                    <col className="w-[140px]" />
+                    <col className="w-[80px]" />
+                  </colgroup>
                   <thead>
                     <tr className="border-b border-gray-100">
-                      <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest w-14">No</th>
+                      <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">No</th>
                       <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Nama Lomba</th>
                       <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Tingkat</th>
                       <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Peringkat</th>
                       <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Tgl. Pengajuan</th>
                       <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Status Klaim</th>
                       <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Status Reward</th>
+                      <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Aksi</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -169,7 +180,7 @@ export default function DaftarKlaim({ session, search, onOpenForm, onTambahKlaim
                         </td>
                         <td className="px-5 py-4 text-[13px] text-gray-500">{claim.tingkat}</td>
                         <td className="px-5 py-4">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#046137] text-white">
+                          <span className="inline-block max-w-full truncate px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#046137] text-white">
                             {claim.peringkat}
                           </span>
                         </td>
@@ -188,12 +199,20 @@ export default function DaftarKlaim({ session, search, onOpenForm, onTambahKlaim
                             ) : (
                               <button
                                 onClick={() => onOpenForm?.(claim.id)}
-                                className="text-[13px] font-semibold text-[#046137] hover:text-[#035230] transition-colors underline underline-offset-2"
+                                className="px-3 py-1.5 rounded-xl text-[11px] font-black bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors border border-orange-200"
                               >
-                                Isi Data Reward
+                                Isi Data Rekening
                               </button>
                             )
                           )}
+                        </td>
+                        <td className="px-5 py-4" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={() => router.push(`/mahasiswa/klaim/${claim.id}`)}
+                            className="px-3 py-1.5 rounded-xl text-[11px] font-black bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors border border-gray-200"
+                          >
+                            DETAIL
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -218,15 +237,27 @@ export default function DaftarKlaim({ session, search, onOpenForm, onTambahKlaim
                Anda ditambahkan sebagai anggota oleh ketua tim anda.
               </p>
               <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-                <table className="w-full text-sm text-left">
+                <table className="w-full table-fixed text-sm text-left">
+                  <colgroup>
+                    <col className="w-14" />
+                    <col className="w-[160px]" />
+                    <col className="w-[120px]" />
+                    <col className="w-[160px]" />
+                    <col className="w-[120px]" />
+                    <col className="w-[130px]" />
+                    <col className="w-[140px]" />
+                    <col className="w-[80px]" />
+                  </colgroup>
                   <thead>
                     <tr className="border-b border-gray-100">
-                      <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest w-14">No</th>
+                      <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">No</th>
                       <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Nama Lomba</th>
                       <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Tingkat</th>
                       <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Peringkat</th>
                       <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Tgl. Pengajuan</th>
                       <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Status Klaim</th>
+                      <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Status Reward</th>
+                      <th className="px-5 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Aksi</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -241,15 +272,34 @@ export default function DaftarKlaim({ session, search, onOpenForm, onTambahKlaim
                         </td>
                         <td className="px-5 py-4 text-[13px] text-gray-500">{claim.tingkat}</td>
                         <td className="px-5 py-4">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#046137] text-white">
+                          <span className="inline-block max-w-full truncate px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#046137] text-white">
                             {claim.peringkat}
                           </span>
                         </td>
-                        <td className="px-5 py-4 text-[12px] text-gray-400">{formatTanggal(claim.tanggal)}</td>
+                        <td className="px-5 py-4 text-[12px] text-gray-400">{pengajuanMap[claim.id]?.created_at ? formatTanggal(pengajuanMap[claim.id].created_at) : formatTanggal(claim.tanggal)}</td>
                         <td className="px-5 py-4">
                           <span className={`inline-flex items-center whitespace-nowrap px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${STATUS_STYLE(claim.status)}`}>
                             {STATUS_LABEL(claim.status)}
                           </span>
+                        </td>
+                        <td className="px-5 py-4 text-[13px]" onClick={(e) => e.stopPropagation()}>
+                          {claim.status === "sudah dicek" && (
+                            claim.reward_status_tim ? (
+                              <span className={`inline-flex items-center whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-semibold ${REWARD_STYLE[claim.reward_status_tim] ?? "bg-gray-100 text-gray-600"}`}>
+                                {REWARD_LABEL[claim.reward_status_tim] ?? claim.reward_status_tim}
+                              </span>
+                            ) : (
+                              <span className="text-gray-300 text-[12px]">Menunggu ketua</span>
+                            )
+                          )}
+                        </td>
+                        <td className="px-5 py-4" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={() => router.push(`/mahasiswa/klaim/${claim.id}?readonly=true`)}
+                            className="px-3 py-1.5 rounded-xl text-[11px] font-black bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors border border-gray-200"
+                          >
+                            DETAIL
+                          </button>
                         </td>
                       </tr>
                     ))}

@@ -49,7 +49,7 @@ const OPT_JENIS_KARYA = ["Teknologi Tepat Guna", "Seni Budaya", "Produk Kreatif"
 const isLombaMandiri = (kat) =>
   kat === "lomba_mandiri_puspresnas" || kat === "lomba_mandiri_non_puspresnas";
 
-const REWARD_LABEL = { menunggu: "Diproses", diproses: "Data Diterima", selesai: "Reward Dikirim", dikembalikan: "Perlu Diperbaiki", ditolak: "Ditolak" };
+const REWARD_LABEL = { menunggu: "Dalam Proses", diproses: "Data Disetujui", selesai: "Reward Dikirim", dikembalikan: "Perlu Diperbaiki", ditolak: "Ditolak" };
 const REWARD_STYLE = { menunggu: "bg-blue-100 text-blue-700", diproses: "bg-blue-100 text-blue-700", selesai: "bg-green-100 text-green-700", dikembalikan: "bg-orange-100 text-orange-700", ditolak: "bg-red-100 text-red-700" };
 
 const BULAN = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
@@ -407,6 +407,64 @@ export default function KlaimDetailPage() {
               </div>
             )}
 
+            {/* Timeline */}
+            <div className="bg-white rounded-[28px] shadow-sm border border-gray-100 p-7">
+              <h3 className="text-[15px] font-black text-gray-800 pb-4 mb-5 border-b border-gray-100">Timeline Pengeclaiman</h3>
+              <div className="flex items-start gap-0">
+                {[
+                  {
+                    label: "Klaim Diajukan",
+                    sub: pengajuan?.created_at ? formatDatetime(pengajuan.created_at) : formatTanggal(claim.tanggal),
+                    done: true,
+                    color: "bg-[#046137]",
+                  },
+                  {
+                    label: claim.status === "ditolak" ? "Tidak Lolos" : "Klaim Disetujui",
+                    sub: claim.verified_at ? formatDatetime(claim.verified_at) : "Menunggu verifikasi operator",
+                    done: claim.status === "sudah dicek" || claim.status === "ditolak",
+                    color: claim.status === "ditolak" ? "bg-red-500" : "bg-[#046137]",
+                  },
+                  {
+                    label: "Data Rekening Diajukan",
+                    sub: reward ? formatDatetime(reward.created_at) : "Belum diisi mahasiswa",
+                    done: !!reward && claim.status !== "ditolak",
+                    color: "bg-[#046137]",
+                  },
+                  {
+                    label: "Data Rekening Disetujui",
+                    sub: reward?.reward_status === "diproses" || reward?.reward_status === "selesai"
+                      ? (reward.diproses_at ? formatDatetime(reward.diproses_at) : "Data rekening telah disetujui")
+                      : "Menunggu konfirmasi operator",
+                    done: reward?.reward_status === "diproses" || reward?.reward_status === "selesai",
+                    color: "bg-[#046137]",
+                  },
+                  {
+                    label: "Reward Dikirim",
+                    sub: reward?.reward_status === "selesai" ? "Reward telah dikirim" : "Menunggu pengiriman",
+                    done: reward?.reward_status === "selesai",
+                    color: "bg-[#046137]",
+                  },
+                ].map((step, i, arr) => (
+                  <div key={i} className="flex-1 flex flex-col items-center text-center relative">
+                    {i < arr.length - 1 && (
+                      <div className={`absolute top-3.5 left-1/2 w-full h-0.5 ${step.done ? "bg-[#d4ebe0]" : "bg-gray-100"}`} />
+                    )}
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center z-10 ${step.done ? step.color : "bg-gray-100"}`}>
+                      {step.done ? (
+                        <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : (
+                        <div className="w-2 h-2 rounded-full bg-gray-300" />
+                      )}
+                    </div>
+                    <p className={`text-[12px] font-bold mt-2 ${step.done ? "text-gray-900" : "text-gray-300"}`}>{step.label}</p>
+                    <p className="text-[10px] text-gray-400 mt-0.5 leading-snug px-2">{step.sub}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             {/* Grid utama */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
@@ -544,6 +602,9 @@ export default function KlaimDetailPage() {
                               <div className="col-span-2"><InfoRow label="Nama Lengkap Kegiatan" value={pengajuan.nama_kegiatan} /></div>
                               {!efLomba && <InfoRow label="Tingkatan" value={pengajuan.tingkatan} />}
                               {efLomba && <>
+                                {pengajuan.kategori_simkatmawa === "lomba_mandiri_puspresnas" && (
+                                  <InfoRow label="Kompetisi PUSPRESNAS" value={pengajuan.kompetisi_puspresnas} />
+                                )}
                                 <InfoRow label="Model Pelaksanaan" value={pengajuan.model_pelaksanaan} />
                                 <InfoRow label="Jumlah Peserta"    value={pengajuan.jumlah_peserta} />
                                 <InfoRow label="Capaian"           value={pengajuan.capaian} />
@@ -593,6 +654,7 @@ export default function KlaimDetailPage() {
                                 <>
                                   <InfoRow label="Nama Lembaga/Mitra" value={pengajuan.nama_lembaga} />
                                   <InfoRow label="Jenis Karya"        value={pengajuan.jenis_karya_teks} />
+                                  <InfoRow label="Kategori Karya"     value={pengajuan.jenis_karya_pilihan} />
                                   <InfoRow label="Nomor Surat"        value={pengajuan.nomor_surat} />
                                   <InfoRow label="Tanggal Surat"      value={formatTanggal(pengajuan.tanggal_surat)} />
                                   <div className="col-span-2"><InfoRow label="Deskripsi Karya" value={pengajuan.deskripsi_karya} /></div>
@@ -669,56 +731,6 @@ export default function KlaimDetailPage() {
                   )}
                 </div>
 
-                {/* Timeline — mengisi ruang kosong di bawah sejajar estimasi */}
-                <div className="bg-white rounded-[28px] shadow-sm border border-gray-100 p-7">
-                  <SectionTitle>Timeline</SectionTitle>
-                  <div className="flex items-start gap-0">
-                    {[
-                      {
-                        label: "Klaim Diajukan",
-                        sub: pengajuan?.created_at ? formatDatetime(pengajuan.created_at) : formatTanggal(claim.tanggal),
-                        done: true,
-                        color: "bg-[#046137]",
-                      },
-                      {
-                        label: claim.status === "ditolak" ? "Tidak Lolos" : "Sudah Dicek",
-                        sub: claim.verified_at ? formatDatetime(claim.verified_at) : "Menunggu verifikasi operator",
-                        done: claim.status === "sudah dicek" || claim.status === "ditolak",
-                        color: claim.status === "ditolak" ? "bg-red-500" : "bg-[#046137]",
-                      },
-                      {
-                        label: "Data Rekening Diajukan",
-                        sub: reward ? formatDatetime(reward.created_at) : "Belum diisi mahasiswa",
-                        done: !!reward && claim.status !== "ditolak",
-                        color: "bg-[#046137]",
-                      },
-                      {
-                        label: "Reward Dikirim",
-                        sub: reward?.reward_status === "selesai" ? "Reward telah dikirim" : "Menunggu pengiriman",
-                        done: reward?.reward_status === "selesai",
-                        color: "bg-[#046137]",
-                      },
-                    ].map((step, i, arr) => (
-                      <div key={i} className="flex-1 flex flex-col items-center text-center relative">
-                        {/* garis penghubung */}
-                        {i < arr.length - 1 && (
-                          <div className={`absolute top-3.5 left-1/2 w-full h-0.5 ${step.done ? "bg-[#d4ebe0]" : "bg-gray-100"}`} />
-                        )}
-                        <div className={`w-7 h-7 rounded-full flex items-center justify-center z-10 ${step.done ? step.color : "bg-gray-100"}`}>
-                          {step.done ? (
-                            <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                            </svg>
-                          ) : (
-                            <div className="w-2 h-2 rounded-full bg-gray-300" />
-                          )}
-                        </div>
-                        <p className={`text-[12px] font-bold mt-2 ${step.done ? "text-gray-900" : "text-gray-300"}`}>{step.label}</p>
-                        <p className="text-[10px] text-gray-400 mt-0.5 leading-snug px-2">{step.sub}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
               </div>
 
             </div>
