@@ -409,7 +409,7 @@ export default function KlaimDetailPage() {
 
             {/* Timeline */}
             <div className="bg-white rounded-[28px] shadow-sm border border-gray-100 p-7">
-              <h3 className="text-[15px] font-black text-gray-800 pb-4 mb-5 border-b border-gray-100">Timeline Pengeclaiman</h3>
+              <h3 className="text-[15px] font-black text-gray-800 pb-4 mb-5 border-b border-gray-100">Timeline Klaim</h3>
               <div className="flex items-start gap-0">
                 {[
                   {

@@ -17,7 +17,7 @@ export default function RewardSection({
           {onBulkKirim && items.length > 0 && (
             <button
               onClick={onBulkKirim}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black bg-green-600 text-white hover:bg-green-700 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black bg-[#046137] text-white hover:bg-[#035230] transition-colors"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
@@ -89,7 +89,7 @@ export default function RewardSection({
                     {rowActions && rowActions(r)}
                     <button
                       onClick={() => onSelectReward(r)}
-                      className="px-4 py-1.5 rounded-xl text-[11px] font-black bg-[#046137] text-white hover:bg-[#035230] transition-all hover:scale-105"
+                      className="px-3 py-1.5 rounded-xl text-[11px] font-black bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors border border-gray-200"
                     >
                       DETAIL
                     </button>
