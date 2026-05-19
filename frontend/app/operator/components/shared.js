@@ -39,6 +39,13 @@ export const STATUS_BADGE = {
   "ditolak":        "bg-red-100 text-red-700",
 };
 
+export const STATUS_LABEL = {
+  "belum dicek":    "Antrean Verifikasi",
+  "perlu ditinjau": "Terindikasi Duplikat",
+  "sudah dicek":    "Disetujui",
+  "ditolak":        "Ditolak",
+};
+
 export const KATEGORI_LABEL = {
   puspresnas:     "PUSPRESNAS",
   non_puspresnas: "Non PUSPRESNAS",
@@ -51,6 +58,14 @@ export const REWARD_STATUS_BADGE = {
   selesai:      "bg-green-100 text-green-700",
   ditolak:      "bg-red-100 text-red-700",
   dikembalikan: "bg-orange-100 text-orange-700",
+};
+
+export const REWARD_STATUS_LABEL = {
+  menunggu:     "Menunggu",
+  diproses:     "Diproses",
+  selesai:      "Selesai",
+  dikembalikan: "Dikembalikan",
+  ditolak:      "Ditolak",
 };
 
 export const ARSIP_STATUS_STYLE = {

@@ -31,8 +31,14 @@ function exportToCsv(logs) {
     log.created_at,
     log.operator_nama,
     AKSI_LABEL[log.aksi]?.label ?? log.aksi,
-    log.target_tipe ? `${log.target_tipe}${log.target_id ? ` #${log.target_id}` : ""}` : "",
-    log.detail ?? "",
+    log.target_tipe === "periode"
+      ? `periode: ${log.detail ?? `#${log.target_id}`}`
+      : log.target_tipe === "operator"
+      ? (log.detail ?? "").split("|")[0] || `#${log.target_id}`
+      : log.target_tipe ? `${log.target_tipe}${log.target_id ? ` #${log.target_id}` : ""}` : "",
+    log.target_tipe === "operator"
+      ? (() => { const r = (log.detail ?? "").split("|")[1]; return r === "superadmin" ? "Super Admin" : r === "operator" ? "Operator" : "—"; })()
+      : log.detail ?? "",
   ]);
   const csv = [headers, ...rows]
     .map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(","))
@@ -180,14 +186,31 @@ export default function LogAktivitas({ operatorId }) {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-[12px] text-gray-500">
-                      {log.target_tipe && (
-                        <span className="font-mono">
-                          {log.target_tipe}{log.target_id ? ` #${log.target_id}` : ""}
-                        </span>
-                      )}
+                      {log.target_tipe && (() => {
+                        if (log.target_tipe === "periode") {
+                          return <span>{log.detail ?? <span className="font-mono">#{log.target_id}</span>}</span>;
+                        }
+                        if (log.target_tipe === "operator") {
+                          const name = (log.detail ?? "").split("|")[0];
+                          return <span className="font-medium text-gray-700">{name || <span className="font-mono">#{log.target_id}</span>}</span>;
+                        }
+                        return (
+                          <span className="font-mono">
+                            {log.target_tipe}{log.target_id ? ` #${log.target_id}` : ""}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="px-6 py-4 text-[12px] text-gray-500 max-w-xs">
-                      <p className="truncate">{log.detail ?? "—"}</p>
+                      {log.target_tipe === "operator" ? (() => {
+                        const role = (log.detail ?? "").split("|")[1];
+                        const label = role === "superadmin" ? "Super Admin" : role === "operator" ? "Operator" : null;
+                        return label
+                          ? <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wide ${role === "superadmin" ? "bg-purple-100 text-purple-700" : "bg-[#d4ebe0] text-[#046137]"}`}>{label}</span>
+                          : <span className="text-gray-300">—</span>;
+                      })() : (
+                        <p className="truncate">{log.detail ?? "—"}</p>
+                      )}
                     </td>
                   </tr>
                 );

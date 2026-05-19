@@ -205,7 +205,7 @@ export default function PengajuanClaim({ router }) {
         <div>
           {(statusFilter === "semua" || statusFilter === "perlu ditinjau") && (
             <ClaimSection
-              title="Terdeteksi Mirip (Perlu Ditinjau)"
+              title="Terindikasi Duplikat"
               color="bg-orange-50/30 text-orange-600 border-orange-50"
               items={perluDitinjau} showActions showMirip
               router={router} onApprove={handleApprove} onDiscard={handleDiscard}
@@ -213,7 +213,7 @@ export default function PengajuanClaim({ router }) {
           )}
           {(statusFilter === "semua" || statusFilter === "belum dicek") && (
             <ClaimSection
-              title="Menunggu Verifikasi (Belum Dicek)"
+              title="Antrean Verifikasi"
               color="bg-[#f0f7f3]/30 text-[#046137] border-[#f0f7f3]"
               items={belumDicek} showActions
               router={router} onApprove={handleApprove} onDiscard={handleDiscard}
@@ -221,7 +221,7 @@ export default function PengajuanClaim({ router }) {
           )}
           {(statusFilter === "semua" || statusFilter === "sudah dicek") && (
             <ClaimSection
-              title="Riwayat Verifikasi (Sudah Dicek)"
+              title="Riwayat Verifikasi"
               color="bg-green-50/30 text-green-600 border-green-50"
               items={sudahDicek} showVerified
               router={router} onApprove={handleApprove} onDiscard={handleDiscard}

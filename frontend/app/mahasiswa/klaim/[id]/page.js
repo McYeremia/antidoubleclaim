@@ -77,7 +77,7 @@ function InfoRow({ label, value }) {
 }
 
 function SectionTitle({ children }) {
-  return <h3 className="text-[11px] font-black text-gray-300 uppercase tracking-[0.3em] border-b border-gray-100 pb-2 mb-5 mt-7 first:mt-0">{children}</h3>;
+  return <h3 className="text-[11px] font-black text-gray-500 uppercase tracking-[0.3em] border-b border-gray-100 pb-2 mb-5 mt-7 first:mt-0">{children}</h3>;
 }
 
 function FileLink({ label, path }) {
@@ -609,8 +609,10 @@ export default function KlaimDetailPage() {
                                 <InfoRow label="Jumlah Peserta"    value={pengajuan.jumlah_peserta} />
                                 <InfoRow label="Capaian"           value={pengajuan.capaian} />
                               </>}
-                              <InfoRow label="Tanggal Mulai"   value={formatTanggal(pengajuan.tanggal_mulai)} />
-                              <InfoRow label="Tanggal Selesai" value={formatTanggal(pengajuan.tanggal_selesai)} />
+                              <div className="col-span-2 grid grid-cols-2 gap-5">
+                                <InfoRow label="Tanggal Mulai"   value={formatTanggal(pengajuan.tanggal_mulai)} />
+                                <InfoRow label="Tanggal Selesai" value={formatTanggal(pengajuan.tanggal_selesai)} />
+                              </div>
                               {pengajuan.url_penyelenggara && (
                                 <div className="col-span-2">
                                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">URL Penyelenggara</p>
