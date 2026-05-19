@@ -34,7 +34,7 @@ def _fmt_datetime(value: str) -> str:
 
 
 def _get_conn():
-    conn = sqlite3.connect("claims.db")
+    conn = sqlite3.connect("claims.db", timeout=10)
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
@@ -1235,6 +1235,15 @@ def get_all_periode():
     return [dict(zip(cols, row)) for row in rows]
 
 
+def get_periode_nama(periode_id: int):
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute("SELECT nama FROM PERIODE_KLAIM WHERE id = ?", (periode_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return row[0] if row else None
+
+
 def create_periode(data: dict) -> int:
     """Buat periode baru dengan status 'tutup' (harus diaktifkan manual)."""
     conn = _get_conn()
@@ -1586,6 +1595,8 @@ def delete_operator(operator_id: int) -> bool:
         if count <= 1:
             conn.close()
             return False  # tidak boleh hapus superadmin terakhir
+    conn.execute("UPDATE CLAIMS    SET verified_by  = NULL WHERE verified_by  = ?", (operator_id,))
+    conn.execute("UPDATE AUDIT_LOG SET operator_id  = NULL WHERE operator_id  = ?", (operator_id,))
     conn.execute("DELETE FROM USERS WHERE id = ?", (operator_id,))
     conn.commit()
     conn.close()

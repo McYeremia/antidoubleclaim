@@ -28,7 +28,7 @@ from backend.database import (
     insert_audit_log, get_audit_log,
     get_periode_aktif, get_periode_terkini, get_all_periode, create_periode,
     update_periode_status, update_periode_data, delete_periode, reset_semua_data,
-    arsipkan_periode, get_claims_by_periode_id, get_rewards_by_periode_id,
+    arsipkan_periode, get_claims_by_periode_id, get_rewards_by_periode_id, get_periode_nama,
     get_reward_konfirmasi_by_id,
     get_klaim_sebagai_anggota,
     update_operator_password,
@@ -282,7 +282,7 @@ async def ubah_status_periode(periode_id: int, status: str, x_operator_id: Optio
     result = update_periode_status(periode_id, status)
     if not result["ok"]:
         raise HTTPException(status_code=400, detail=result.get("alasan", "Gagal mengubah status periode."))
-    insert_audit_log(op["id"], op["nama"], f"periode_{status}", "periode", periode_id, None)
+    insert_audit_log(op["id"], op["nama"], f"periode_{status}", "periode", periode_id, get_periode_nama(periode_id))
     return {"success": True}
 
 @app.post("/periode/{periode_id}/arsip")
@@ -291,7 +291,7 @@ async def arsip_periode(periode_id: int, x_operator_id: Optional[str] = Header(N
     result = arsipkan_periode(periode_id)
     if not result["ok"]:
         raise HTTPException(status_code=400, detail=result.get("alasan", "Tidak dapat mengarsipkan"))
-    insert_audit_log(op["id"], op["nama"], "arsip_periode", "periode", periode_id, None)
+    insert_audit_log(op["id"], op["nama"], "arsip_periode", "periode", periode_id, get_periode_nama(periode_id))
     return {"success": True}
 
 @app.get("/periode/{periode_id}/claims")
@@ -315,10 +315,11 @@ async def edit_periode(periode_id: int, body: PeriodeEdit):
 @app.delete("/periode/{periode_id}")
 async def hapus_periode(periode_id: int, x_operator_id: Optional[str] = Header(None)):
     op = _require_superadmin(x_operator_id)
+    nama_periode = get_periode_nama(periode_id)
     ok = delete_periode(periode_id)
     if not ok:
         raise HTTPException(status_code=400, detail="Tidak dapat menghapus: periode tidak ditemukan atau sedang aktif.")
-    insert_audit_log(op["id"], op["nama"], "hapus_periode", "periode", periode_id, None)
+    insert_audit_log(op["id"], op["nama"], "hapus_periode", "periode", periode_id, nama_periode)
     return {"success": True}
 
 @app.post("/admin/reset-data")
@@ -843,10 +844,11 @@ async def add_operator(
     x_operator_id: Optional[str] = Header(None),
 ):
     op = _require_superadmin(x_operator_id)
-    ok = create_operator(body.username, body.password, body.nama, body.email, body.role or "operator")
+    role = body.role or "operator"
+    ok = create_operator(body.username, body.password, body.nama, body.email, role)
     if not ok:
         raise HTTPException(status_code=409, detail="Username atau email sudah digunakan")
-    insert_audit_log(op["id"], op["nama"], "tambah_operator", "operator", None, body.username)
+    insert_audit_log(op["id"], op["nama"], "tambah_operator", "operator", None, f"{body.nama}|{role}")
     return {"success": True}
 
 class ChangePasswordRequest(BaseModel):
@@ -868,7 +870,7 @@ async def change_operator_password(
     if not is_self and op.get("role") != "superadmin":
         raise HTTPException(status_code=403, detail="Akses ditolak: hanya Super Admin yang dapat mengubah password operator lain")
     if not is_self and target.get("role") == "superadmin":
-        raise HTTPException(status_code=403, detail="Akses ditolak: password Super Admin tidak dapat diubah oleh Super Admin lain")
+        raise HTTPException(status_code=403, detail="Akses ditolak: password Super Admin lain tidak dapat diubah")
 
     if is_self:
         if not body.old_password:
@@ -880,22 +882,27 @@ async def change_operator_password(
         raise HTTPException(status_code=400, detail="Password baru minimal 6 karakter")
 
     update_operator_password(target["username"], body.new_password)
-    insert_audit_log(op["id"], op["nama"], "ganti_password", "operator", operator_id, target["username"])
+    insert_audit_log(op["id"], op["nama"], "ganti_password", "operator", operator_id, f"{target['nama']}|{target['role']}")
     return {"success": True}
+
+class DeleteOperatorBody(BaseModel):
+    current_password: Optional[str] = None
 
 @app.delete("/operators/{operator_id}")
 async def remove_operator(
     operator_id: int,
+    body: DeleteOperatorBody = DeleteOperatorBody(),
     x_operator_id: Optional[str] = Header(None),
 ):
     op = _require_superadmin(x_operator_id)
-    if str(operator_id) == str(x_operator_id):
-        raise HTTPException(status_code=400, detail="Tidak dapat menghapus akun sendiri")
+    if not body.current_password:
+        raise HTTPException(status_code=400, detail="Password diperlukan untuk mengkonfirmasi penghapusan")
+    if not authenticate_operator(op["username"], body.current_password):
+        raise HTTPException(status_code=401, detail="Password salah")
     target = get_operator_by_id(operator_id)
-    if target and target["role"] == "superadmin":
-        raise HTTPException(status_code=403, detail="Akun Super Admin tidak dapat dihapus")
     ok = delete_operator(operator_id)
     if not ok:
-        raise HTTPException(status_code=400, detail="Tidak dapat menghapus: akun tidak ditemukan atau superadmin terakhir")
-    insert_audit_log(op["id"], op["nama"], "hapus_operator", "operator", operator_id, None)
+        raise HTTPException(status_code=400, detail="Tidak dapat menghapus: akun tidak ditemukan atau merupakan super admin terakhir dalam sistem")
+    detail_hapus = f"{target['nama']}|{target['role']}" if target else None
+    insert_audit_log(op["id"], op["nama"], "hapus_operator", "operator", operator_id, detail_hapus)
     return {"success": True}

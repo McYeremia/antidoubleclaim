@@ -16,10 +16,21 @@ export default function ClaimSection({
       {items.length === 0 ? (
         <p className="text-center text-gray-400 text-[13px] py-12">Tidak ada data untuk kategori ini.</p>
       ) : (
-        <table className="w-full text-sm text-left">
+        <table className="w-full table-fixed text-sm text-left">
+          <colgroup>
+            <col className="w-16" />
+            <col className="w-[160px]" />
+            <col className="w-[110px]" />
+            <col className="w-[150px]" />
+            <col className="w-[110px]" />
+            {showMirip    && <col className="w-[110px]" />}
+            {showMirip    && <col className="w-[100px]" />}
+            {showVerified && <col className="w-[160px]" />}
+            <col className={showActions ? "w-[190px]" : "w-[90px]"} />
+          </colgroup>
           <thead>
             <tr className="border-b border-gray-50">
-              <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest w-16">ID</th>
+              <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">ID</th>
               <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Nama Lomba</th>
               <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Tingkat</th>
               <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Peringkat</th>
@@ -44,7 +55,7 @@ export default function ClaimSection({
                 </td>
                 <td className="px-6 py-4 text-[13px] text-gray-500 font-medium">{claim.tingkat}</td>
                 <td className="px-6 py-4">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-black bg-[#046137] text-white">
+                  <span className="inline-block max-w-full truncate px-2.5 py-0.5 rounded-full text-[11px] font-black bg-[#046137] text-white">
                     {claim.peringkat}
                   </span>
                 </td>

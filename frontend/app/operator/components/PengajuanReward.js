@@ -316,7 +316,7 @@ export default function PengajuanReward() {
       ) : (
         <div>
           <RewardSection
-            title="Antrian Menunggu Verifikasi"
+            title="Antrean Verifikasi"
             color="bg-orange-50/30 text-orange-600 border-orange-50"
             items={menunggu}
             onSelectReward={setSelectedReward}

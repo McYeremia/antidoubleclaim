@@ -110,6 +110,13 @@ function hitungEstimasi(form) {
 }
 
 // ── Helper ────────────────────────────────────────────────────────────────────
+const BULAN = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+function formatTanggal(str) {
+  if (!str) return "—";
+  const [y, m, d] = str.slice(0, 10).split("-");
+  return `${parseInt(d)} ${BULAN[parseInt(m) - 1]} ${y}`;
+}
+
 function InfoRow({ label, value }) {
   if (!value && value !== 0) return null;
   return (
@@ -121,7 +128,7 @@ function InfoRow({ label, value }) {
 }
 
 function SectionTitle({ children }) {
-  return <h3 className="text-[11px] font-black text-gray-300 uppercase tracking-[0.3em] border-b border-gray-50 pb-2 mb-4 mt-6 first:mt-0">{children}</h3>;
+  return <h3 className="text-[11px] font-black text-gray-500 uppercase tracking-[0.3em] border-b border-gray-100 pb-2 mb-4 mt-6 first:mt-0">{children}</h3>;
 }
 
 function CertPreview({ url, filename }) {
@@ -416,10 +423,12 @@ function PengajuanDetail({ p, onSaved, claimId }) {
                 </div>
                 {!isLomba && <InfoRow label="Tingkatan" value={p.tingkatan} />}
 
-                {!isLomba && <>
-                  <InfoRow label="Tanggal Mulai"   value={p.tanggal_mulai} />
-                  <InfoRow label="Tanggal Selesai" value={p.tanggal_selesai} />
-                </>}
+                {!isLomba && (
+                  <div className="col-span-2 sm:col-span-3 grid grid-cols-2 gap-6">
+                    <InfoRow label="Tanggal Mulai"   value={formatTanggal(p.tanggal_mulai)} />
+                    <InfoRow label="Tanggal Selesai" value={formatTanggal(p.tanggal_selesai)} />
+                  </div>
+                )}
 
                 {isLomba && <>
                   {p.kategori_simkatmawa === "lomba_mandiri_puspresnas" && (
@@ -428,8 +437,10 @@ function PengajuanDetail({ p, onSaved, claimId }) {
                   <InfoRow label="Model Pelaksanaan" value={p.model_pelaksanaan} />
                   <InfoRow label="Jumlah Peserta"    value={p.jumlah_peserta} />
                   <InfoRow label="Capaian / Peringkat" value={p.capaian} />
-                  <InfoRow label="Tanggal Mulai"     value={p.tanggal_mulai} />
-                  <InfoRow label="Tanggal Selesai"   value={p.tanggal_selesai} />
+                  <div className="col-span-2 sm:col-span-3 grid grid-cols-2 gap-6">
+                    <InfoRow label="Tanggal Mulai"   value={formatTanggal(p.tanggal_mulai)} />
+                    <InfoRow label="Tanggal Selesai" value={formatTanggal(p.tanggal_selesai)} />
+                  </div>
                 </>}
                 <div className="col-span-2 sm:col-span-3">
                   <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">URL Website Penyelenggara</p>
@@ -757,6 +768,24 @@ export default function DetailKlaim() {
               {claim.verified_by_nama && (
                 <p className="text-[11px] text-red-400 mt-2">Ditolak oleh <strong>{claim.verified_by_nama}</strong></p>
               )}
+            </div>
+          </div>
+        )}
+
+        {isRekognisi && rewardEmpty && canAct && (
+          <div className="bg-amber-50 border border-amber-300 rounded-2xl px-6 py-5 flex items-start gap-4">
+            <div className="w-9 h-9 rounded-xl bg-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-[13px] font-black text-amber-900">Estimasi Dana Belum Diisi</p>
+              <p className="text-[12px] text-amber-700 mt-1 leading-relaxed">
+                Klaim rekognisi ini memerlukan estimasi dana sebelum dapat disetujui. Klik tombol{" "}
+                <span className="font-black bg-amber-200 px-1.5 py-0.5 rounded text-amber-900">EDIT DATA</span>
+                {" "}di bagian <span className="font-bold">Data Pengajuan Lengkap</span> di bawah, lalu isi kolom <span className="font-bold">Estimasi Dana</span>.
+              </p>
             </div>
           </div>
         )}

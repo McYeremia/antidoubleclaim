@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import * as XLSX from "xlsx";
-import { API, apiFetch, ARSIP_STATUS_STYLE, STATUS_BADGE, KATEGORI_LABEL, formatTanggal, ConfirmModal, formatDatetime } from "./shared";
+import { API, apiFetch, ARSIP_STATUS_STYLE, STATUS_BADGE, STATUS_LABEL, REWARD_STATUS_BADGE, REWARD_STATUS_LABEL, KATEGORI_LABEL, formatTanggal, ConfirmModal, formatDatetime } from "./shared";
 import ArsipDetailView from "./ArsipDetailView";
 
 export default function ArsipPeriode() {
@@ -222,7 +222,7 @@ export default function ArsipPeriode() {
         c.mahasiswa_email ?? "",
         c.tingkat        ?? "",
         c.peringkat      ?? "",
-        c.status         ?? "",
+        STATUS_LABEL[c.status] ?? c.status ?? "",
         formatTanggal(c.tanggal),
         c.jenis_kepesertaan ?? "",
       ]);
@@ -238,7 +238,7 @@ export default function ArsipPeriode() {
         (r.bank ?? "").toUpperCase(),
         r.nomor_rekening ?? "",
         r.estimasi_reward ? Number(r.estimasi_reward).toLocaleString("id-ID") : "—",
-        r.reward_status  ?? "",
+        REWARD_STATUS_LABEL[r.reward_status] ?? r.reward_status ?? "",
       ]);
     }
 
@@ -272,10 +272,12 @@ export default function ArsipPeriode() {
         const statusCol = type === "claims" ? 7 : 9;
         if (info.column.index === statusCol) {
           const s = info.cell.raw;
-          if (s === "sudah dicek" || s === "selesai")
+          if (s === "Disetujui" || s === "Selesai")
             { info.cell.styles.textColor = [4, 97, 55];   info.cell.styles.fontStyle = "bold"; }
-          else if (s === "ditolak")
+          else if (s === "Ditolak")
             { info.cell.styles.textColor = [185, 28, 28]; info.cell.styles.fontStyle = "bold"; }
+          else if (s === "Terindikasi Duplikat")
+            { info.cell.styles.textColor = [194, 65, 12]; info.cell.styles.fontStyle = "bold"; }
         }
       },
       didDrawPage: ({ pageNumber }) => { if (pageNumber > 1) drawHeader(); },
@@ -312,7 +314,7 @@ export default function ArsipPeriode() {
         "Email":            c.mahasiswa_email ?? "",
         "Tingkat":          c.tingkat ?? "",
         "Peringkat":        c.peringkat ?? "",
-        "Status":           c.status ?? "",
+        "Status":           STATUS_LABEL[c.status] ?? c.status ?? "",
         "Tanggal Kegiatan": formatTanggal(c.tanggal),
         "Tanggal Mulai":    formatTanggal(c.tanggal_mulai),
         "Tanggal Selesai":  formatTanggal(c.tanggal_selesai),
@@ -343,7 +345,7 @@ export default function ArsipPeriode() {
       "Bank":                  r.bank ?? "",
       "Nomor Rekening":        r.nomor_rekening ?? "",
       "Estimasi Dana (Rp)":    r.estimasi_reward ?? "",
-      "Status Reward":         r.reward_status ?? "",
+      "Status Reward":         REWARD_STATUS_LABEL[r.reward_status] ?? r.reward_status ?? "",
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
     ws["!cols"] = [{ wch: 5 }, { wch: 10 }, { wch: 25 }, { wch: 14 }, { wch: 35 }, { wch: 22 }, { wch: 25 }, { wch: 12 }, { wch: 20 }, { wch: 20 }, { wch: 14 }];
@@ -527,10 +529,18 @@ export default function ArsipPeriode() {
                       {q ? `Tidak ada klaim yang cocok dengan "${searchQuery}".` : "Tidak ada klaim pada periode ini."}
                     </p>
                   ) : (
-                    <table className="w-full text-sm text-left">
+                    <table className="w-full table-fixed text-sm text-left">
+                      <colgroup>
+                        <col className="w-16" />
+                        <col className="w-[260px]" />
+                        <col className="w-[160px]" />
+                        <col className="w-[180px]" />
+                        <col className="w-[115px]" />
+                        <col className="w-[75px]" />
+                      </colgroup>
                       <thead>
                         <tr className="border-b border-gray-50">
-                          <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest w-16">ID</th>
+                          <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">ID</th>
                           <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Nama Lomba</th>
                           <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Mahasiswa</th>
                           <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Status</th>
@@ -543,17 +553,17 @@ export default function ArsipPeriode() {
                           <tr key={c.id} className="hover:bg-gray-50/60 transition-colors">
                             <td className="px-6 py-4 font-mono text-[12px] text-gray-300 font-bold">#{c.id}</td>
                             <td className="px-6 py-4">
-                              <p className="font-bold text-gray-900 text-[13px]">{c.nama_lomba}</p>
-                              <p className="text-[11px] text-gray-400 mt-0.5">{c.tingkat} · {c.peringkat}</p>
+                              <p className="font-bold text-gray-900 text-[13px] truncate">{c.nama_lomba}</p>
+                              <p className="text-[11px] text-gray-400 mt-0.5 truncate">{c.tingkat} · {c.peringkat}</p>
                             </td>
                             <td className="px-6 py-4">
-                              <p className="font-medium text-gray-900 text-[13px]">{c.nama_display}</p>
-                              <p className="text-[11px] font-mono text-gray-400 mt-0.5">{c.mahasiswa_email}</p>
+                              <p className="font-medium text-gray-900 text-[13px] truncate">{c.nama_display}</p>
+                              <p className="text-[11px] font-mono text-gray-400 mt-0.5 truncate">{c.mahasiswa_email}</p>
                             </td>
                             <td className="px-6 py-4">
                               <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
                                 STATUS_BADGE[c.status] ?? "bg-gray-100 text-gray-500"
-                              }`}>{c.status}</span>
+                              }`}>{STATUS_LABEL[c.status] ?? c.status}</span>
                             </td>
                             <td className="px-6 py-4 text-[12px] text-gray-400">{formatTanggal(c.tanggal)}</td>
                             <td className="px-6 py-4">
@@ -584,7 +594,14 @@ export default function ArsipPeriode() {
                       {q ? `Tidak ada reward yang cocok dengan "${searchQuery}".` : "Tidak ada data reward pada periode ini."}
                     </p>
                   ) : (
-                    <table className="w-full text-sm text-left">
+                    <table className="w-full table-fixed text-sm text-left">
+                      <colgroup>
+                        <col className="w-[260px]" />
+                        <col className="w-[180px]" />
+                        <col className="w-[130px]" />
+                        <col className="w-[140px]" />
+                        <col className="w-[75px]" />
+                      </colgroup>
                       <thead>
                         <tr className="border-b border-gray-50">
                           <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Nama Lomba</th>
@@ -600,20 +617,18 @@ export default function ArsipPeriode() {
                           return (
                             <tr key={r.id} className="hover:bg-gray-50/60 transition-colors">
                               <td className="px-6 py-4">
-                                <p className="font-bold text-gray-900 text-[13px]">{r.nama_lomba}</p>
+                                <p className="font-bold text-gray-900 text-[13px] truncate">{r.nama_lomba}</p>
                                 <p className="text-[11px] text-gray-400 mt-0.5">Klaim #{r.claim_id}</p>
                               </td>
                               <td className="px-6 py-4">
-                                <p className="font-medium text-gray-900 text-[13px]">{r.nama_rekening}</p>
-                                <p className="text-[11px] font-mono text-gray-400 mt-0.5">{r.bank} · {r.nomor_rekening}</p>
+                                <p className="font-medium text-gray-900 text-[13px] truncate">{r.nama_rekening}</p>
+                                <p className="text-[11px] font-mono text-gray-400 mt-0.5 truncate">{r.bank} · {r.nomor_rekening}</p>
                               </td>
                               <td className="px-6 py-4 text-[12px] text-gray-700 font-semibold">{r.estimasi_reward || "—"}</td>
                               <td className="px-6 py-4">
                                 <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                                  r.reward_status === "selesai"  ? "bg-green-100 text-green-700"
-                                  : r.reward_status === "diproses" ? "bg-[#d4ebe0] text-[#046137]"
-                                  : "bg-orange-100 text-orange-600"
-                                }`}>{r.reward_status}</span>
+                                  REWARD_STATUS_BADGE[r.reward_status] ?? "bg-gray-100 text-gray-500"
+                                }`}>{REWARD_STATUS_LABEL[r.reward_status] ?? r.reward_status}</span>
                               </td>
                               <td className="px-6 py-4">
                                 {claimForReward && (
