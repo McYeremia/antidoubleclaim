@@ -24,6 +24,9 @@ export default function KelolaOperator({ operatorId }) {
   const [pwForm,        setPwForm]        = useState({ new_password: "", confirm: "" });
   const [pwError,       setPwError]       = useState("");
   const [pwSaving,      setPwSaving]      = useState(false);
+  const [showFormPw,    setShowFormPw]    = useState(false);
+  const [showDeletePw,  setShowDeletePw]  = useState(false);
+  const [showResetPw,   setShowResetPw]   = useState({ new: false, confirm: false });
 
   const headers = { "Content-Type": "application/json", "x-operator-id": String(operatorId) };
 
@@ -70,6 +73,7 @@ export default function KelolaOperator({ operatorId }) {
   const handleDelete = (id, nama) => {
     setDeletePw("");
     setDeleteError("");
+    setShowDeletePw(false);
     setDeleteModal({ id, nama, isSelf: String(id) === String(operatorId) });
   };
 
@@ -77,6 +81,7 @@ export default function KelolaOperator({ operatorId }) {
     setPasswordModal({ id: op.id, nama: op.nama });
     setPwForm({ new_password: "", confirm: "" });
     setPwError("");
+    setShowResetPw({ new: false, confirm: false });
   };
 
   const handleResetPasswordConfirm = async (e) => {
@@ -154,20 +159,50 @@ export default function KelolaOperator({ operatorId }) {
           <h3 className="text-[16px] font-black text-gray-900 mb-8 uppercase tracking-tight">Akun Pengelola Baru</h3>
           <form onSubmit={handleAdd} className="grid grid-cols-2 gap-6">
             {[
-              { label: "Nama Lengkap", name: "nama",     type: "text",     required: true },
-              { label: "Email",        name: "email",    type: "email",    required: true },
-              { label: "Username",     name: "username", type: "text",     required: true },
+              { label: "Nama Lengkap", name: "nama",     type: "text",  required: true },
+              { label: "Email",        name: "email",    type: "email", required: true },
+              { label: "Username",     name: "username", type: "text",  required: true },
               { label: "Password",     name: "password", type: "password", required: true },
             ].map(f => (
               <div key={f.name}>
                 <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">{f.label}</label>
-                <input
-                  type={f.type}
-                  required={f.required}
-                  value={form[f.name]}
-                  onChange={e => setForm(v => ({ ...v, [f.name]: e.target.value }))}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-[14px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all"
-                />
+                {f.name === "password" ? (
+                  <div className="relative">
+                    <input
+                      type={showFormPw ? "text" : "password"}
+                      required={f.required}
+                      value={form[f.name]}
+                      onChange={e => setForm(v => ({ ...v, [f.name]: e.target.value }))}
+                      className="w-full px-4 py-3 pr-10 bg-gray-50 border border-gray-200 rounded-2xl text-[14px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all"
+                    />
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      onClick={() => setShowFormPw(v => !v)}
+                      className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-300 hover:text-gray-700 transition-colors"
+                    >
+                      {showFormPw ? (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                            d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                ) : (
+                  <input
+                    type={f.type}
+                    required={f.required}
+                    value={form[f.name]}
+                    onChange={e => setForm(v => ({ ...v, [f.name]: e.target.value }))}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-[14px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 transition-all"
+                  />
+                )}
               </div>
             ))}
             <div>
@@ -186,7 +221,7 @@ export default function KelolaOperator({ operatorId }) {
               <div className="flex items-center gap-3 ml-auto">
                 <button
                   type="button"
-                  onClick={() => { setShowForm(false); setFormError(""); setForm({ username: "", password: "", nama: "", email: "", role: "operator" }); }}
+                  onClick={() => { setShowForm(false); setFormError(""); setForm({ username: "", password: "", nama: "", email: "", role: "operator" }); setShowFormPw(false); }}
                   className="px-7 py-3.5 rounded-2xl text-[14px] font-black bg-gray-100 text-gray-500 hover:bg-gray-200 transition-all"
                 >
                   Batal
@@ -337,15 +372,35 @@ export default function KelolaOperator({ operatorId }) {
                 <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
                   Password Anda Saat Ini <span className="text-red-400">*</span>
                 </label>
-                <input
-                  type="password"
-                  required
-                  autoFocus
-                  value={deletePw}
-                  onChange={e => { setDeletePw(e.target.value); setDeleteError(""); }}
-                  placeholder="Masukkan password Anda"
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-[14px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-400 transition-all"
-                />
+                <div className="relative">
+                  <input
+                    type={showDeletePw ? "text" : "password"}
+                    required
+                    autoFocus
+                    value={deletePw}
+                    onChange={e => { setDeletePw(e.target.value); setDeleteError(""); }}
+                    placeholder="Masukkan password Anda"
+                    className="w-full px-4 py-3 pr-10 bg-gray-50 border border-gray-200 rounded-2xl text-[14px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-400 transition-all"
+                  />
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    onClick={() => setShowDeletePw(v => !v)}
+                    className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-300 hover:text-red-400 transition-colors"
+                  >
+                    {showDeletePw ? (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                          d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
               </div>
               {deleteError && (
                 <p className="text-[12px] font-bold text-red-600 italic">! {deleteError}</p>
@@ -392,28 +447,68 @@ export default function KelolaOperator({ operatorId }) {
                 <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
                   Password Baru <span className="text-red-400">*</span>
                 </label>
-                <input
-                  type="password"
-                  required
-                  autoFocus
-                  value={pwForm.new_password}
-                  onChange={e => { setPwForm(v => ({ ...v, new_password: e.target.value })); setPwError(""); }}
-                  placeholder="Minimal 6 karakter"
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-[14px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
-                />
+                <div className="relative">
+                  <input
+                    type={showResetPw.new ? "text" : "password"}
+                    required
+                    autoFocus
+                    value={pwForm.new_password}
+                    onChange={e => { setPwForm(v => ({ ...v, new_password: e.target.value })); setPwError(""); }}
+                    placeholder="Minimal 6 karakter"
+                    className="w-full px-4 py-3 pr-10 bg-gray-50 border border-gray-200 rounded-2xl text-[14px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
+                  />
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    onClick={() => setShowResetPw(v => ({ ...v, new: !v.new }))}
+                    className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-300 hover:text-blue-400 transition-colors"
+                  >
+                    {showResetPw.new ? (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                          d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
               </div>
               <div>
                 <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
                   Konfirmasi Password Baru <span className="text-red-400">*</span>
                 </label>
-                <input
-                  type="password"
-                  required
-                  value={pwForm.confirm}
-                  onChange={e => { setPwForm(v => ({ ...v, confirm: e.target.value })); setPwError(""); }}
-                  placeholder="Ulangi password baru"
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-[14px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
-                />
+                <div className="relative">
+                  <input
+                    type={showResetPw.confirm ? "text" : "password"}
+                    required
+                    value={pwForm.confirm}
+                    onChange={e => { setPwForm(v => ({ ...v, confirm: e.target.value })); setPwError(""); }}
+                    placeholder="Ulangi password baru"
+                    className="w-full px-4 py-3 pr-10 bg-gray-50 border border-gray-200 rounded-2xl text-[14px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
+                  />
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    onClick={() => setShowResetPw(v => ({ ...v, confirm: !v.confirm }))}
+                    className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-300 hover:text-blue-400 transition-colors"
+                  >
+                    {showResetPw.confirm ? (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                          d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
               </div>
               {pwError && (
                 <p className="text-[12px] font-bold text-red-600 italic">! {pwError}</p>

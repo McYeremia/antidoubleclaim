@@ -293,15 +293,15 @@ export default function PengajuanReward() {
 
       <div className="grid grid-cols-3 gap-6">
         <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
-          <p className="text-[10px] font-black text-orange-400 uppercase tracking-[0.2em]">Menunggu</p>
+          <p className="text-[10px] font-black text-orange-400 uppercase tracking-[0.2em]">Antrean Verifikasi</p>
           <p className="text-5xl font-black text-gray-900 mt-3 leading-none">{menunggu.length}</p>
         </div>
         <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
-          <p className="text-[10px] font-black text-[#046137] uppercase tracking-[0.2em]">Diproses</p>
+          <p className="text-[10px] font-black text-[#046137] uppercase tracking-[0.2em]">Data Diterima</p>
           <p className="text-5xl font-black text-gray-900 mt-3 leading-none">{diproses.length}</p>
         </div>
         <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
-          <p className="text-[10px] font-black text-green-400 uppercase tracking-[0.2em]">Selesai</p>
+          <p className="text-[10px] font-black text-green-400 uppercase tracking-[0.2em]">Dana Terkirim</p>
           <p className="text-5xl font-black text-gray-900 mt-3 leading-none">{selesai.length}</p>
         </div>
       </div>

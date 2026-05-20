@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { API, apiFetch, formatDatetime } from "./shared";
+import { useEffect, useState, useRef } from "react";
+import { API, apiFetch, formatDatetime, formatTanggal } from "./shared";
 
 const AKSI_LABEL = {
   approve_klaim:      { label: "Approve Klaim",       style: "bg-green-100 text-green-700"   },
@@ -52,17 +52,28 @@ function exportToCsv(logs) {
   URL.revokeObjectURL(url);
 }
 
+const PAGE_SIZE = 20;
+
 export default function LogAktivitas({ operatorId }) {
-  const today    = new Date();
-  const thirtyDaysAgo = new Date(today);
-  thirtyDaysAgo.setDate(today.getDate() - 30);
+  const [logs,        setLogs]        = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [page,        setPage]        = useState(1);
+  const [dateFrom,    setDateFrom]    = useState(() => {
+    const d = new Date(); d.setMonth(d.getMonth() - 1); return toLocalDateInput(d);
+  });
+  const [dateTo,      setDateTo]      = useState(() => toLocalDateInput(new Date()));
+  const [appliedFrom, setAppliedFrom] = useState(() => {
+    const d = new Date(); d.setMonth(d.getMonth() - 1); return toLocalDateInput(d);
+  });
+  const [appliedTo,   setAppliedTo]   = useState(() => toLocalDateInput(new Date()));
 
-  const [logs,     setLogs]     = useState([]);
-  const [loading,  setLoading]  = useState(true);
-  const [dateFrom, setDateFrom] = useState(toLocalDateInput(thirtyDaysAgo));
-  const [dateTo,   setDateTo]   = useState(toLocalDateInput(today));
+  const dateFromRef = useRef(dateFrom);
+  const dateToRef   = useRef(dateTo);
 
-  const fetchLogs = async (from = dateFrom, to = dateTo) => {
+  const handleDateFromChange = (v) => { setDateFrom(v); dateFromRef.current = v; };
+  const handleDateToChange   = (v) => { setDateTo(v);   dateToRef.current   = v; };
+
+  const fetchLogs = async (from, to) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -80,9 +91,18 @@ export default function LogAktivitas({ operatorId }) {
     }
   };
 
-  useEffect(() => { fetchLogs(); }, []);
+  useEffect(() => {
+    fetchLogs(dateFromRef.current, dateToRef.current);
+  }, []);
 
-  const handleFilter = () => fetchLogs(dateFrom, dateTo);
+  const handleFilter = () => {
+    const from = dateFromRef.current;
+    const to   = dateToRef.current;
+    setAppliedFrom(from);
+    setAppliedTo(to);
+    setPage(1);
+    fetchLogs(from, to);
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -117,113 +137,193 @@ export default function LogAktivitas({ operatorId }) {
       </div>
 
       {/* Filter Tanggal */}
-      <div className="flex items-center gap-3 bg-white border border-gray-100 rounded-2xl px-5 py-4 shadow-sm">
-        <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        </svg>
-        <span className="text-[12px] font-bold text-gray-400 uppercase tracking-widest">Periode</span>
-        <input
-          type="date"
-          value={dateFrom}
-          onChange={e => setDateFrom(e.target.value)}
-          className="px-3 py-1.5 border border-gray-200 rounded-lg text-[13px] text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#046137]/30"
-        />
-        <span className="text-[12px] text-gray-400 font-medium">s/d</span>
-        <input
-          type="date"
-          value={dateTo}
-          onChange={e => setDateTo(e.target.value)}
-          className="px-3 py-1.5 border border-gray-200 rounded-lg text-[13px] text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#046137]/30"
-        />
-        <button
-          onClick={handleFilter}
-          className="px-4 py-1.5 bg-[#046137] text-white text-[12px] font-bold rounded-lg hover:bg-[#035230] transition-colors"
-        >
-          Terapkan
-        </button>
+      <div className="bg-white border border-gray-100 rounded-2xl px-5 py-4 shadow-sm">
+        <div className="flex items-center gap-3 flex-wrap">
+          <svg className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <span className="text-[12px] text-gray-400">Tampilkan dari</span>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={e => handleDateFromChange(e.target.value)}
+            className="px-3 py-1.5 border border-gray-200 rounded-lg text-[13px] text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#046137]/30"
+          />
+          <span className="text-[12px] text-gray-400">s/d</span>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={e => handleDateToChange(e.target.value)}
+            className="px-3 py-1.5 border border-gray-200 rounded-lg text-[13px] text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#046137]/30"
+          />
+          <button
+            onClick={handleFilter}
+            className="px-4 py-1.5 bg-[#046137] text-white text-[12px] font-bold rounded-lg hover:bg-[#035230] transition-colors"
+          >
+            Terapkan
+          </button>
+          {!loading && (
+            <span className="text-[12px] text-gray-400 ml-auto">
+              {formatTanggal(appliedFrom)} — {formatTanggal(appliedTo)}
+              <span className="text-gray-300"> · {logs.length} entri</span>
+            </span>
+          )}
+        </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        {loading ? (
-          <div className="flex items-center justify-center py-24">
-            <svg className="w-8 h-8 text-gray-200 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
-          </div>
-        ) : logs.length === 0 ? (
-          <p className="text-center text-gray-400 text-[13px] py-16">Tidak ada aktivitas pada rentang tanggal ini.</p>
-        ) : (
-          <table className="w-full text-sm text-left">
-            <thead>
-              <tr className="border-b border-gray-50">
-                <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest w-14">No</th>
-                <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Waktu</th>
-                <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Operator</th>
-                <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Aksi</th>
-                <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Target</th>
-                <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Detail</th>
-              </tr>
-            </thead>
-            <tbody>
-              {logs.map((log, idx) => {
-                const aksiInfo = AKSI_LABEL[log.aksi] ?? { label: log.aksi, style: "bg-gray-100 text-gray-600" };
-                return (
-                  <tr key={log.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/40 transition-colors">
-                    <td className="px-6 py-4 text-gray-300 text-[12px] font-semibold tabular-nums">
-                      {String(idx + 1).padStart(2, "0")}
-                    </td>
-                    <td className="px-6 py-4 text-[12px] text-gray-400 tabular-nums whitespace-nowrap">
-                      {formatDatetime(log.created_at)}
-                    </td>
-                    <td className="px-6 py-4">
-                      <p className="text-[13px] font-semibold text-gray-900">{log.operator_nama}</p>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap ${aksiInfo.style}`}>
-                        {aksiInfo.label}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-[12px] text-gray-500">
-                      {log.target_tipe && (() => {
-                        if (log.target_tipe === "periode") {
-                          return <span>{log.detail ?? <span className="font-mono">#{log.target_id}</span>}</span>;
-                        }
-                        if (log.target_tipe === "operator") {
-                          const name = (log.detail ?? "").split("|")[0];
-                          return <span className="font-medium text-gray-700">{name || <span className="font-mono">#{log.target_id}</span>}</span>;
-                        }
-                        return (
-                          <span className="font-mono">
-                            {log.target_tipe}{log.target_id ? ` #${log.target_id}` : ""}
-                          </span>
-                        );
-                      })()}
-                    </td>
-                    <td className="px-6 py-4 text-[12px] text-gray-500 max-w-xs">
-                      {log.target_tipe === "operator" ? (() => {
-                        const role = (log.detail ?? "").split("|")[1];
-                        const label = role === "superadmin" ? "Super Admin" : role === "operator" ? "Operator" : null;
-                        return label
-                          ? <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wide ${role === "superadmin" ? "bg-purple-100 text-purple-700" : "bg-[#d4ebe0] text-[#046137]"}`}>{label}</span>
-                          : <span className="text-gray-300">—</span>;
-                      })() : (
-                        <p className="truncate">{log.detail ?? "—"}</p>
-                      )}
-                    </td>
+      {(() => {
+        const totalPages  = Math.ceil(logs.length / PAGE_SIZE);
+        const safePage    = Math.min(page, totalPages || 1);
+        const startIdx    = (safePage - 1) * PAGE_SIZE;
+        const pageLogs    = logs.slice(startIdx, startIdx + PAGE_SIZE);
+
+        return (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            {loading ? (
+              <div className="flex items-center justify-center py-24">
+                <svg className="w-8 h-8 text-gray-200 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              </div>
+            ) : logs.length === 0 ? (
+              <p className="text-center text-gray-400 text-[13px] py-16">Tidak ada aktivitas pada rentang tanggal ini.</p>
+            ) : (
+              <table className="w-full text-sm text-left">
+                <thead>
+                  <tr className="border-b border-gray-50">
+                    <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest w-14">No</th>
+                    <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Waktu</th>
+                    <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Operator</th>
+                    <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Aksi</th>
+                    <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Target</th>
+                    <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Detail</th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
-        {!loading && logs.length > 0 && (
-          <div className="px-6 py-3 border-t border-gray-50">
-            <p className="text-[11px] text-gray-300 font-medium">{logs.length} entri ditampilkan</p>
+                </thead>
+                <tbody>
+                  {pageLogs.map((log, idx) => {
+                    const aksiInfo = AKSI_LABEL[log.aksi] ?? { label: log.aksi, style: "bg-gray-100 text-gray-600" };
+                    return (
+                      <tr key={log.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/40 transition-colors">
+                        <td className="px-6 py-4 text-gray-300 text-[12px] font-semibold tabular-nums">
+                          {String(startIdx + idx + 1).padStart(2, "0")}
+                        </td>
+                        <td className="px-6 py-4 text-[12px] text-gray-400 tabular-nums whitespace-nowrap">
+                          {formatDatetime(log.created_at)}
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className="text-[13px] font-semibold text-gray-900">{log.operator_nama}</p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap ${aksiInfo.style}`}>
+                            {aksiInfo.label}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-[12px] text-gray-500">
+                          {log.target_tipe && (() => {
+                            if (log.target_tipe === "periode") {
+                              return <span>{log.detail ?? <span className="font-mono">#{log.target_id}</span>}</span>;
+                            }
+                            if (log.target_tipe === "operator") {
+                              const name = (log.detail ?? "").split("|")[0];
+                              return <span className="font-medium text-gray-700">{name || <span className="font-mono">#{log.target_id}</span>}</span>;
+                            }
+                            return (
+                              <span className="font-mono">
+                                {log.target_tipe}{log.target_id ? ` #${log.target_id}` : ""}
+                              </span>
+                            );
+                          })()}
+                        </td>
+                        <td className="px-6 py-4 text-[12px] text-gray-500 max-w-xs">
+                          {log.target_tipe === "operator" ? (() => {
+                            const role = (log.detail ?? "").split("|")[1];
+                            const label = role === "superadmin" ? "Super Admin" : role === "operator" ? "Operator" : null;
+                            return label
+                              ? <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wide ${role === "superadmin" ? "bg-purple-100 text-purple-700" : "bg-[#d4ebe0] text-[#046137]"}`}>{label}</span>
+                              : <span className="text-gray-300">—</span>;
+                          })() : (
+                            <p className="truncate">{log.detail ?? "—"}</p>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+
+            {!loading && logs.length > 0 && (
+              <div className="px-6 py-3.5 border-t border-gray-50 flex items-center justify-between">
+                <p className="text-[11px] text-gray-400 font-medium">
+                  {startIdx + 1}–{Math.min(startIdx + PAGE_SIZE, logs.length)} dari {logs.length} entri
+                </p>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setPage(1)}
+                    disabled={safePage === 1}
+                    className="px-2 py-1 rounded-lg text-[11px] font-bold text-gray-400 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    title="Halaman pertama"
+                  >
+                    «
+                  </button>
+                  <button
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={safePage === 1}
+                    className="px-2.5 py-1 rounded-lg text-[11px] font-bold text-gray-400 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    ‹ Sebelumnya
+                  </button>
+
+                  <div className="flex items-center gap-1 mx-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter(p => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
+                      .reduce((acc, p, i, arr) => {
+                        if (i > 0 && p - arr[i - 1] > 1) acc.push("…");
+                        acc.push(p);
+                        return acc;
+                      }, [])
+                      .map((p, i) =>
+                        p === "…" ? (
+                          <span key={`ellipsis-${i}`} className="px-1 text-[11px] text-gray-300">…</span>
+                        ) : (
+                          <button
+                            key={p}
+                            onClick={() => setPage(p)}
+                            className={`w-7 h-7 rounded-lg text-[11px] font-black transition-colors ${
+                              p === safePage
+                                ? "bg-[#046137] text-white"
+                                : "text-gray-400 hover:bg-gray-100"
+                            }`}
+                          >
+                            {p}
+                          </button>
+                        )
+                      )}
+                  </div>
+
+                  <button
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    disabled={safePage === totalPages}
+                    className="px-2.5 py-1 rounded-lg text-[11px] font-bold text-gray-400 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Berikutnya ›
+                  </button>
+                  <button
+                    onClick={() => setPage(totalPages)}
+                    disabled={safePage === totalPages}
+                    className="px-2 py-1 rounded-lg text-[11px] font-bold text-gray-400 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    title="Halaman terakhir"
+                  >
+                    »
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        );
+      })()}
     </div>
   );
 }

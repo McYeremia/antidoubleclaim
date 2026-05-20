@@ -7,6 +7,7 @@ import { useParams } from "next/navigation";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 const apiFetch = (url, options = {}) => fetch(url, { ...options, headers: { "ngrok-skip-browser-warning": "true", ...(options.headers || {}) } });
 import OperatorSidebar, { OperatorTopbar } from "../../_sidebar";
+import { formatTanggal } from "../../components/shared";
 
 const STATUS_LABEL = {
   "belum dicek":    { text: "Belum Dicek",    cls: "bg-[#d4ebe0] text-[#046137]" },
@@ -70,7 +71,10 @@ function CertPanel({ claim, label, accent }) {
           <InfoItem label="Tingkat"   value={claim.tingkat} />
           <InfoItem label="Peringkat" value={claim.peringkat} />
         </div>
-        <InfoItem label="Tanggal"    value={claim.tanggal} />
+        <div className="grid grid-cols-2 gap-4">
+          <InfoItem label="Tanggal Mulai"   value={formatTanggal(claim.tanggal_mulai  ?? claim.tanggal)} />
+          <InfoItem label="Tanggal Selesai" value={formatTanggal(claim.tanggal_selesai)} />
+        </div>
         <div className="pt-3 border-t border-gray-50">
           <InfoItem label="Mahasiswa" value={claim.nama_display} />
           <p className="text-[11px] font-mono text-gray-400 mt-1">{claim.mahasiswa_email}</p>
@@ -237,7 +241,8 @@ export default function ComparePage() {
                     ["Nama Lomba",  claimA.nama_lomba,   claimB.nama_lomba],
                     ["Tingkat",     claimA.tingkat,      claimB.tingkat],
                     ["Peringkat",   claimA.peringkat,    claimB.peringkat],
-                    ["Tanggal",     claimA.tanggal,      claimB.tanggal],
+                    ["Tgl Mulai",   formatTanggal(claimA.tanggal_mulai  ?? claimA.tanggal), formatTanggal(claimB.tanggal_mulai  ?? claimB.tanggal)],
+                    ["Tgl Selesai", formatTanggal(claimA.tanggal_selesai), formatTanggal(claimB.tanggal_selesai)],
                     ["Mahasiswa",   claimA.nama_display, claimB.nama_display],
                     ["Email",       claimA.mahasiswa_email, claimB.mahasiswa_email],
                   ].map(([field, valA, valB]) => {
