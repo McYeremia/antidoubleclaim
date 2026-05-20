@@ -481,7 +481,7 @@ function PengajuanDetail({ p, onSaved, claimId }) {
                   <InfoRow label="Judul/Jenis Karya"          value={p.jenis_karya_teks} />
                   <InfoRow label="Pilihan Kategori Karya"     value={p.jenis_karya_pilihan} />
                   <InfoRow label="Nomor Surat Keterangan"     value={p.nomor_surat} />
-                  <InfoRow label="Tanggal Surat"              value={p.tanggal_surat} />
+                  <InfoRow label="Tanggal Surat"              value={formatTanggal(p.tanggal_surat)} />
                   <div className="col-span-2"><InfoRow label="Deskripsi Karya" value={p.deskripsi_karya} /></div>
                   <div className="col-span-2"><InfoRow label="Manfaat Karya"   value={p.manfaat_karya} /></div>
                 </>
@@ -590,7 +590,7 @@ function PengajuanDetail({ p, onSaved, claimId }) {
 
       {/* Timestamp */}
       <div className="pt-6 border-t border-gray-50 flex justify-between items-center">
-        <InfoRow label="Tanggal Pengajuan" value={p.created_at} />
+        <InfoRow label="Tanggal Pengajuan" value={formatTanggal(p.created_at)} />
         <p className="text-[10px] font-black text-gray-200 uppercase tracking-widest">Antidoubleclaim Verification Engine</p>
       </div>
     </div>
@@ -890,10 +890,10 @@ export default function DetailKlaim() {
 
       <ConfirmModal
         isOpen={approveModal}
-        title="Setujui Klaim?"
+        title="Approve Klaim?"
         message={`Konfirmasi persetujuan untuk klaim sertifikat #${id}. Pastikan semua data sudah valid.`}
         variant="success"
-        confirmLabel="YA, SETUJUI"
+        confirmLabel="YA, APPROVE"
         onConfirm={handleApproveConfirm}
         onCancel={() => setApproveModal(false)}
       />      </div>

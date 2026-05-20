@@ -212,10 +212,10 @@ export default function RewardDetailModal({ reward, onClose, onStatusUpdate }) {
 
         <ConfirmModal
           isOpen={confirmApprove}
-          title="Setujui Data Rekening?"
+          title="Approve Data Rekening?"
           message={`Konfirmasi bahwa data rekening mahasiswa ${reward.nama_ketua} sudah benar dan siap untuk diproses pembayarannya.`}
           variant="success"
-          confirmLabel="YA, SETUJUI"
+          confirmLabel="YA, APPROVE"
           onConfirm={() => { setConfirmApprove(false); handleStatus("diproses"); }}
           onCancel={() => setConfirmApprove(false)}
         />

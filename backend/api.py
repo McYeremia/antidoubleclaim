@@ -192,12 +192,12 @@ async def root():
 # ── Statistik Visualisasi ────────────────────────────────────────────────────
 @app.get("/stats/visualisasi")
 async def stats_visualisasi(
-    fakultas:    Optional[str] = None,
-    prodi:       Optional[str] = None,
-    tahun:       Optional[str] = None,
-    tingkatan:   Optional[str] = None,
-    kategori:    Optional[str] = None,
-    kepesertaan: Optional[str] = None,
+    fakultas:  Optional[str] = None,
+    prodi:     Optional[str] = None,
+    tahun:     Optional[str] = None,
+    tingkatan: Optional[str] = None,
+    kategori:  Optional[str] = None,
+    periode:   Optional[str] = None,
 ):
     return get_stats_visualisasi(
         filter_fakultas=fakultas,
@@ -205,7 +205,7 @@ async def stats_visualisasi(
         filter_tahun=tahun,
         filter_tingkatan=tingkatan,
         filter_kategori=kategori,
-        filter_kepesertaan=kepesertaan,
+        filter_periode=periode,
     )
 
 # ── Export Data ─────────────────────────────────────────────────────────────
