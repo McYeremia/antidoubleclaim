@@ -34,7 +34,7 @@ export default function ClaimSection({
               <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Nama Lomba</th>
               <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Tingkat</th>
               <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Peringkat</th>
-              <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Tanggal</th>
+              <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">{showMirip ? "Tgl. Pengajuan" : "Tanggal Pengajuan"}</th>
               {showMirip    && <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Mirip Dengan</th>}
               {showMirip    && <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Alasan</th>}
               {showVerified && <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Diverifikasi Oleh</th>}
@@ -59,7 +59,7 @@ export default function ClaimSection({
                     {claim.peringkat}
                   </span>
                 </td>
-                <td className="px-6 py-4 text-[12px] text-gray-400 font-medium">{formatTanggal(claim.tanggal)}</td>
+                <td className="px-6 py-4 text-[12px] text-gray-400 font-medium">{formatTanggal(claim.pengajuan_created_at)}</td>
                 {showMirip && (
                   <td className="px-6 py-4">
                     {claim.mirip_dengan_id ? (
@@ -83,7 +83,7 @@ export default function ClaimSection({
                         ? "bg-red-100 text-red-700"
                         : isImg
                         ? "bg-orange-100 text-orange-700"
-                        : "bg-blue-100 text-blue-700";
+                        : "bg-orange-100 text-orange-700";
                       return (
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide ${style}`}>
                           {label}

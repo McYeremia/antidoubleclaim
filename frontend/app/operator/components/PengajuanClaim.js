@@ -118,15 +118,15 @@ export default function PengajuanClaim({ router }) {
 
       <div className="grid grid-cols-4 gap-6">
         <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
-          <p className="text-[10px] font-black text-orange-400 uppercase tracking-[0.2em]">Perlu Ditinjau</p>
+          <p className="text-[10px] font-black text-orange-400 uppercase tracking-[0.2em]">Terindikasi Duplikat</p>
           <p className="text-5xl font-black text-gray-900 mt-3 leading-none">{claims.filter(c => c.status === "perlu ditinjau").length}</p>
         </div>
         <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
-          <p className="text-[10px] font-black text-[#046137] uppercase tracking-[0.2em]">Belum Dicek</p>
+          <p className="text-[10px] font-black text-[#046137] uppercase tracking-[0.2em]">Antrean Verifikasi</p>
           <p className="text-5xl font-black text-gray-900 mt-3 leading-none">{claims.filter(c => c.status === "belum dicek").length}</p>
         </div>
         <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
-          <p className="text-[10px] font-black text-green-400 uppercase tracking-[0.2em]">Sudah Dicek</p>
+          <p className="text-[10px] font-black text-green-400 uppercase tracking-[0.2em]">Telah Diverifikasi</p>
           <p className="text-5xl font-black text-gray-900 mt-3 leading-none">{claims.filter(c => c.status === "sudah dicek").length}</p>
         </div>
         <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
@@ -139,10 +139,10 @@ export default function PengajuanClaim({ router }) {
       <div className="flex flex-wrap gap-2">
         {[
           { key: "semua",          label: "Semua",           count: perluDitinjau.length + belumDicek.length + sudahDicek.length + ditolakFiltered.length },
-          { key: "perlu ditinjau", label: "Perlu Ditinjau",  count: perluDitinjau.length },
-          { key: "belum dicek",    label: "Belum Dicek",     count: belumDicek.length },
-          { key: "sudah dicek",    label: "Sudah Dicek",     count: sudahDicek.length },
-          { key: "ditolak",        label: "Ditolak",         count: ditolakFiltered.length },
+          { key: "perlu ditinjau", label: "Terindikasi Duplikat", count: perluDitinjau.length },
+          { key: "belum dicek",    label: "Antrean Verifikasi",  count: belumDicek.length },
+          { key: "sudah dicek",    label: "Telah Diverifikasi",  count: sudahDicek.length },
+          { key: "ditolak",        label: "Ditolak",             count: ditolakFiltered.length },
         ].map(chip => (
           <button
             key={chip.key}

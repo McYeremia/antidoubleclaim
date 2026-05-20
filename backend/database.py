@@ -459,8 +459,11 @@ def _row_to_dict(row):
         "catatan_penolakan":   row[14] if len(row) > 14 else None,
         "periode_id":          row[15] if len(row) > 15 else None,
         "periode_nama":        row[16] if len(row) > 16 else None,
-        "kategori":            row[17] if len(row) > 17 else None,
-        "estimasi_reward":     row[18] if len(row) > 18 else None,
+        "kategori":              row[17] if len(row) > 17 else None,
+        "estimasi_reward":       row[18] if len(row) > 18 else None,
+        "pengajuan_created_at":  row[19] if len(row) > 19 else None,
+        "tanggal_mulai":         row[20] if len(row) > 20 else None,
+        "tanggal_selesai":       row[21] if len(row) > 21 else None,
     }
 
 # ---------------------------------------------------------------------------
@@ -476,14 +479,15 @@ def get_all_claims():
                c.mirip_dengan_id, c.verified_by, c.verified_at,
                u.nama AS verified_by_nama, c.flag_alasan, c.catatan_penolakan,
                c.periode_id, pk.nama AS periode_nama,
-               p.kategori_simkatmawa, p.estimasi_reward
+               p.kategori_simkatmawa, p.estimasi_reward,
+               p.created_at AS pengajuan_created_at
         FROM CLAIMS c
         LEFT JOIN USERS u ON u.id = c.verified_by
         LEFT JOIN PERIODE_KLAIM pk ON pk.id = c.periode_id
         LEFT JOIN PENGAJUAN p ON p.claim_id = c.id
         WHERE (pk.status IS NULL OR pk.status != 'diarsipkan')
           AND c.status != 'ditolak'
-        ORDER BY c.id DESC
+        ORDER BY c.id ASC
     """)
     rows = cursor.fetchall()
     conn.close()
@@ -709,7 +713,9 @@ def get_claim_by_id(claim_id):
                c.mirip_dengan_id, c.verified_by, c.verified_at,
                u.nama AS verified_by_nama, c.flag_alasan, c.catatan_penolakan,
                c.periode_id, pk.nama AS periode_nama,
-               p.kategori_simkatmawa, p.estimasi_reward
+               p.kategori_simkatmawa, p.estimasi_reward,
+               p.created_at AS pengajuan_created_at,
+               p.tanggal_mulai, p.tanggal_selesai
         FROM CLAIMS c
         LEFT JOIN USERS u ON u.id = c.verified_by
         LEFT JOIN PERIODE_KLAIM pk ON pk.id = c.periode_id
@@ -951,11 +957,11 @@ def get_audit_log(date_from: str = None, date_to: str = None, limit: int = 1000)
     conditions = []
     params = []
     if date_from:
-        conditions.append("DATE(a.created_at) >= DATE(?)")
-        params.append(date_from)
+        conditions.append("a.created_at >= ?")
+        params.append(date_from + " 00:00:00")
     if date_to:
-        conditions.append("DATE(a.created_at) <= DATE(?)")
-        params.append(date_to)
+        conditions.append("a.created_at <= ?")
+        params.append(date_to + " 23:59:59")
     where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
     params.append(limit)
     cursor.execute(f"""
