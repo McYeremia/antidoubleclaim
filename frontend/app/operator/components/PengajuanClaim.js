@@ -102,7 +102,7 @@ export default function PengajuanClaim({ router }) {
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-4xl font-black text-gray-900 leading-none tracking-tight">Pengajuan Claim</h1>
+          <h1 className="text-4xl font-black text-gray-900 leading-none tracking-tight">Pengajuan Klaim</h1>
           <p className="text-gray-400 mt-3 text-[14px]">Tinjau dan verifikasi klaim sertifikat prestasi mahasiswa.</p>
         </div>
         <button
@@ -304,10 +304,10 @@ export default function PengajuanClaim({ router }) {
 
       <ConfirmModal
         isOpen={!!approveModal}
-        title="Setujui Klaim?"
+        title="Approve Klaim?"
         message={`Konfirmasi persetujuan untuk klaim "${approveModal?.name}". Pastikan semua data sudah valid.`}
         variant="success"
-        confirmLabel="YA, SETUJUI"
+        confirmLabel="YA, APPROVE"
         onConfirm={handleApproveConfirm}
         onCancel={() => setApproveModal(null)}
       />

@@ -135,7 +135,7 @@ export default function OperatorSidebar({ activeKey = "claim" }) {
   }, []);
 
   const menus = [
-    { key: "claim",       href: "/operator",                    label: "Pengajuan Claim",    icon: <IconClaim />    },
+    { key: "claim",       href: "/operator",                    label: "Pengajuan Klaim",    icon: <IconClaim />    },
     { key: "reward",      href: "/operator?menu=reward",        label: "Pengajuan Reward",   icon: <IconReward />   },
     { key: "visualisasi", href: "/operator?menu=visualisasi",   label: "Visualisasi Data",   icon: <IconChart />    },
     { key: "simulator",   href: "/operator?menu=simulator",     label: "Simulator Deteksi",  icon: <IconBeaker />   },

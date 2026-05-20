@@ -9,26 +9,21 @@ const apiFetch = (url, options = {}) => fetch(url, { ...options, headers: { "ngr
 // ── Konstanta ─────────────────────────────────────────────────────────────────
 
 const FAK_SHORT = {
+  "Fakultas Teknologi Informasi":   "Fakultas Teknologi Informasi",
+  "Fakultas Bisnis":                "Fakultas Bisnis",
+  "Fakultas Bioteknologi":          "Fakultas Bioteknologi",
+  "Fakultas Kedokteran":            "Fakultas Kedokteran",
+  "Fakultas Arsitektur dan Desain": "Fakultas Arsitektur dan Desain",
+  "Fakultas Humaniora":             "Fakultas Humaniora",
+};
+
+const FAK_ABBR = {
   "Fakultas Teknologi Informasi":   "FTI",
-  "Fakultas Bisnis":                "F. Bisnis",
-  "Fakultas Bioteknologi":          "F. Bioteknologi",
-  "Fakultas Kedokteran":            "F. Kedokteran",
-  "Fakultas Arsitektur dan Desain": "F. Arsitektur & Desain",
-  "Fakultas Humaniora":             "F. Humaniora",
-};
-
-const STATUS_CFG = {
-  "Disetujui":      { bg: "bg-emerald-50", border: "border-emerald-100", text: "text-emerald-700", numText: "text-emerald-900", dot: "bg-emerald-500" },
-  "Ditolak":        { bg: "bg-red-50",     border: "border-red-100",     text: "text-red-600",     numText: "text-red-800",     dot: "bg-red-500"     },
-  "Perlu Ditinjau": { bg: "bg-amber-50",   border: "border-amber-100",   text: "text-amber-600",   numText: "text-amber-800",   dot: "bg-amber-400"   },
-  "Dalam Proses":   { bg: "bg-indigo-50",  border: "border-indigo-100",  text: "text-indigo-600",  numText: "text-indigo-800",  dot: "bg-indigo-500"  },
-};
-
-const STATUS_DONUT_COLOR = {
-  "Disetujui":      "#10b981",
-  "Ditolak":        "#ef4444",
-  "Perlu Ditinjau": "#f59e0b",
-  "Dalam Proses":   "#6366f1",
+  "Fakultas Bisnis":                "Bisnis",
+  "Fakultas Bioteknologi":          "Bioteknologi",
+  "Fakultas Kedokteran":            "Kedokteran",
+  "Fakultas Arsitektur dan Desain": "Arsitektur",
+  "Fakultas Humaniora":             "Humaniora",
 };
 
 const JENIS_SHORT = {
@@ -37,13 +32,19 @@ const JENIS_SHORT = {
   "Rekognisi Non-Lomba":          "Rekognisi",
 };
 
+const JENIS_COLOR = {
+  "Lomba Mandiri Puspresnas":     "#4f46e5",
+  "Lomba Mandiri Non-Puspresnas": "#0891b2",
+  "Rekognisi Non-Lomba":          "#7c3aed",
+};
+
 const PALETTE = ["#046137","#4f46e5","#0891b2","#d97706","#dc2626","#7c3aed","#0d9488","#ea580c"];
 
-const EMPTY_FILTERS = { fakultas: "", prodi: "", tahun: "", tingkatan: "", kategori: "", kepesertaan: "" };
+const EMPTY_FILTERS = { fakultas: "", prodi: "", tahun: "", tingkatan: "", kategori: "", periode: "" };
 
 const FILTER_LABEL_MAP = {
   fakultas: "Fakultas", prodi: "Prodi", tahun: "Tahun",
-  tingkatan: "Tingkatan", kategori: "Jenis", kepesertaan: "Kepesertaan",
+  tingkatan: "Tingkatan", kategori: "Jenis", periode: "Periode",
 };
 
 // ── Skeleton ──────────────────────────────────────────────────────────────────
@@ -55,19 +56,19 @@ function Sk({ className = "" }) {
 function DashboardSkeleton() {
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-5 gap-4">
-        {[...Array(5)].map((_, i) => <Sk key={i} className="h-24" />)}
+      <div className="grid grid-cols-4 gap-4">
+        {[...Array(4)].map((_, i) => <Sk key={i} className="h-[88px]" />)}
       </div>
       <div className="grid grid-cols-12 gap-5">
-        <Sk className="col-span-8 h-52" />
-        <Sk className="col-span-4 h-52" />
+        <Sk className="col-span-7 h-56" />
+        <Sk className="col-span-5 h-56" />
       </div>
       <div className="grid grid-cols-2 gap-5">
-        <Sk className="h-44" /><Sk className="h-44" />
+        <Sk className="h-48" /><Sk className="h-48" />
       </div>
-      <Sk className="h-48" />
-      <div className="grid grid-cols-3 gap-5">
-        <Sk className="h-40" /><Sk className="h-40" /><Sk className="h-40" />
+      <Sk className="h-52" />
+      <div className="grid grid-cols-2 gap-5">
+        <Sk className="h-44" /><Sk className="h-44" />
       </div>
     </div>
   );
@@ -76,7 +77,7 @@ function DashboardSkeleton() {
 // ── KPI Card ──────────────────────────────────────────────────────────────────
 
 function KPICard({ label, value, total, bg, border, text, numText }) {
-  const pct = total > 0 && label !== "Total Klaim"
+  const pct = total > 0 && label !== "Total Disetujui"
     ? Math.round((value / total) * 100) : null;
   return (
     <div className={`rounded-2xl border ${bg} ${border} px-5 py-4 flex flex-col justify-between h-[88px]`}>
@@ -92,11 +93,8 @@ function KPICard({ label, value, total, bg, border, text, numText }) {
 }
 
 // ── Donut Chart ───────────────────────────────────────────────────────────────
-// Pilihan terbaik untuk data "bagian dari keseluruhan" (part-of-whole) dengan
-// ≤6 kategori. Lubang tengah menampilkan total — information density tinggi
-// (Stephen Few). Bar tertumpuk menyulitkan perbandingan segmen non-pertama.
 
-function DonutChart({ data, total, colorFn, centerLabel = "Total", labelFn, compact = false }) {
+function DonutChart({ data, total, colorFn, centerLabel = "Total", labelFn }) {
   if (!data || data.length === 0)
     return <p className="text-[12px] text-gray-300 text-center py-10">Belum ada data.</p>;
 
@@ -108,8 +106,7 @@ function DonutChart({ data, total, colorFn, centerLabel = "Total", labelFn, comp
   let cum = -Math.PI / 2;
   const slices = items.map((d, i) => {
     const angle = total > 0 ? (d.count / total) * 2 * Math.PI : 0;
-    const sa = cum;
-    cum += angle;
+    const sa = cum; cum += angle;
     return { ...d, sa, ea: cum, color: colorFn ? colorFn(d.name) : PALETTE[i % PALETTE.length] };
   });
 
@@ -122,21 +119,16 @@ function DonutChart({ data, total, colorFn, centerLabel = "Total", labelFn, comp
     return `M${x1.toFixed(2)} ${y1.toFixed(2)} A${R} ${R} 0 ${large} 1 ${x2.toFixed(2)} ${y2.toFixed(2)} L${xi1.toFixed(2)} ${yi1.toFixed(2)} A${r} ${r} 0 ${large} 0 ${xi2.toFixed(2)} ${yi2.toFixed(2)}Z`;
   };
 
-  const svgClass = compact ? "w-[110px] h-[110px]" : "w-[130px] h-[130px]";
-
   return (
     <div className="flex items-center gap-5">
-      <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className={`${svgClass} flex-shrink-0`}>
+      <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="w-[130px] h-[130px] flex-shrink-0">
         {slices.map(s => {
-          const span = s.ea - s.sa;
-          if (span >= Math.PI * 2 - 0.001) {
-            return (
-              <g key={s.name}>
-                <circle cx={CX} cy={CY} r={R} fill={s.color} />
-                <circle cx={CX} cy={CY} r={r} fill="white" />
-              </g>
-            );
-          }
+          if (s.ea - s.sa >= Math.PI * 2 - 0.001) return (
+            <g key={s.name}>
+              <circle cx={CX} cy={CY} r={R} fill={s.color} />
+              <circle cx={CX} cy={CY} r={r} fill="white" />
+            </g>
+          );
           return (
             <path key={s.name} d={arcPath(s.sa, s.ea)}
               fill={s.color} stroke="white" strokeWidth="2.5">
@@ -168,46 +160,7 @@ function DonutChart({ data, total, colorFn, centerLabel = "Total", labelFn, comp
   );
 }
 
-// ── Split Bar ─────────────────────────────────────────────────────────────────
-// Pilihan terbaik untuk data biner atau sedikit kategori (Tim / Individu).
-// Segmented bar memperlihatkan rasio secara langsung. Angka besar menegaskan
-// kategori dominan. Jauh lebih informatif daripada dua mini-bar terpisah.
-
-function SplitBar({ data, total }) {
-  if (!data || data.length === 0)
-    return <p className="text-[12px] text-gray-300 text-center py-6">Belum ada data.</p>;
-  return (
-    <div>
-      <div className="flex h-3 rounded-full overflow-hidden gap-px mb-5">
-        {data.map((d, i) => {
-          const pct = total > 0 ? (d.count / total) * 100 : 0;
-          return pct > 0.3 ? (
-            <div key={d.name} className="transition-all duration-700"
-              style={{ width: `${pct}%`, backgroundColor: PALETTE[i % PALETTE.length] }}
-              title={`${d.name}: ${d.count}`} />
-          ) : null;
-        })}
-      </div>
-      <div className="flex justify-around">
-        {data.map((d, i) => {
-          const pct = total > 0 ? Math.round((d.count / total) * 100) : 0;
-          return (
-            <div key={d.name} className="text-center">
-              <p className="text-[32px] font-black tabular-nums leading-none"
-                style={{ color: PALETTE[i % PALETTE.length] }}>{d.count}</p>
-              <p className="text-[11px] text-gray-500 font-semibold mt-1.5">{d.name}</p>
-              <p className="text-[10px] text-gray-300 tabular-nums mt-0.5">{pct}%</p>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-// ── Trend Chart (Line) ────────────────────────────────────────────────────────
-// Pilihan terbaik untuk data time-series (Tufte, Few). Garis menekankan
-// kontinuitas perubahan antar waktu — bar chart akan memutus persepsi tren.
+// ── Trend Chart (smooth bezier) ───────────────────────────────────────────────
 
 function TrendChart({ data }) {
   if (!data || data.length === 0)
@@ -224,19 +177,25 @@ function TrendChart({ data }) {
   const P = { l: 30, r: 12, t: 22, b: 28 };
   const pw = W - P.l - P.r, ph = H - P.t - P.b;
   const maxV = Math.max(...data.map(d => d.count), 1);
-  const range = maxV || 1;
 
   const pts = data.map((d, i) => ({
     x: P.l + (i / (data.length - 1)) * pw,
-    y: P.t + (1 - d.count / range) * ph,
+    y: P.t + (1 - d.count / maxV) * ph,
     label: d.name, count: d.count,
   }));
 
-  const line = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
-  const area = `${line} L${pts.at(-1).x},${P.t + ph} L${pts[0].x},${P.t + ph}Z`;
+  // Smooth cubic bezier
+  const smooth = pts.map((p, i) => {
+    if (i === 0) return `M${p.x.toFixed(1)},${p.y.toFixed(1)}`;
+    const prev = pts[i - 1];
+    const cpx = (prev.x + p.x) / 2;
+    return `C${cpx.toFixed(1)},${prev.y.toFixed(1)} ${cpx.toFixed(1)},${p.y.toFixed(1)} ${p.x.toFixed(1)},${p.y.toFixed(1)}`;
+  }).join(" ");
+
+  const area = `${smooth} L${pts.at(-1).x},${P.t + ph} L${pts[0].x},${P.t + ph}Z`;
 
   const ticks = [0, 0.5, 1].map(t => ({
-    y: P.t + (1 - t) * ph, v: Math.round(t * range),
+    y: P.t + (1 - t) * ph, v: Math.round(t * maxV),
   }));
 
   return (
@@ -254,7 +213,7 @@ function TrendChart({ data }) {
         </g>
       ))}
       <path d={area} fill="url(#trendFill)" />
-      <path d={line}  fill="none" stroke="#046137" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d={smooth} fill="none" stroke="#046137" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
       {pts.map(p => (
         <g key={p.label}>
           <circle cx={p.x} cy={p.y} r="5"   fill="#046137" />
@@ -268,9 +227,6 @@ function TrendChart({ data }) {
 }
 
 // ── Horizontal Bar ────────────────────────────────────────────────────────────
-// Pilihan terbaik untuk perbandingan magnitude antar kategori (Many vs Few),
-// terutama bila label panjang. Bar horizontal > pie untuk perbandingan ranking
-// karena manusia lebih akurat menilai panjang daripada sudut (Cleveland 1984).
 
 function HBarChart({ data, formatLabel, maxItems = 8 }) {
   if (!data || data.length === 0)
@@ -294,14 +250,68 @@ function HBarChart({ data, formatLabel, maxItems = 8 }) {
                 <span className="text-[10px] text-gray-300 tabular-nums w-7 text-right">{relPct}%</span>
               </div>
             </div>
-            <div className="h-[5px] bg-gray-50 rounded-full overflow-hidden">
+            <div className="h-[7px] bg-gray-50 rounded-full overflow-hidden">
               <div className="h-full rounded-full transition-all duration-700"
-                style={{ width: `${barPct}%`, backgroundColor: PALETTE[i % PALETTE.length], opacity: 0.8 }} />
+                style={{ width: `${barPct}%`, backgroundColor: PALETTE[i % PALETTE.length], opacity: 0.85 }} />
             </div>
           </div>
         );
       })}
     </div>
+  );
+}
+
+// ── Vertical Bar ─────────────────────────────────────────────────────────────
+
+function VBarChart({ data, maxItems = 8, labelTrunc = 16 }) {
+  if (!data || data.length === 0)
+    return <p className="text-[12px] text-gray-300 text-center py-8">Belum ada data.</p>;
+
+  const items = data.slice(0, maxItems);
+  const max   = Math.max(...items.map(d => d.count), 1);
+  const n     = items.length;
+
+  const W = 460, H = 160;
+  const P = { l: 28, r: 12, t: 28, b: 36 };
+  const pw = W - P.l - P.r, ph = H - P.t - P.b;
+  const colW = pw / n;
+  const barW = Math.min(52, colW * 0.55);
+
+  const ticks = [0, 0.5, 1].map(t => ({
+    y: P.t + (1 - t) * ph, v: Math.round(t * max),
+  }));
+
+  const fmt = (s) => labelTrunc > 0 && s.length > labelTrunc
+    ? s.slice(0, labelTrunc) + "…" : s;
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full overflow-visible">
+      {ticks.map(t => (
+        <g key={t.y}>
+          <line x1={P.l} y1={t.y} x2={W - P.r} y2={t.y} stroke="#f1f5f9" strokeWidth="1" />
+          <text x={P.l - 5} y={t.y + 4} textAnchor="end" fontSize="9"
+            fill="#cbd5e1" fontFamily="system-ui">{t.v}</text>
+        </g>
+      ))}
+      {items.map((item, i) => {
+        const cx    = P.l + colW * i + colW / 2;
+        const barH  = item.count > 0 ? Math.max((item.count / max) * ph, 3) : 0;
+        const barY  = P.t + ph - barH;
+        const color = PALETTE[i % PALETTE.length];
+        return (
+          <g key={item.name}>
+            <rect x={cx - barW / 2} y={barY} width={barW} height={barH}
+              rx="5" ry="5" fill={color} opacity="0.85" />
+            {item.count > 0 && (
+              <text x={cx} y={barY - 6} textAnchor="middle" fontSize="10.5"
+                fill={color} fontWeight="800" fontFamily="system-ui">{item.count}</text>
+            )}
+            <text x={cx} y={H - 1} textAnchor="middle" fontSize="9.5"
+              fill="#94a3b8" fontFamily="system-ui">{fmt(item.name)}</text>
+          </g>
+        );
+      })}
+    </svg>
   );
 }
 
@@ -312,47 +322,61 @@ function HeatmapChart({ data }) {
     return <p className="text-[12px] text-gray-300 text-center py-6">Belum ada data.</p>;
   const { rows, cols, cells, max } = data;
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full border-collapse text-[12px]">
-        <thead>
-          <tr>
-            <th className="text-left pb-3 pr-4 text-[9px] font-bold text-gray-300 uppercase tracking-widest min-w-[110px]">Fakultas</th>
-            {cols.map(c => (
-              <th key={c} className="pb-3 px-2 text-center font-bold text-gray-500 text-[12px]">{c}</th>
-            ))}
-            <th className="pb-3 pl-4 text-center text-[9px] font-bold text-gray-300 uppercase tracking-widest">Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map(fak => {
-            const rowTotal = cols.reduce((s, c) => s + (cells[fak]?.[c] ?? 0), 0);
-            return (
-              <tr key={fak}>
-                <td className="pr-4 py-1 text-gray-500 text-[11px] whitespace-nowrap align-middle font-medium">
-                  {FAK_SHORT[fak] ?? fak}
-                </td>
-                {cols.map(c => {
-                  const count = cells[fak]?.[c] ?? 0;
-                  const t     = max > 0 ? count / max : 0;
-                  const bg    = count === 0 ? "#f8fafc" : `rgba(4,97,55,${(0.08 + 0.82 * t).toFixed(2)})`;
-                  const fg    = t > 0.48 ? "white" : (count === 0 ? "#d1d5db" : "#046137");
-                  return (
-                    <td key={c} className="px-1 py-1 align-middle">
-                      <div className="rounded-lg flex items-center justify-center h-9 font-bold tabular-nums text-[13px] transition-colors"
-                        style={{ backgroundColor: bg, color: fg, minWidth: "2.25rem" }}
-                        title={`${FAK_SHORT[fak] ?? fak} · ${c}: ${count}`}
-                      >
-                        {count === 0 ? <span className="text-gray-200 font-normal text-[11px]">—</span> : count}
-                      </div>
-                    </td>
-                  );
-                })}
-                <td className="pl-4 py-1 text-center font-black text-gray-700 text-[13px] align-middle">{rowTotal}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+    <div>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-[12px]">
+          <thead>
+            <tr>
+              <th className="text-left pb-3 pr-4 text-[9px] font-bold text-gray-300 uppercase tracking-widest min-w-[110px]">Fakultas</th>
+              {cols.map(c => (
+                <th key={c} className="pb-3 px-2 text-center font-bold text-gray-500 text-[12px]">{c}</th>
+              ))}
+              <th className="pb-3 pl-4 text-center text-[9px] font-bold text-gray-300 uppercase tracking-widest">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(fak => {
+              const rowTotal = cols.reduce((s, c) => s + (cells[fak]?.[c] ?? 0), 0);
+              return (
+                <tr key={fak}>
+                  <td className="pr-4 py-1 text-gray-500 text-[11px] whitespace-nowrap align-middle font-medium">
+                    {FAK_ABBR[fak] ?? fak}
+                  </td>
+                  {cols.map(c => {
+                    const count = cells[fak]?.[c] ?? 0;
+                    const t     = max > 0 ? count / max : 0;
+                    const bg    = count === 0 ? "#f8fafc" : `rgba(4,97,55,${(0.08 + 0.82 * t).toFixed(2)})`;
+                    const fg    = t > 0.48 ? "white" : (count === 0 ? "#d1d5db" : "#046137");
+                    return (
+                      <td key={c} className="px-1 py-1 align-middle">
+                        <div className="rounded-lg flex items-center justify-center h-9 font-bold tabular-nums text-[13px] transition-colors"
+                          style={{ backgroundColor: bg, color: fg, minWidth: "2.25rem" }}
+                          title={`${FAK_ABBR[fak] ?? fak} · ${c}: ${count}`}
+                        >
+                          {count === 0 ? <span className="text-gray-200 font-normal text-[11px]">—</span> : count}
+                        </div>
+                      </td>
+                    );
+                  })}
+                  <td className="pl-4 py-1 text-center font-black text-gray-700 text-[13px] align-middle tabular-nums">{rowTotal}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      {/* Skala warna */}
+      <div className="mt-4 flex items-center gap-2.5 justify-end">
+        <span className="text-[9px] font-bold text-gray-300 uppercase tracking-widest">Skala:</span>
+        <span className="text-[10px] text-gray-400">Sedikit</span>
+        <div className="flex gap-0.5">
+          {[0.1, 0.25, 0.4, 0.55, 0.7, 0.85, 1.0].map(t => (
+            <div key={t} className="w-5 h-2.5 rounded-sm"
+              style={{ backgroundColor: `rgba(4,97,55,${(0.08 + 0.82 * t).toFixed(2)})` }} />
+          ))}
+        </div>
+        <span className="text-[10px] text-gray-400">Banyak</span>
+      </div>
     </div>
   );
 }
@@ -443,12 +467,12 @@ export default function VisualisasiDataOperator() {
 
   const buildParams = useCallback((f) => {
     const p = new URLSearchParams();
-    if (f.fakultas)    p.set("fakultas",    f.fakultas);
-    if (f.prodi)       p.set("prodi",       f.prodi);
-    if (f.tahun)       p.set("tahun",       f.tahun);
-    if (f.tingkatan)   p.set("tingkatan",   f.tingkatan);
-    if (f.kategori)    p.set("kategori",    f.kategori);
-    if (f.kepesertaan) p.set("kepesertaan", f.kepesertaan);
+    if (f.fakultas)  p.set("fakultas",  f.fakultas);
+    if (f.prodi)     p.set("prodi",     f.prodi);
+    if (f.tahun)     p.set("tahun",     f.tahun);
+    if (f.tingkatan) p.set("tingkatan", f.tingkatan);
+    if (f.kategori)  p.set("kategori",  f.kategori);
+    if (f.periode)   p.set("periode",   f.periode);
     return p.toString();
   }, []);
 
@@ -483,7 +507,7 @@ export default function VisualisasiDataOperator() {
 
   const resetFilters = () => { setFilters(EMPTY_FILTERS); fetchStats(EMPTY_FILTERS); };
 
-  // ── Export Excel ─────────────────────────────────────────────────────────────
+  // ── Export Excel ──────────────────────────────────────────────────────────────
   const handleExport = async () => {
     setExporting(true);
     try {
@@ -557,16 +581,14 @@ export default function VisualisasiDataOperator() {
 
       drawHeader();
 
-      const sMap = Object.fromEntries((stats?.by_status ?? []).map(d => [d.name, d.count]));
       const total = stats?.total ?? data.length;
       const boxes = [
-        { label: "Total Klaim",    value: total,                        color: [55,65,81]   },
-        { label: "Disetujui",      value: sMap["Disetujui"]      ?? 0,  color: [4,97,55]    },
-        { label: "Dalam Proses",   value: sMap["Dalam Proses"]   ?? 0,  color: [79,70,229]  },
-        { label: "Perlu Ditinjau", value: sMap["Perlu Ditinjau"] ?? 0,  color: [180,83,9]   },
-        { label: "Ditolak",        value: sMap["Ditolak"]        ?? 0,  color: [185,28,28]  },
+        { label: "Total Disetujui", value: total,                                                                                              color: [4,97,55]    },
+        { label: "Puspresnas",      value: (stats?.by_jenis ?? []).find(d => d.name === "Lomba Mandiri Puspresnas")?.count ?? 0,     color: [79,70,229]  },
+        { label: "Non-Puspresnas",  value: (stats?.by_jenis ?? []).find(d => d.name === "Lomba Mandiri Non-Puspresnas")?.count ?? 0, color: [8,145,178]  },
+        { label: "Rekognisi",       value: (stats?.by_jenis ?? []).find(d => d.name === "Rekognisi Non-Lomba")?.count ?? 0,          color: [124,58,237] },
       ];
-      const BY = 25, BH = 14, BW = (PW - M * 2 - 4 * 3) / 5;
+      const BY = 25, BH = 14, BW = (PW - M * 2 - 3 * 3) / 4;
       boxes.forEach((b, i) => {
         const x = M + i * (BW + 3);
         doc.setFillColor(248,250,252); doc.setDrawColor(226,232,240); doc.setLineWidth(0.3);
@@ -589,14 +611,6 @@ export default function VisualisasiDataOperator() {
         headStyles: { fillColor: GREEN, textColor: [255,255,255], fontStyle: "bold", fontSize: 7, halign: "center" },
         alternateRowStyles: { fillColor: [249,250,251] },
         columnStyles: Object.fromEntries(COL_W.map((w,i) => [i, { cellWidth: w, halign: i === 0 ? "center" : "left" }])),
-        didParseCell: (info) => {
-          if (info.section === "body" && info.column.index === 11) {
-            const s = info.cell.raw;
-            if (s === "Disetujui")           { info.cell.styles.textColor = [4,97,55];    info.cell.styles.fontStyle = "bold"; }
-            else if (s === "Ditolak")        { info.cell.styles.textColor = [185,28,28];  info.cell.styles.fontStyle = "bold"; }
-            else if (s === "Perlu Ditinjau") { info.cell.styles.textColor = [180,83,9];   info.cell.styles.fontStyle = "bold"; }
-          }
-        },
         didDrawPage: ({ pageNumber }) => { if (pageNumber > 1) drawHeader(); },
       });
 
@@ -618,13 +632,13 @@ export default function VisualisasiDataOperator() {
     ? (filterOpts?.prodi_by_fakultas?.[filters.fakultas] ?? [])
     : Object.values(filterOpts?.prodi_by_fakultas ?? {}).flat();
 
-  const statusMap = Object.fromEntries((stats?.by_status ?? []).map(d => [d.name, d.count]));
-  const kpiItems  = [
-    { label: "Total Klaim",    value: stats?.total ?? 0,                 bg: "bg-gray-50",    border: "border-gray-100",   text: "text-gray-400",   numText: "text-gray-800" },
-    { label: "Disetujui",      value: statusMap["Disetujui"]      ?? 0,  ...STATUS_CFG["Disetujui"]      },
-    { label: "Ditolak",        value: statusMap["Ditolak"]        ?? 0,  ...STATUS_CFG["Ditolak"]        },
-    { label: "Perlu Ditinjau", value: statusMap["Perlu Ditinjau"] ?? 0,  ...STATUS_CFG["Perlu Ditinjau"] },
-    { label: "Dalam Proses",   value: statusMap["Dalam Proses"]   ?? 0,  ...STATUS_CFG["Dalam Proses"]   },
+  const findJenis = (name) => (stats?.by_jenis ?? []).find(d => d.name === name)?.count ?? 0;
+
+  const kpiItems = [
+    { label: "Total Disetujui", value: stats?.total ?? 0,                        bg: "bg-[#f0f7f3]",  border: "border-[#d4ebe0]",  text: "text-[#046137]",  numText: "text-gray-900"   },
+    { label: "Puspresnas",      value: findJenis("Lomba Mandiri Puspresnas"),     bg: "bg-indigo-50",  border: "border-indigo-100",  text: "text-indigo-600", numText: "text-indigo-800" },
+    { label: "Non-Puspresnas",  value: findJenis("Lomba Mandiri Non-Puspresnas"), bg: "bg-cyan-50",    border: "border-cyan-100",    text: "text-cyan-600",   numText: "text-cyan-800"   },
+    { label: "Rekognisi",       value: findJenis("Rekognisi Non-Lomba"),          bg: "bg-purple-50",  border: "border-purple-100",  text: "text-purple-600", numText: "text-purple-800" },
   ];
 
   // ── Render ────────────────────────────────────────────────────────────────────
@@ -636,7 +650,7 @@ export default function VisualisasiDataOperator() {
         <div>
           <h1 className="text-4xl font-black text-gray-900 leading-none tracking-tight">Visualisasi Data</h1>
           <p className="text-gray-400 mt-3 text-[14px]">
-            Statistik klaim sertifikat — filter lalu export ke Excel atau PDF.
+            Statistik klaim sertifikat terverifikasi — filter lalu export ke Excel atau PDF.
           </p>
         </div>
         <div className="flex items-center gap-2.5 flex-shrink-0 mt-1">
@@ -685,16 +699,16 @@ export default function VisualisasiDataOperator() {
           )}
         </div>
         <div className="grid grid-cols-3 gap-3 lg:grid-cols-6">
-          <FilterSelect label="Tahun"          value={filters.tahun}       onChange={v => setFilter("tahun", v)}        options={filterOpts?.tahun ?? []} />
-          <FilterSelect label="Fakultas"       value={filters.fakultas}    onChange={v => setFilter("fakultas", v)}     options={(filterOpts?.fakultas ?? []).map(f => ({ value: f, label: FAK_SHORT[f] ?? f }))} />
-          <FilterSelect label="Prodi"          value={filters.prodi}       onChange={v => setFilter("prodi", v)}        options={prodiOptions} disabled={prodiOptions.length === 0} />
-          <FilterSelect label="Tingkatan"      value={filters.tingkatan}   onChange={v => setFilter("tingkatan", v)}    options={filterOpts?.tingkatan ?? []} />
-          <FilterSelect label="Jenis Kegiatan" value={filters.kategori}    onChange={v => setFilter("kategori", v)}     options={[
+          <FilterSelect label="Tahun"          value={filters.tahun}     onChange={v => setFilter("tahun", v)}      options={filterOpts?.tahun ?? []} />
+          <FilterSelect label="Fakultas"       value={filters.fakultas}  onChange={v => setFilter("fakultas", v)}   options={(filterOpts?.fakultas ?? []).map(f => ({ value: f, label: FAK_SHORT[f] ?? f }))} />
+          <FilterSelect label="Prodi"          value={filters.prodi}     onChange={v => setFilter("prodi", v)}      options={prodiOptions} disabled={prodiOptions.length === 0} />
+          <FilterSelect label="Tingkatan"      value={filters.tingkatan} onChange={v => setFilter("tingkatan", v)}  options={filterOpts?.tingkatan ?? []} />
+          <FilterSelect label="Jenis Kegiatan" value={filters.kategori}  onChange={v => setFilter("kategori", v)}   options={[
             { value: "lomba_mandiri_puspresnas",     label: "Lomba Mandiri Puspresnas"     },
             { value: "lomba_mandiri_non_puspresnas", label: "Lomba Mandiri Non-Puspresnas" },
             { value: "rekognisi",                    label: "Rekognisi Non-Lomba"          },
           ]} />
-          <FilterSelect label="Kepesertaan"    value={filters.kepesertaan} onChange={v => setFilter("kepesertaan", v)}  options={filterOpts?.kepesertaan ?? []} />
+          <FilterSelect label="Periode"        value={filters.periode}   onChange={v => setFilter("periode", v)}    options={filterOpts?.periode ?? []} />
         </div>
         <FilterChips filters={filters} onRemove={removeFilter} />
       </div>
@@ -718,30 +732,24 @@ export default function VisualisasiDataOperator() {
       ) : (
         <div className="space-y-5">
 
-          {/* Row 1 — KPI Cards ──────────────────────────────────────────────── */}
-          <div className="grid grid-cols-5 gap-4">
+          {/* Row 1 — KPI Cards */}
+          <div className="grid grid-cols-4 gap-4">
             {kpiItems.map(k => (
               <KPICard key={k.label} {...k} total={stats.total} />
             ))}
           </div>
 
-          {/* Row 2 — Tren + Donut Status ────────────────────────────────────── */}
+          {/* Row 2 — Tren + Per Periode */}
           <div className="grid grid-cols-12 gap-5">
-            <ChartCard label="Tren" title="Klaim per Tahun" className="col-span-8">
+            <ChartCard label="Tren" title="Klaim Disetujui per Tahun" className="col-span-7">
               <TrendChart data={stats.by_tahun} />
             </ChartCard>
-            <ChartCard label="Distribusi" title="Status Klaim" className="col-span-4">
-              <DonutChart
-                data={stats.by_status}
-                total={stats.total}
-                colorFn={n => STATUS_DONUT_COLOR[n] ?? "#94a3b8"}
-                centerLabel="Klaim"
-                compact
-              />
+            <ChartCard label="Distribusi" title="Klaim per Periode" className="col-span-5">
+              <VBarChart data={(stats.by_periode ?? []).slice(-5)} labelTrunc={14} />
             </ChartCard>
           </div>
 
-          {/* Row 3 — Fakultas + Donut Jenis Kegiatan ───────────────────────── */}
+          {/* Row 3 — Fakultas + Jenis */}
           <div className="grid grid-cols-2 gap-5">
             <ChartCard label="Distribusi" title="Per Fakultas">
               <HBarChart data={stats.by_fakultas} formatLabel={n => FAK_SHORT[n] ?? n} maxItems={7} />
@@ -751,26 +759,24 @@ export default function VisualisasiDataOperator() {
                 data={stats.by_jenis}
                 total={stats.total}
                 centerLabel="Klaim"
+                colorFn={n => JENIS_COLOR[n] ?? PALETTE[0]}
                 labelFn={n => JENIS_SHORT[n] ?? n}
               />
             </ChartCard>
           </div>
 
-          {/* Row 4 — Heatmap ─────────────────────────────────────────────────── */}
+          {/* Row 4 — Heatmap */}
           <ChartCard label="Sebaran" title="Klaim per Fakultas × Tahun">
             <HeatmapChart data={stats.heatmap} />
           </ChartCard>
 
-          {/* Row 5 — Prodi + Tingkatan + Split Kepesertaan ─────────────────── */}
-          <div className="grid grid-cols-3 gap-5">
+          {/* Row 5 — Prodi + Tingkatan */}
+          <div className="grid grid-cols-2 gap-5">
             <ChartCard label="Distribusi" title="Program Studi">
               <HBarChart data={stats.by_prodi} maxItems={8} />
             </ChartCard>
             <ChartCard label="Distribusi" title="Tingkatan Lomba">
-              <HBarChart data={stats.by_tingkatan} maxItems={6} />
-            </ChartCard>
-            <ChartCard label="Proporsi" title="Jenis Kepesertaan">
-              <SplitBar data={stats.by_kepesertaan} total={stats.total} />
+              <VBarChart data={stats.by_tingkatan} maxItems={6} />
             </ChartCard>
           </div>
 

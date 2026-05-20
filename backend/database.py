@@ -1019,12 +1019,12 @@ def upsert_profil_mahasiswa(email: str, data: dict):
 # Statistik Visualisasi
 # ---------------------------------------------------------------------------
 def get_stats_visualisasi(
-    filter_fakultas:    str = None,
-    filter_prodi:       str = None,
-    filter_tahun:       str = None,
-    filter_tingkatan:   str = None,
-    filter_kategori:    str = None,
-    filter_kepesertaan: str = None,
+    filter_fakultas:  str = None,
+    filter_prodi:     str = None,
+    filter_tahun:     str = None,
+    filter_tingkatan: str = None,
+    filter_kategori:  str = None,
+    filter_periode:   str = None,
 ) -> dict:
     from backend.nim_parser import parse_nim
 
@@ -1032,35 +1032,35 @@ def get_stats_visualisasi(
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT c.mahasiswa_email, c.tanggal, c.tingkat, c.status,
-               p.kategori_simkatmawa, p.tahun_kegiatan, p.jenis_kepesertaan
+        SELECT c.mahasiswa_email, c.tanggal, c.tingkat,
+               p.kategori_simkatmawa, p.tahun_kegiatan,
+               pk.nama AS periode_nama
         FROM CLAIMS c
         LEFT JOIN PENGAJUAN p ON p.claim_id = c.id
+        LEFT JOIN PERIODE_KLAIM pk ON pk.id = c.periode_id
+        WHERE c.status = 'sudah dicek'
         ORDER BY c.id
     """)
     rows = cursor.fetchall()
     conn.close()
 
-    # Normalisasi semua baris ke dict terlebih dahulu
     all_rows = []
-    for (email, tanggal, tingkat, status, kat_simkat, tahun_keg, kepesertaan) in rows:
-        parsed     = parse_nim(email)
-        row_fak    = parsed["fakultas"] if parsed.get("valid") else "Lainnya"
-        row_prodi  = parsed["prodi"]    if parsed.get("valid") else "Lainnya"
-        row_tahun  = tahun_keg or (tanggal[:4] if tanggal and len(tanggal) >= 4 else None)
+    for (email, tanggal, tingkat, kat_simkat, tahun_keg, periode_nama) in rows:
+        parsed    = parse_nim(email)
+        row_fak   = parsed["fakultas"] if parsed.get("valid") else "Lainnya"
+        row_prodi = parsed["prodi"]    if parsed.get("valid") else "Lainnya"
+        row_tahun = tahun_keg or (tanggal[:4] if tanggal and len(tanggal) >= 4 else None)
         all_rows.append({
-            "fakultas":    row_fak,
-            "prodi":       row_prodi,
-            "tahun":       row_tahun,
-            "tingkatan":   tingkat       or "Tidak Diketahui",
-            "status":      status        or "Tidak Diketahui",
-            "kategori":    kat_simkat    or "tidak_diketahui",
-            "kepesertaan": kepesertaan   or "Tidak Diketahui",
+            "fakultas":  row_fak,
+            "prodi":     row_prodi,
+            "tahun":     row_tahun,
+            "tingkatan": tingkat    or "Tidak Diketahui",
+            "kategori":  kat_simkat or "tidak_diketahui",
+            "periode":   periode_nama or "Tanpa Periode",
         })
 
-    # Bangun filter_options dari data PENUH (tidak terpengaruh filter aktif)
     def unique_sorted(vals):
-        return sorted(v for v in set(vals) if v and v not in ("Lainnya", "Tidak Diketahui", "tidak_diketahui"))
+        return sorted(v for v in set(vals) if v and v not in ("Lainnya", "Tidak Diketahui", "tidak_diketahui", "Tanpa Periode"))
 
     prodi_by_fak = {}
     for d in all_rows:
@@ -1070,44 +1070,41 @@ def get_stats_visualisasi(
     prodi_by_fak = {k: sorted(v) for k, v in prodi_by_fak.items()}
 
     filter_options = {
-        "fakultas":          unique_sorted(d["fakultas"]    for d in all_rows),
+        "fakultas":          unique_sorted(d["fakultas"]  for d in all_rows),
         "prodi_by_fakultas": prodi_by_fak,
-        "tahun":             unique_sorted(d["tahun"]       for d in all_rows if d["tahun"]),
-        "tingkatan":         unique_sorted(d["tingkatan"]   for d in all_rows),
-        "kepesertaan":       unique_sorted(d["kepesertaan"] for d in all_rows),
+        "tahun":             unique_sorted(d["tahun"]     for d in all_rows if d["tahun"]),
+        "tingkatan":         unique_sorted(d["tingkatan"] for d in all_rows),
+        "periode":           unique_sorted(d["periode"]   for d in all_rows),
     }
 
-    # Terapkan filter
     filtered = all_rows
     if filter_fakultas:
-        filtered = [d for d in filtered if d["fakultas"]    == filter_fakultas]
+        filtered = [d for d in filtered if d["fakultas"]  == filter_fakultas]
     if filter_prodi:
-        filtered = [d for d in filtered if d["prodi"]       == filter_prodi]
+        filtered = [d for d in filtered if d["prodi"]     == filter_prodi]
     if filter_tahun:
-        filtered = [d for d in filtered if d["tahun"]       == filter_tahun]
+        filtered = [d for d in filtered if d["tahun"]     == filter_tahun]
     if filter_tingkatan:
-        filtered = [d for d in filtered if d["tingkatan"]   == filter_tingkatan]
+        filtered = [d for d in filtered if d["tingkatan"] == filter_tingkatan]
     if filter_kategori:
-        filtered = [d for d in filtered if d["kategori"]    == filter_kategori]
-    if filter_kepesertaan:
-        filtered = [d for d in filtered if d["kepesertaan"] == filter_kepesertaan]
+        filtered = [d for d in filtered if d["kategori"]  == filter_kategori]
+    if filter_periode:
+        filtered = [d for d in filtered if d["periode"]   == filter_periode]
 
-    # Agregasi
     from collections import defaultdict
-    fak_count  = defaultdict(int)
-    prod_count = defaultdict(int)
-    jenis_count  = defaultdict(int)
-    tahun_count  = defaultdict(int)
+    fak_count     = defaultdict(int)
+    prod_count    = defaultdict(int)
+    jenis_count   = defaultdict(int)
+    tahun_count   = defaultdict(int)
     tingkat_count = defaultdict(int)
-    kp_count   = defaultdict(int)
-    status_count = defaultdict(int)
+    periode_count = defaultdict(int)
 
     for d in filtered:
-        fak_count[d["fakultas"]]   += 1
-        prod_count[d["prodi"]]     += 1
-        tahun_count[d["tahun"] or "—"] += 1
-        tingkat_count[d["tingkatan"]]  += 1
-        kp_count[d["kepesertaan"]]     += 1
+        fak_count[d["fakultas"]]        += 1
+        prod_count[d["prodi"]]          += 1
+        tahun_count[d["tahun"] or "—"]  += 1
+        tingkat_count[d["tingkatan"]]   += 1
+        periode_count[d["periode"]]     += 1
 
         k = d["kategori"]
         if k == "lomba_mandiri_puspresnas":
@@ -1119,23 +1116,12 @@ def get_stats_visualisasi(
         else:
             jenis_count["Tidak Diketahui"] += 1
 
-        st = d["status"]
-        if st == "sudah dicek":
-            status_count["Disetujui"] += 1
-        elif st == "ditolak":
-            status_count["Ditolak"] += 1
-        elif st == "perlu ditinjau":
-            status_count["Perlu Ditinjau"] += 1
-        else:
-            status_count["Dalam Proses"] += 1
-
     def to_list(d):
         return sorted([{"name": k, "count": v} for k, v in d.items()], key=lambda x: -x["count"])
 
     def to_list_key(d):
         return sorted([{"name": k, "count": v} for k, v in d.items()], key=lambda x: x["name"])
 
-    # Heatmap: Fakultas × Tahun
     heatmap_cells: dict = {}
     for d in filtered:
         fak   = d["fakultas"]
@@ -1149,13 +1135,12 @@ def get_stats_visualisasi(
 
     return {
         "total":          len(filtered),
-        "by_status":      to_list(status_count),
         "by_fakultas":    to_list(fak_count),
         "by_prodi":       to_list(prod_count),
         "by_jenis":       to_list(jenis_count),
         "by_tahun":       to_list_key(tahun_count),
         "by_tingkatan":   to_list(tingkat_count),
-        "by_kepesertaan": to_list(kp_count),
+        "by_periode":     to_list(periode_count),
         "filter_options": filter_options,
         "heatmap": {
             "rows":  heatmap_rows,
