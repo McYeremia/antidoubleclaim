@@ -65,7 +65,13 @@
       "Bash(.venvScriptspython.exe -c ' *)",
       "Bash(sqlite3 claims.db \"SELECT id, nama_lomba, mahasiswa_email, status, mirip_dengan_id FROM CLAIMS WHERE id = 93 OR mirip_dengan_id = 93;\")",
       "Bash(dir *)",
-      "WebSearch"
+      "WebSearch",
+      "WebFetch(domain:idl.cs.washington.edu)",
+      "WebFetch(domain:arinbasu.github.io)",
+      "WebFetch(domain:arxiv.org)",
+      "WebFetch(domain:www.cell.com)",
+      "WebFetch(domain:journals.sagepub.com)",
+      "WebFetch(domain:repository.lsu.edu)"
     ]
   }
 }

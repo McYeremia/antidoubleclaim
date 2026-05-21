@@ -32,13 +32,63 @@ const JENIS_SHORT = {
   "Rekognisi Non-Lomba":          "Rekognisi",
 };
 
+const FAK_COLOR = {
+  "Fakultas Teologi":                    "#9333ea",
+  "Fakultas Bisnis":                     "#FDD100",
+  "Fakultas Bioteknologi":               "#046137",
+  "Fakultas Kedokteran":                 "#e2e8f0",
+  "Fakultas Arsitektur dan Desain":      "#3b82f6",
+  "Fakultas Teknologi Informasi":        "#6b7280",
+  "Fakultas Kependidikan dan Humaniora": "#f97316",
+  "Fakultas Humaniora":                  "#f97316",
+};
+
+const PRODI_FAK = {
+  "Prodi Filsafat Keilahian":        "Fakultas Teologi",
+  "Prodi Manajemen":                 "Fakultas Bisnis",
+  "Prodi Akuntansi":                 "Fakultas Bisnis",
+  "Prodi Biologi":                   "Fakultas Bioteknologi",
+  "Prodi Kedokteran":                "Fakultas Kedokteran",
+  "Prodi Arsitektur":                "Fakultas Arsitektur dan Desain",
+  "Prodi Desain Produk":             "Fakultas Arsitektur dan Desain",
+  "Prodi Informatika":               "Fakultas Teknologi Informasi",
+  "Prodi Sistem Informasi":          "Fakultas Teknologi Informasi",
+  "Prodi Pendidikan Bahasa Inggris": "Fakultas Kependidikan dan Humaniora",
+  "Prodi Studi Humanitas":           "Fakultas Kependidikan dan Humaniora",
+};
+
+// Warna turunan per prodi — shade gelap & terang dari warna fakultas induk
+const PRODI_COLOR = {
+  // Teologi → ungu
+  "Prodi Filsafat Keilahian":        "#9333ea",
+  // Bisnis → kuning (gelap & terang)
+  "Prodi Manajemen":                 "#FDD100",
+  "Prodi Akuntansi":                 "#D4A800",
+  // Bioteknologi → hijau
+  "Prodi Biologi":                   "#046137",
+  // Kedokteran → slate
+  "Prodi Kedokteran":                "#cbd5e1",
+  // Arsitektur dan Desain → biru (gelap & terang)
+  "Prodi Arsitektur":                "#2563eb",
+  "Prodi Desain Produk":             "#60a5fa",
+  // Teknologi Informasi → abu-abu (gelap & terang)
+  "Prodi Informatika":               "#4b5563",
+  "Prodi Sistem Informasi":          "#9ca3af",
+  // Kependidikan dan Humaniora → oranye (gelap & terang)
+  "Prodi Pendidikan Bahasa Inggris": "#ea580c",
+  "Prodi Studi Humanitas":           "#fb923c",
+};
+
 const JENIS_COLOR = {
-  "Lomba Mandiri Puspresnas":     "#4f46e5",
-  "Lomba Mandiri Non-Puspresnas": "#0891b2",
-  "Rekognisi Non-Lomba":          "#7c3aed",
+  "Lomba Mandiri Puspresnas":     "#046137",
+  "Lomba Mandiri Non-Puspresnas": "#0d9488",
+  "Rekognisi Non-Lomba":          "#b45309",
 };
 
 const PALETTE = ["#046137","#4f46e5","#0891b2","#d97706","#dc2626","#7c3aed","#0d9488","#ea580c"];
+
+// Palet hijau bertingkat untuk chart Periode & Tingkatan
+const GREEN_SHADES = ["#046137","#0a7a4a","#10a063","#2db87a","#5bcc96","#8ddbb4"];
 
 const EMPTY_FILTERS = { fakultas: "", prodi: "", tahun: "", tingkatan: "", kategori: "", periode: "" };
 
@@ -228,10 +278,10 @@ function TrendChart({ data }) {
 
 // ── Horizontal Bar ────────────────────────────────────────────────────────────
 
-function HBarChart({ data, formatLabel, maxItems = 8 }) {
+function HBarChart({ data, formatLabel, maxItems, colorFn }) {
   if (!data || data.length === 0)
     return <p className="text-[12px] text-gray-300 text-center py-8">Belum ada data.</p>;
-  const items = data.slice(0, maxItems);
+  const items = maxItems ? data.slice(0, maxItems) : data;
   const max   = Math.max(...items.map(d => d.count), 1);
   const sum   = items.reduce((s, d) => s + d.count, 0);
   return (
@@ -239,6 +289,7 @@ function HBarChart({ data, formatLabel, maxItems = 8 }) {
       {items.map((item, i) => {
         const barPct = Math.max((item.count / max) * 100, 2);
         const relPct = sum > 0 ? Math.round((item.count / sum) * 100) : 0;
+        const color  = colorFn ? colorFn(item.name) : PALETTE[i % PALETTE.length];
         return (
           <div key={item.name}>
             <div className="flex items-center justify-between mb-1">
@@ -252,7 +303,7 @@ function HBarChart({ data, formatLabel, maxItems = 8 }) {
             </div>
             <div className="h-[7px] bg-gray-50 rounded-full overflow-hidden">
               <div className="h-full rounded-full transition-all duration-700"
-                style={{ width: `${barPct}%`, backgroundColor: PALETTE[i % PALETTE.length], opacity: 0.85 }} />
+                style={{ width: `${barPct}%`, backgroundColor: color, opacity: 0.85 }} />
             </div>
           </div>
         );
@@ -263,7 +314,7 @@ function HBarChart({ data, formatLabel, maxItems = 8 }) {
 
 // ── Vertical Bar ─────────────────────────────────────────────────────────────
 
-function VBarChart({ data, maxItems = 8, labelTrunc = 16 }) {
+function VBarChart({ data, maxItems = 8, labelTrunc = 16, colorFn }) {
   if (!data || data.length === 0)
     return <p className="text-[12px] text-gray-300 text-center py-8">Belum ada data.</p>;
 
@@ -297,7 +348,7 @@ function VBarChart({ data, maxItems = 8, labelTrunc = 16 }) {
         const cx    = P.l + colW * i + colW / 2;
         const barH  = item.count > 0 ? Math.max((item.count / max) * ph, 3) : 0;
         const barY  = P.t + ph - barH;
-        const color = PALETTE[i % PALETTE.length];
+        const color = colorFn ? colorFn(item.name, i) : PALETTE[i % PALETTE.length];
         return (
           <g key={item.name}>
             <rect x={cx - barW / 2} y={barY} width={barW} height={barH}
@@ -408,7 +459,7 @@ function FilterSelect({ label, value, onChange, options, disabled }) {
         className={`text-[12px] border rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-200 transition-all
           ${disabled ? "bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed"
                      : "bg-white text-gray-800 border-gray-200 hover:border-gray-300 cursor-pointer"}
-          ${value ? "font-bold border-gray-800 bg-gray-50 text-gray-900" : "font-normal"}`}
+          ${value ? "font-bold border-[#046137] bg-[#f0f7f3] text-[#046137]" : "font-normal"}`}
       >
         <option value="">Semua</option>
         {options.map(o => (
@@ -428,7 +479,7 @@ function FilterChips({ filters, onRemove }) {
     <div className="flex flex-wrap gap-2 pt-3 mt-3 border-t border-gray-50">
       {active.map(([k, v]) => (
         <span key={k}
-          className="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-900 text-white rounded-full text-[11px] font-bold leading-none"
+          className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#d4ebe0] text-[#046137] rounded-full text-[11px] font-bold leading-none"
         >
           <span className="opacity-50">{FILTER_LABEL_MAP[k]}:</span> {v}
           <button onClick={() => onRemove(k)}
@@ -584,9 +635,9 @@ export default function VisualisasiDataOperator() {
       const total = stats?.total ?? data.length;
       const boxes = [
         { label: "Total Disetujui", value: total,                                                                                              color: [4,97,55]    },
-        { label: "Puspresnas",      value: (stats?.by_jenis ?? []).find(d => d.name === "Lomba Mandiri Puspresnas")?.count ?? 0,     color: [79,70,229]  },
-        { label: "Non-Puspresnas",  value: (stats?.by_jenis ?? []).find(d => d.name === "Lomba Mandiri Non-Puspresnas")?.count ?? 0, color: [8,145,178]  },
-        { label: "Rekognisi",       value: (stats?.by_jenis ?? []).find(d => d.name === "Rekognisi Non-Lomba")?.count ?? 0,          color: [124,58,237] },
+        { label: "Puspresnas",      value: (stats?.by_jenis ?? []).find(d => d.name === "Lomba Mandiri Puspresnas")?.count ?? 0,     color: [4,97,55]    },
+        { label: "Non-Puspresnas",  value: (stats?.by_jenis ?? []).find(d => d.name === "Lomba Mandiri Non-Puspresnas")?.count ?? 0, color: [13,148,136] },
+        { label: "Rekognisi",       value: (stats?.by_jenis ?? []).find(d => d.name === "Rekognisi Non-Lomba")?.count ?? 0,          color: [180,83,9]   },
       ];
       const BY = 25, BH = 14, BW = (PW - M * 2 - 3 * 3) / 4;
       boxes.forEach((b, i) => {
@@ -614,6 +665,265 @@ export default function VisualisasiDataOperator() {
         didDrawPage: ({ pageNumber }) => { if (pageNumber > 1) drawHeader(); },
       });
 
+      // ── Helpers Visualisasi ──────────────────────────────────────────────────
+      const FAK_ABBR_P = {
+        "Fakultas Teknologi Informasi":        "FTI",
+        "Fakultas Bisnis":                     "Bisnis",
+        "Fakultas Bioteknologi":               "Bioteknologi",
+        "Fakultas Kedokteran":                 "Kedokteran",
+        "Fakultas Arsitektur dan Desain":      "Arsitektur & Desain",
+        "Fakultas Humaniora":                  "Humaniora",
+        "Fakultas Kependidikan dan Humaniora": "Kependidikan & Humaniora",
+        "Fakultas Teologi":                    "Teologi",
+      };
+      const FAK_COLOR_P = {
+        "Fakultas Teknologi Informasi":        [107,114,128],
+        "Fakultas Bisnis":                     [253,209,0],
+        "Fakultas Bioteknologi":               [4,97,55],
+        "Fakultas Kedokteran":                 [226,232,240],
+        "Fakultas Arsitektur dan Desain":      [37,99,235],
+        "Fakultas Humaniora":                  [249,115,22],
+        "Fakultas Kependidikan dan Humaniora": [249,115,22],
+        "Fakultas Teologi":                    [147,51,234],
+      };
+      const PRODI_COLOR_P = {
+        "Prodi Filsafat Keilahian":        [147,51,234],
+        "Prodi Manajemen":                 [253,209,0],
+        "Prodi Akuntansi":                 [212,168,0],
+        "Prodi Biologi":                   [4,97,55],
+        "Prodi Kedokteran":                [203,213,225],
+        "Prodi Arsitektur":                [37,99,235],
+        "Prodi Desain Produk":             [96,165,250],
+        "Prodi Informatika":               [75,85,99],
+        "Prodi Sistem Informasi":          [156,163,175],
+        "Prodi Pendidikan Bahasa Inggris": [234,88,12],
+        "Prodi Studi Humanitas":           [251,146,60],
+      };
+      const JENIS_COLOR_P = {
+        "Lomba Mandiri Puspresnas":     [4,97,55],
+        "Lomba Mandiri Non-Puspresnas": [13,148,136],
+        "Rekognisi Non-Lomba":          [180,83,9],
+      };
+      const JENIS_LABEL_P = {
+        "Lomba Mandiri Puspresnas":     "Puspresnas",
+        "Lomba Mandiri Non-Puspresnas": "Non-Puspresnas",
+        "Rekognisi Non-Lomba":          "Rekognisi",
+      };
+
+      // Untuk warna terang (kuning dll), turunkan ke shade gelap agar teks terbaca
+      const safeTextColor = ([r, g, b]) => {
+        const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        return lum > 0.65 ? [Math.round(r * 0.45), Math.round(g * 0.45), Math.round(b * 0.45)] : [r, g, b];
+      };
+
+      const secT = (x, y, txt, lw = 65) => {
+        doc.setFont("helvetica","bold"); doc.setFontSize(8); doc.setTextColor(...GREEN);
+        doc.text(txt.toUpperCase(), x, y);
+        doc.setDrawColor(...GREEN); doc.setLineWidth(0.3);
+        doc.line(x, y + 1.5, x + lw, y + 1.5);
+      };
+
+      // Vertical bar chart
+      const pdfVBars = (items, ox, oy, cw, ch, colorFn) => {
+        if (!items || items.length === 0) return;
+        const maxV = Math.max(...items.map(d => d.count), 1);
+        const colW = cw / items.length;
+        const barW = Math.min(16, colW * 0.62);
+        [0, 0.5, 1].forEach(t => {
+          const gy = oy + (1 - t) * ch;
+          doc.setDrawColor(230,234,240); doc.setLineWidth(0.2);
+          doc.line(ox, gy, ox + cw, gy);
+          doc.setFont("helvetica","normal"); doc.setFontSize(5.5); doc.setTextColor(180,190,205);
+          doc.text(String(Math.round(t * maxV)), ox - 2, gy + 2, { align:"right" });
+        });
+        items.forEach((d, i) => {
+          const cx_b = ox + colW * i + colW / 2;
+          const bh = d.count > 0 ? Math.max((d.count / maxV) * ch, 2) : 0;
+          const by = oy + ch - bh;
+          const c = colorFn ? colorFn(d.name, i) : GREEN;
+          const tc = safeTextColor(c);
+          doc.setFillColor(...c);
+          doc.roundedRect(cx_b - barW/2, by, barW, bh, 1.5, 1.5, "F");
+          if (d.count > 0) {
+            doc.setFont("helvetica","bold"); doc.setFontSize(6); doc.setTextColor(...tc);
+            doc.text(String(d.count), cx_b, by - 1.5, { align:"center" });
+          }
+          const lbl = String(d.name).length > 9 ? String(d.name).slice(0,8)+"…" : String(d.name);
+          doc.setFont("helvetica","normal"); doc.setFontSize(5.5); doc.setTextColor(148,163,184);
+          doc.text(lbl, cx_b, oy + ch + 5, { align:"center" });
+        });
+      };
+
+      // Horizontal bar chart
+      const pdfHBars = (items, ox, oy, labelW, barW, rowH, colorFn) => {
+        if (!items || items.length === 0) return;
+        const tot = items.reduce((s, d) => s + d.count, 0);
+        const maxV = Math.max(...items.map(d => d.count), 1);
+        items.forEach((d, i) => {
+          const ry = oy + i * rowH;
+          const bw = d.count > 0 ? Math.max((d.count / maxV) * barW, 1.5) : 0;
+          const c  = colorFn ? colorFn(d.name, i) : GREEN;
+          const tc = safeTextColor(c);
+          const lbl = String(d.name).length > 22 ? String(d.name).slice(0,21)+"…" : String(d.name);
+          const pct = tot > 0 ? Math.round(d.count / tot * 100) : 0;
+          doc.setFont("helvetica","normal"); doc.setFontSize(6); doc.setTextColor(100,116,139);
+          doc.text(lbl, ox, ry + 3.5);
+          doc.setFillColor(240,244,248); doc.rect(ox + labelW, ry, barW, 5, "F");
+          if (bw > 0) { doc.setFillColor(...c); doc.rect(ox + labelW, ry, bw, 5, "F"); }
+          doc.setFont("helvetica","bold"); doc.setFontSize(6); doc.setTextColor(...tc);
+          doc.text(`${d.count} (${pct}%)`, ox + labelW + barW + 2, ry + 3.5);
+        });
+      };
+
+      // Donut chart (triangle approximation)
+      const pdfDonut = (data, cx, cy, outerR, innerR, totalVal) => {
+        if (!data || data.length === 0) return;
+        const items = data.filter(d => d.count > 0);
+        let startA = -Math.PI / 2;
+        items.forEach(d => {
+          const angle = (d.count / totalVal) * 2 * Math.PI;
+          const endA  = startA + angle;
+          const steps = Math.max(8, Math.ceil(angle * 22));
+          const c = JENIS_COLOR_P[d.name] ?? GREEN;
+          doc.setFillColor(...c);
+          for (let j = 0; j < steps; j++) {
+            const a1 = startA + angle * j / steps;
+            const a2 = startA + angle * (j + 1) / steps;
+            doc.triangle(cx, cy,
+              cx + outerR * Math.cos(a1), cy + outerR * Math.sin(a1),
+              cx + outerR * Math.cos(a2), cy + outerR * Math.sin(a2), "F");
+          }
+          startA = endA;
+        });
+        doc.setFillColor(255,255,255);
+        doc.circle(cx, cy, innerR, "F");
+        doc.setFont("helvetica","bold"); doc.setFontSize(12); doc.setTextColor(17,24,39);
+        doc.text(String(totalVal), cx, cy + 1.5, { align:"center" });
+        doc.setFont("helvetica","normal"); doc.setFontSize(6); doc.setTextColor(156,163,175);
+        doc.text("Klaim", cx, cy + 6, { align:"center" });
+        // Legend di kanan donut
+        const LX = cx + outerR + 5;
+        items.forEach((d, i) => {
+          const ly = cy - outerR + i * 12;
+          const c = JENIS_COLOR_P[d.name] ?? GREEN;
+          const lbl = JENIS_LABEL_P[d.name] ?? d.name;
+          const pct = totalVal > 0 ? Math.round(d.count / totalVal * 100) : 0;
+          doc.setFillColor(...c); doc.circle(LX + 1.5, ly + 2, 1.5, "F");
+          doc.setFont("helvetica","normal"); doc.setFontSize(6.5); doc.setTextColor(100,116,139);
+          doc.text(lbl, LX + 5, ly + 3.5);
+          doc.setFont("helvetica","bold"); doc.setFontSize(7.5); doc.setTextColor(31,41,55);
+          doc.text(String(d.count), LX + 5, ly + 9);
+          doc.setFont("helvetica","normal"); doc.setFontSize(6); doc.setTextColor(156,163,175);
+          doc.text(`${pct}%`, LX + 16, ly + 9);
+        });
+      };
+
+      // Heatmap
+      const pdfHeatmap = (heatmap, ox, oy, availW) => {
+        if (!heatmap || !heatmap.rows || heatmap.rows.length === 0) return;
+        const { rows, cols, cells, max: hMax } = heatmap;
+        const labelColW = 36;
+        const cellW = Math.min(16, (availW - labelColW - 14) / cols.length);
+        const cellH = 8;
+        doc.setFont("helvetica","bold"); doc.setFontSize(6.5); doc.setTextColor(100,116,139);
+        doc.text("Fakultas", ox, oy + 4);
+        cols.forEach((c, ci) => {
+          doc.text(String(c), ox + labelColW + ci * cellW + cellW/2, oy + 4, { align:"center" });
+        });
+        doc.text("Total", ox + labelColW + cols.length * cellW + 7, oy + 4, { align:"center" });
+        rows.forEach((fak, ri) => {
+          const ry = oy + 7 + ri * cellH;
+          const rowTotal = cols.reduce((s, c) => s + (cells[fak]?.[c] ?? 0), 0);
+          const lbl = FAK_ABBR_P[fak] ?? fak;
+          doc.setFont("helvetica","normal"); doc.setFontSize(6); doc.setTextColor(100,116,139);
+          doc.text(lbl, ox, ry + 4.5);
+          cols.forEach((c, ci) => {
+            const count = cells[fak]?.[c] ?? 0;
+            const t = hMax > 0 ? count / hMax : 0;
+            const alpha = count === 0 ? 0 : (0.08 + 0.82 * t);
+            const rr = Math.round(4   + (240 - 4)   * (1 - alpha));
+            const gg = Math.round(97  + (248 - 97)  * (1 - alpha));
+            const bb = Math.round(55  + (247 - 55)  * (1 - alpha));
+            doc.setFillColor(rr, gg, bb);
+            doc.roundedRect(ox + labelColW + ci * cellW + 0.5, ry, cellW - 1, cellH - 1, 1, 1, "F");
+            if (count > 0) {
+              const fg = t > 0.48 ? [255,255,255] : GREEN;
+              doc.setFont("helvetica","bold"); doc.setFontSize(6); doc.setTextColor(...fg);
+              doc.text(String(count), ox + labelColW + ci * cellW + cellW/2, ry + 4.5, { align:"center" });
+            }
+          });
+          doc.setFont("helvetica","bold"); doc.setFontSize(7); doc.setTextColor(31,41,55);
+          doc.text(String(rowTotal), ox + labelColW + cols.length * cellW + 7, ry + 4.5, { align:"center" });
+        });
+        // Skala warna
+        const sy = oy + 7 + rows.length * cellH + 4;
+        doc.setFont("helvetica","normal"); doc.setFontSize(6); doc.setTextColor(156,163,175);
+        doc.text("Skala:", ox, sy + 3);
+        doc.text("Sedikit", ox + 10, sy + 3);
+        [0.1,0.25,0.4,0.55,0.7,0.85,1.0].forEach((t, si) => {
+          const alpha = 0.08 + 0.82 * t;
+          doc.setFillColor(
+            Math.round(4   + (240-4)   * (1-alpha)),
+            Math.round(97  + (248-97)  * (1-alpha)),
+            Math.round(55  + (247-55)  * (1-alpha))
+          );
+          doc.rect(ox + 25 + si * 5.5, sy, 5, 3.5, "F");
+        });
+        doc.text("Banyak", ox + 25 + 7 * 5.5 + 1, sy + 3);
+      };
+
+      // ── Viz Page 1: Tren + Jenis | Periode + Tingkatan ───────────────────────
+      const LX = M, LW = 130, RX = M + 139, RW = PW - M - 139 - M;
+      const VP1Y0 = 28;
+
+      doc.addPage();
+      drawHeader();
+
+      // Baris 1: Tren per Tahun (kiri) | Jenis Kegiatan donut (kanan)
+      const B1H = 50;
+      secT(LX, VP1Y0, "Tren Klaim per Tahun", LW);
+      pdfVBars(stats?.by_tahun ?? [], LX + 8, VP1Y0 + 8, LW - 10, B1H,
+        () => GREEN);
+
+      secT(RX, VP1Y0, "Jenis Kegiatan", RW);
+      const donutCX = RX + 22, donutCY = VP1Y0 + 8 + B1H/2;
+      pdfDonut(stats?.by_jenis ?? [], donutCX, donutCY, 20, 13, stats?.total ?? 0);
+
+      // Baris 2: Klaim per Periode (kiri) | Tingkatan Lomba (kanan)
+      const B2Y = VP1Y0 + B1H + 16;
+      const B2H = 48;
+      secT(LX, B2Y, "Klaim per Periode", LW);
+      const GS = [[4,97,55],[10,122,74],[16,160,99],[45,184,122],[91,204,150],[141,219,180]];
+      pdfVBars((stats?.by_periode ?? []).slice(-5), LX + 8, B2Y + 8, LW - 10, B2H,
+        (_, i) => GS[i % GS.length]);
+
+      secT(RX, B2Y, "Tingkatan Lomba", RW);
+      pdfVBars(stats?.by_tingkatan ?? [], RX + 8, B2Y + 8, RW - 10, B2H,
+        (_, i) => GS[i % GS.length]);
+
+      // ── Viz Page 2: Fakultas + Prodi ─────────────────────────────────────────
+      doc.addPage();
+      drawHeader();
+
+      const VP2Y0 = 28;
+      const byFak_pdf   = stats?.by_fakultas ?? [];
+      const byProdi_pdf = stats?.by_prodi    ?? [];
+
+      secT(LX, VP2Y0, "Distribusi per Fakultas", LW);
+      pdfHBars(byFak_pdf, LX, VP2Y0 + 8, 32, LW - 32 - 26, 9,
+        (name) => FAK_COLOR_P[name] ?? GREEN);
+
+      secT(RX, VP2Y0, "Program Studi", RW);
+      pdfHBars(byProdi_pdf, RX, VP2Y0 + 8, 36, RW - 36 - 26, 9,
+        (name) => PRODI_COLOR_P[name] ?? GREEN);
+
+      // ── Viz Page 3: Heatmap (halaman penuh agar tidak terpotong) ──────────────
+      doc.addPage();
+      drawHeader();
+
+      secT(LX, 28, "Sebaran Klaim per Fakultas × Tahun", PW - M * 2);
+      pdfHeatmap(stats?.heatmap, LX, 36, PW - M * 2);
+
       const totalPages = doc.getNumberOfPages();
       for (let pg = 1; pg <= totalPages; pg++) { doc.setPage(pg); drawFooter(pg, totalPages); }
 
@@ -636,9 +946,9 @@ export default function VisualisasiDataOperator() {
 
   const kpiItems = [
     { label: "Total Disetujui", value: stats?.total ?? 0,                        bg: "bg-[#f0f7f3]",  border: "border-[#d4ebe0]",  text: "text-[#046137]",  numText: "text-gray-900"   },
-    { label: "Puspresnas",      value: findJenis("Lomba Mandiri Puspresnas"),     bg: "bg-indigo-50",  border: "border-indigo-100",  text: "text-indigo-600", numText: "text-indigo-800" },
-    { label: "Non-Puspresnas",  value: findJenis("Lomba Mandiri Non-Puspresnas"), bg: "bg-cyan-50",    border: "border-cyan-100",    text: "text-cyan-600",   numText: "text-cyan-800"   },
-    { label: "Rekognisi",       value: findJenis("Rekognisi Non-Lomba"),          bg: "bg-purple-50",  border: "border-purple-100",  text: "text-purple-600", numText: "text-purple-800" },
+    { label: "Puspresnas",      value: findJenis("Lomba Mandiri Puspresnas"),     bg: "bg-[#e8f4ef]",  border: "border-[#046137]",  text: "text-[#046137]",  numText: "text-[#023d22]"  },
+    { label: "Non-Puspresnas",  value: findJenis("Lomba Mandiri Non-Puspresnas"), bg: "bg-[#e6f7f6]",  border: "border-[#0d9488]",  text: "text-[#0d9488]",  numText: "text-[#0a6b63]"  },
+    { label: "Rekognisi",       value: findJenis("Rekognisi Non-Lomba"),          bg: "bg-[#fef3e2]",  border: "border-[#b45309]",  text: "text-[#b45309]",  numText: "text-[#7c3a06]"  },
   ];
 
   // ── Render ────────────────────────────────────────────────────────────────────
@@ -683,7 +993,7 @@ export default function VisualisasiDataOperator() {
             </svg>
             <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Filter Data</p>
             {activeCount > 0 && (
-              <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-gray-900 text-white tabular-nums">
+              <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-[#d4ebe0] text-[#046137] tabular-nums">
                 {activeCount}
               </span>
             )}
@@ -739,22 +1049,12 @@ export default function VisualisasiDataOperator() {
             ))}
           </div>
 
-          {/* Row 2 — Tren + Per Periode */}
+          {/* Row 2 — Tren per Tahun + Jenis Kegiatan */}
           <div className="grid grid-cols-12 gap-5">
             <ChartCard label="Tren" title="Klaim Disetujui per Tahun" className="col-span-7">
               <TrendChart data={stats.by_tahun} />
             </ChartCard>
-            <ChartCard label="Distribusi" title="Klaim per Periode" className="col-span-5">
-              <VBarChart data={(stats.by_periode ?? []).slice(-5)} labelTrunc={14} />
-            </ChartCard>
-          </div>
-
-          {/* Row 3 — Fakultas + Jenis */}
-          <div className="grid grid-cols-2 gap-5">
-            <ChartCard label="Distribusi" title="Per Fakultas">
-              <HBarChart data={stats.by_fakultas} formatLabel={n => FAK_SHORT[n] ?? n} maxItems={7} />
-            </ChartCard>
-            <ChartCard label="Komposisi" title="Jenis Kegiatan">
+            <ChartCard label="Komposisi" title="Jenis Kegiatan" className="col-span-5">
               <DonutChart
                 data={stats.by_jenis}
                 total={stats.total}
@@ -765,20 +1065,34 @@ export default function VisualisasiDataOperator() {
             </ChartCard>
           </div>
 
-          {/* Row 4 — Heatmap */}
+          {/* Row 3 — Per Periode + Tingkatan Lomba */}
+          <div className="grid grid-cols-2 gap-5">
+            <ChartCard label="Distribusi" title="Klaim per Periode">
+              <VBarChart data={(stats.by_periode ?? []).slice(-5)} labelTrunc={14}
+                colorFn={(_, i) => GREEN_SHADES[i % GREEN_SHADES.length]} />
+            </ChartCard>
+            <ChartCard label="Distribusi" title="Tingkatan Lomba">
+              <VBarChart data={stats.by_tingkatan} maxItems={6}
+                colorFn={(_, i) => GREEN_SHADES[i % GREEN_SHADES.length]} />
+            </ChartCard>
+          </div>
+
+          {/* Row 4 — Per Fakultas + Program Studi */}
+          <div className="grid grid-cols-2 gap-5">
+            <ChartCard label="Distribusi" title="Per Fakultas">
+              <HBarChart data={stats.by_fakultas} formatLabel={n => FAK_SHORT[n] ?? n} maxItems={7}
+                colorFn={n => FAK_COLOR[n] ?? PALETTE[0]} />
+            </ChartCard>
+            <ChartCard label="Distribusi" title="Program Studi">
+              <HBarChart data={stats.by_prodi}
+                colorFn={n => PRODI_COLOR[n] ?? FAK_COLOR[PRODI_FAK[n]] ?? PALETTE[0]} />
+            </ChartCard>
+          </div>
+
+          {/* Row 5 — Heatmap */}
           <ChartCard label="Sebaran" title="Klaim per Fakultas × Tahun">
             <HeatmapChart data={stats.heatmap} />
           </ChartCard>
-
-          {/* Row 5 — Prodi + Tingkatan */}
-          <div className="grid grid-cols-2 gap-5">
-            <ChartCard label="Distribusi" title="Program Studi">
-              <HBarChart data={stats.by_prodi} maxItems={8} />
-            </ChartCard>
-            <ChartCard label="Distribusi" title="Tingkatan Lomba">
-              <VBarChart data={stats.by_tingkatan} maxItems={6} />
-            </ChartCard>
-          </div>
 
         </div>
       )}

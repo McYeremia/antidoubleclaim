@@ -1463,6 +1463,7 @@ def get_export_data(
         LEFT JOIN USERS u           ON u.id          = c.verified_by
         LEFT JOIN PENGAJUAN p       ON p.claim_id    = c.id
         LEFT JOIN PENGAJUAN_ANGGOTA a ON a.pengajuan_id = p.id
+        WHERE c.status = 'sudah dicek'
         GROUP BY c.id
         ORDER BY c.id DESC
     """)
