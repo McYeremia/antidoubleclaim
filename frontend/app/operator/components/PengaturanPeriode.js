@@ -58,17 +58,18 @@ export default function PengaturanPeriode({ operatorNama, operatorId }) {
     }
     setSaving(true);
     try {
+      const authHeader = operatorId ? { "x-operator-id": String(operatorId) } : {};
       if (editingPeriode) {
         const res = await apiFetch(`${API}/periode/${editingPeriode.id}`, {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...authHeader },
           body: JSON.stringify(form),
         });
         if (!res.ok) { alert("Gagal menyimpan perubahan."); return; }
       } else {
         const res = await apiFetch(`${API}/periode`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...authHeader },
           body: JSON.stringify({ ...form, dibuat_oleh: operatorNama }),
         });
         if (!res.ok) { alert("Gagal membuat periode."); return; }

@@ -1,0 +1,65 @@
+KETERBATASAN SISTEM ANTIDOUBLECLAIM
+====================================
+Dicatat: 2026-05-23
+
+---------------------------------------------------------------------------
+MASALAH: Endpoint API mahasiswa tidak terproteksi di level backend
+---------------------------------------------------------------------------
+
+LATAR BELAKANG:
+  Sistem memiliki dua mekanisme autentikasi yang berbeda:
+  - Operator  : header X-Operator-ID (bisa diverifikasi FastAPI)
+  - Mahasiswa : Google OAuth via NextAuth.js (hanya ada di sisi Next.js,
+                tidak bisa diverifikasi langsung oleh FastAPI)
+
+  Karena NextAuth hanya menyimpan session di Next.js server, FastAPI tidak
+  punya cara untuk memverifikasi identitas mahasiswa secara langsung.
+
+DAMPAK:
+  Endpoint berikut dapat diakses tanpa autentikasi jika seseorang memanggil
+  API FastAPI secara langsung (bypass frontend):
+
+  - GET  /claims?email=...          (lihat klaim milik email tertentu)
+  - GET  /pengajuan?email=...       (lihat pengajuan milik email tertentu)
+  - GET  /reward-konfirmasi?email=. (lihat reward milik email tertentu)
+  - GET  /profil?email=...          (sudah ditambah validasi format email)
+  - PUT  /profil?email=...          (sudah ditambah validasi format email)
+
+  Perlindungan saat ini hanya dari sisi frontend: halaman mahasiswa hanya
+  bisa diakses setelah login Google. Jika API dipanggil langsung (misal
+  via curl atau Postman), data bisa diakses tanpa login.
+
+SOLUSI YANG TERSEDIA (belum diimplementasi):
+
+  Solusi 1 - Proxy Next.js API Route
+    Semua request mahasiswa diteruskan melalui Next.js /api/... yang
+    memverifikasi session NextAuth sebelum meneruskan ke FastAPI.
+    (Pola ini sudah diterapkan untuk /api/file)
+    Perubahan: Sedang | Keamanan: Baik
+
+  Solusi 2 - Header Email Terverifikasi
+    Next.js meneruskan email dari session ke FastAPI via header khusus
+    (X-Verified-Email). FastAPI percaya header ini karena request hanya
+    boleh datang dari Next.js server.
+    Perubahan: Sedang | Keamanan: Cukup
+
+  Solusi 3 - JWT Token untuk Mahasiswa
+    Setelah OAuth sukses, NextAuth membuat JWT tambahan yang dikirim ke
+    FastAPI dan diverifikasi di setiap request mahasiswa.
+    Perubahan: Besar | Keamanan: Terbaik
+
+  Solusi 4 - Network Restriction (Production)
+    Backend FastAPI tidak diekspos ke publik, hanya bisa diakses dari
+    server Next.js melalui jaringan internal.
+    Perubahan: Tidak ada (konfigurasi jaringan) | Keamanan: Baik
+
+REKOMENDASI:
+  Untuk konteks deployment production: gunakan Solusi 4 (backend tidak
+  diekspos publik) ditambah Solusi 1 untuk endpoint paling sensitif.
+  Untuk pengembangan lebih lanjut: Solusi 3 (JWT) adalah yang paling
+  proper secara arsitektur.
+
+---------------------------------------------------------------------------
+STATUS: Diketahui, belum diimplementasi. Sistem tetap aman selama backend
+tidak diekspos langsung ke internet (hanya diakses via Next.js frontend).
+---------------------------------------------------------------------------

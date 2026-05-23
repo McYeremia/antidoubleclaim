@@ -18,15 +18,14 @@ export default function ClaimSection({
       ) : (
         <table className="w-full table-fixed text-sm text-left">
           <colgroup>
-            <col className="w-16" />
+            <col className="w-14" />
             <col className="w-[160px]" />
-            <col className="w-[110px]" />
-            <col className="w-[150px]" />
-            <col className="w-[110px]" />
-            {showMirip    && <col className="w-[110px]" />}
-            {showMirip    && <col className="w-[100px]" />}
-            {showVerified && <col className="w-[160px]" />}
-            <col className={showActions ? "w-[190px]" : "w-[90px]"} />
+            <col className="w-[90px]" />
+            <col className="w-[120px]" />
+            <col className="w-[100px]" />
+            {showMirip    && <col className="w-[130px]" />}
+            {showVerified && <col className="w-[150px]" />}
+            <col className={showActions ? "w-[200px]" : "w-[80px]"} />
           </colgroup>
           <thead>
             <tr className="border-b border-gray-50">
@@ -35,8 +34,7 @@ export default function ClaimSection({
               <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Tingkat</th>
               <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Peringkat</th>
               <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">{showMirip ? "Tgl. Pengajuan" : "Tanggal Pengajuan"}</th>
-              {showMirip    && <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Mirip Dengan</th>}
-              {showMirip    && <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Alasan</th>}
+              {showMirip    && <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Mirip Dengan - Alasan</th>}
               {showVerified && <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest">Diverifikasi Oleh</th>}
               <th className="px-6 py-3.5 text-[10px] font-bold text-gray-300 uppercase tracking-widest text-right">Aksi</th>
             </tr>
@@ -63,33 +61,27 @@ export default function ClaimSection({
                 {showMirip && (
                   <td className="px-6 py-4">
                     {claim.mirip_dengan_id ? (
-                      <button
-                        onClick={e => { e.stopPropagation(); router.push(`/operator/${claim.mirip_dengan_id}`); }}
-                        className="px-2.5 py-1 rounded-full text-[11px] font-black bg-orange-100 text-orange-700 hover:bg-orange-200"
-                      >
-                        #{claim.mirip_dengan_id}
-                      </button>
+                      <div className="flex flex-col items-start gap-1">
+                        <button
+                          onClick={e => { e.stopPropagation(); router.push(`/operator/${claim.mirip_dengan_id}`); }}
+                          className="px-2.5 py-1 rounded-full text-[11px] font-black bg-orange-100 text-orange-700 hover:bg-orange-200"
+                        >
+                          #{claim.mirip_dengan_id}
+                        </button>
+                        {claim.flag_alasan && (() => {
+                          const a = claim.flag_alasan;
+                          const isBoth = a === "gambar, nama" || a === "gambar, nama lomba";
+                          const isImg  = a === "gambar";
+                          const label  = isBoth ? "Gambar + Nama" : isImg ? "Gambar" : "Nama";
+                          const style  = isBoth ? "bg-red-100 text-red-700" : "bg-orange-100 text-orange-700";
+                          return (
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide ${style}`}>
+                              {label}
+                            </span>
+                          );
+                        })()}
+                      </div>
                     ) : <span className="text-gray-200">—</span>}
-                  </td>
-                )}
-                {showMirip && (
-                  <td className="px-6 py-4">
-                    {claim.flag_alasan ? (() => {
-                      const a = claim.flag_alasan;
-                      const isBoth = a === "gambar, nama" || a === "gambar, nama lomba";
-                      const isImg  = a === "gambar";
-                      const label  = isBoth ? "Gambar + Nama" : isImg ? "Gambar" : "Nama";
-                      const style  = isBoth
-                        ? "bg-red-100 text-red-700"
-                        : isImg
-                        ? "bg-orange-100 text-orange-700"
-                        : "bg-orange-100 text-orange-700";
-                      return (
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide ${style}`}>
-                          {label}
-                        </span>
-                      );
-                    })() : <span className="text-gray-200">—</span>}
                   </td>
                 )}
                 {showVerified && (
