@@ -71,7 +71,9 @@
       "WebFetch(domain:arxiv.org)",
       "WebFetch(domain:www.cell.com)",
       "WebFetch(domain:journals.sagepub.com)",
-      "WebFetch(domain:repository.lsu.edu)"
+      "WebFetch(domain:repository.lsu.edu)",
+      "PowerShell(Get-Item *)",
+      "Bash(powershell -Command \"\\(Get-Item '4_Skripsi_Yeremia C.pdf'\\).Length\")"
     ]
   }
 }
