@@ -3,9 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
-const apiFetch = (url, options = {}) => fetch(url, { ...options, headers: { "ngrok-skip-browser-warning": "true", ...(options.headers || {}) } });
+import { API, apiFetch } from "./components/shared";
 
 const IconClaim = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -59,7 +57,7 @@ export function OperatorTopbar() {
   useEffect(() => {
     setOperatorNama(localStorage.getItem("operator_nama") || "Operator");
     setOperatorRole(localStorage.getItem("operator_role") || "operator");
-    apiFetch(`${API_URL}/periode/aktif`)
+    apiFetch(`${API}/periode/aktif`)
       .then(r => r.ok ? r.json() : { aktif: false })
       .then(p => setPeriodeLabel(p.aktif && p.periode?.nama ? p.periode.nama : null))
       .catch(() => setPeriodeLabel(null));
@@ -126,9 +124,6 @@ export function OperatorTopbar() {
 }
 
 export default function OperatorSidebar({ activeKey = "claim" }) {
-  const isSuperAdmin = typeof window !== "undefined"
-    ? localStorage.getItem("operator_role") === "superadmin"
-    : false;
   const [superAdmin, setSuperAdmin] = useState(false);
   useEffect(() => {
     setSuperAdmin(localStorage.getItem("operator_role") === "superadmin");

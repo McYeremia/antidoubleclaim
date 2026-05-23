@@ -152,6 +152,27 @@ def kirim_email_reward_dikembalikan(email: str, nama_lomba: str, catatan: str = 
     _kirim(email, f"Data Rekening Dikembalikan — {nama_lomba}", _template(konten))
 
 
+# ── Reset password operator ───────────────────────────────────────────────────
+def kirim_email_otp_reset_operator(email: str, nama: str, otp: str):
+    konten = f"""
+      <p style="margin:0 0 20px;font-size:15px;font-weight:bold;color:#111;">&#128273; Reset Password Akun Operator</p>
+      <p style="margin:0 0 12px;color:#374151;font-size:14px;">Yth. {nama},</p>
+      <p style="margin:0 0 20px;color:#374151;font-size:14px;line-height:1.6;">
+        Kami menerima permintaan reset password untuk akun operator Anda.
+        Gunakan kode OTP berikut untuk melanjutkan:
+      </p>
+      <div style="background:#f9fafb;border:2px dashed #046137;padding:24px;border-radius:12px;text-align:center;margin-bottom:20px;">
+        <p style="margin:0;font-size:40px;font-weight:900;letter-spacing:14px;color:#046137;">{otp}</p>
+        <p style="margin:10px 0 0;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:2px;">berlaku 15 menit</p>
+      </div>
+      <p style="margin:0;color:#374151;font-size:14px;line-height:1.6;">
+        Jika Anda tidak merasa meminta reset password, abaikan email ini.
+        Password Anda tidak akan berubah.
+      </p>
+    """
+    _kirim(email, "Reset Password Akun Operator", _template(konten))
+
+
 # ── Reward: selesai ───────────────────────────────────────────────────────────
 def kirim_email_reward_selesai(email: str, nama_lomba: str):
     konten = f"""

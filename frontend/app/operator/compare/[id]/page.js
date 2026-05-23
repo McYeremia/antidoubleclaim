@@ -4,10 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
-const apiFetch = (url, options = {}) => fetch(url, { ...options, headers: { "ngrok-skip-browser-warning": "true", ...(options.headers || {}) } });
 import OperatorSidebar, { OperatorTopbar } from "../../_sidebar";
-import { formatTanggal } from "../../components/shared";
+import { API, apiFetch, formatTanggal } from "../../components/shared";
 
 const STATUS_LABEL = {
   "belum dicek":    { text: "Belum Dicek",    cls: "bg-[#d4ebe0] text-[#046137]" },
@@ -31,7 +29,8 @@ function CertPanel({ claim, label, accent }) {
     </div>
   );
 
-  const fileUrl  = `/api/file?name=${claim.sertifikat_filename}`;
+  const opId    = typeof window !== "undefined" ? localStorage.getItem("operator_id") : "";
+  const fileUrl  = `/api/file?name=${claim.sertifikat_filename}${opId ? `&op=${opId}` : ""}`;
   const isPdf    = claim.sertifikat_filename?.toLowerCase().endsWith(".pdf");
   const accentBg = accent === "orange" ? "bg-orange-50 border-orange-200" : "bg-[#f0f7f3] border-[#d4ebe0]";
   const accentTxt = accent === "orange" ? "text-orange-600" : "text-[#046137]";
@@ -119,13 +118,13 @@ export default function ComparePage() {
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      const resA = await apiFetch(`${API_URL}/claims/${id}`);
+      const resA = await apiFetch(`${API}/claims/${id}`);
       if (!resA.ok) { setNotFound(true); setLoading(false); return; }
       const a = await resA.json();
       setClaimA(a);
 
       if (a.mirip_dengan_id) {
-        const resB = await apiFetch(`${API_URL}/claims/${a.mirip_dengan_id}`);
+        const resB = await apiFetch(`${API}/claims/${a.mirip_dengan_id}`);
         if (resB.ok) setClaimB(await resB.json());
       }
       setLoading(false);

@@ -4,9 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import MahasiswaSidebar from "../_sidebar";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
-const apiFetch = (url, options = {}) => fetch(url, { ...options, headers: { "ngrok-skip-browser-warning": "true", ...(options.headers || {}) } });
+import { API_URL, apiFetch } from "./components/shared";
 import TambahKlaimWizard from "./TambahKlaimWizard";
 import DaftarKlaim from "./components/DaftarKlaim";
 import KonfirmasiReward from "./components/KonfirmasiReward";

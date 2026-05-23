@@ -3,9 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import OperatorSidebar from "./_sidebar";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
-const apiFetch = (url, options = {}) => fetch(url, { ...options, headers: { "ngrok-skip-browser-warning": "true", ...(options.headers || {}) } });
+import { API, apiFetch } from "./components/shared";
 import PengajuanClaim          from "./components/PengajuanClaim";
 import PengajuanReward          from "./components/PengajuanReward";
 import KelolaOperator            from "./components/KelolaOperator";
@@ -48,7 +46,7 @@ function OperatorDashboardContent() {
   }, [router]);
 
   useEffect(() => {
-    apiFetch(`${API_URL}/periode/aktif`)
+    apiFetch(`${API}/periode/aktif`)
       .then(r => r.ok ? r.json() : { aktif: false })
       .then(p => setPeriodeLabel(p.aktif && p.periode?.nama ? p.periode.nama : null))
       .catch(() => setPeriodeLabel(null));
@@ -56,11 +54,11 @@ function OperatorDashboardContent() {
 
   const handleSelfPassword = async (e) => {
     e.preventDefault();
-    if (pwForm.new.length < 6) { setPwError("Password baru minimal 6 karakter."); return; }
+    if (pwForm.new.length < 8) { setPwError("Password baru minimal 8 karakter."); return; }
     if (pwForm.new !== pwForm.confirm) { setPwError("Konfirmasi password tidak cocok."); return; }
     setPwSaving(true);
     try {
-      const res = await apiFetch(`${API_URL}/operators/${operatorId}/password`, {
+      const res = await apiFetch(`${API}/operators/${operatorId}/password`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", "x-operator-id": String(operatorId) },
         body: JSON.stringify({ old_password: pwForm.old, new_password: pwForm.new }),
@@ -196,7 +194,7 @@ function OperatorDashboardContent() {
                 <form onSubmit={handleSelfPassword} className="space-y-4">
                   {[
                     { label: "Password Lama",            key: "old",     placeholder: "Masukkan password saat ini" },
-                    { label: "Password Baru",            key: "new",     placeholder: "Minimal 6 karakter" },
+                    { label: "Password Baru",            key: "new",     placeholder: "Minimal 8 karakter" },
                     { label: "Konfirmasi Password Baru", key: "confirm", placeholder: "Ulangi password baru" },
                   ].map(f => (
                     <div key={f.key}>

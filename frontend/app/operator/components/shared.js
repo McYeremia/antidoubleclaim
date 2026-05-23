@@ -99,11 +99,13 @@ export function DocLink({ label, path }) {
   const filename = path.split(/[\\/]/).pop();
   const match = filename.match(/^.+?_[0-9a-f]{32}_(.+)$/);
   const displayName = match ? match[1] : filename;
+  const opId = typeof window !== "undefined" ? localStorage.getItem("operator_id") : "";
+  const href = `/api/file?name=${filename}${opId ? `&op=${opId}` : ""}`;
   return (
     <div className="min-w-0 overflow-hidden">
       <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{label}</p>
       <a
-        href={`/api/file?name=${filename}`}
+        href={href}
         target="_blank"
         rel="noopener noreferrer"
         className="text-[13px] font-bold text-[#046137] hover:text-[#035230] mt-1 flex items-center gap-1.5 overflow-hidden transition-colors"
@@ -140,11 +142,13 @@ export function ArsipFileLink({ label, path }) {
   if (!path) return null;
   const filename = path.split(/[\\/]/).pop();
   const display  = filename.length > 36 ? filename.slice(0, 33) + "…" : filename;
+  const opId = typeof window !== "undefined" ? localStorage.getItem("operator_id") : "";
+  const href = `/api/file?name=${filename}${opId ? `&op=${opId}` : ""}`;
   return (
     <div className="min-w-0">
       <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{label}</p>
       <a
-        href={`/api/file?name=${filename}`}
+        href={href}
         target="_blank"
         rel="noopener noreferrer"
         title={filename}

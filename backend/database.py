@@ -837,6 +837,25 @@ def get_reward_konfirmasi_by_email(email: str) -> list:
     return [dict(zip(cols, row)) for row in rows]
 
 
+def get_all_reward_konfirmasi() -> list:
+    """Kembalikan semua reward konfirmasi kecuali dari periode yang diarsipkan."""
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT rk.*, c.nama_lomba, p.estimasi_reward
+        FROM REWARD_KONFIRMASI rk
+        LEFT JOIN CLAIMS c ON c.id = rk.claim_id
+        LEFT JOIN PENGAJUAN p ON p.claim_id = rk.claim_id
+        LEFT JOIN PERIODE_KLAIM pk ON pk.id = c.periode_id
+        WHERE (pk.status IS NULL OR pk.status != 'diarsipkan')
+        ORDER BY rk.id DESC
+    """)
+    rows = cursor.fetchall()
+    cols = [d[0] for d in cursor.description]
+    conn.close()
+    return [dict(zip(cols, row)) for row in rows]
+
+
 def get_reward_konfirmasi_by_id(reward_id: int):
     conn = _get_conn()
     cursor = conn.cursor()
@@ -1605,3 +1624,58 @@ def update_operator_password(username: str, new_password: str):
     )
     conn.commit()
     conn.close()
+
+
+def get_operator_by_email(email: str):
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT id, username, nama, email, role FROM USERS WHERE email = ?",
+        (email,)
+    )
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        return None
+    return dict(zip(["id", "username", "nama", "email", "role"], row))
+
+
+def create_operator_otp(email: str, otp: str):
+    """Simpan OTP reset password operator. Hapus OTP lama untuk email yang sama."""
+    from datetime import datetime, timedelta
+    expired_at = (datetime.now() + timedelta(minutes=15)).strftime("%Y-%m-%d %H:%M:%S")
+    conn = _get_conn()
+    conn.execute(
+        "DELETE FROM OTP_SESSIONS WHERE email = ? AND google_name = 'operator_reset'",
+        (email,)
+    )
+    conn.execute(
+        "INSERT INTO OTP_SESSIONS (email, otp, expired_at, used, google_name) VALUES (?, ?, ?, 0, 'operator_reset')",
+        (email, otp, expired_at)
+    )
+    conn.commit()
+    conn.close()
+
+
+def verify_operator_otp(email: str, otp: str) -> bool:
+    """Verifikasi OTP operator. Tandai sebagai used jika valid."""
+    from datetime import datetime
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id, expired_at, used FROM OTP_SESSIONS
+        WHERE email = ? AND otp = ? AND google_name = 'operator_reset'
+        ORDER BY id DESC LIMIT 1
+    """, (email, otp))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return False
+    otp_id, expired_at, used = row
+    if used or datetime.now().strftime("%Y-%m-%d %H:%M:%S") > expired_at:
+        conn.close()
+        return False
+    conn.execute("UPDATE OTP_SESSIONS SET used = 1 WHERE id = ?", (otp_id,))
+    conn.commit()
+    conn.close()
+    return True

@@ -86,7 +86,7 @@ export default function KelolaOperator({ operatorId }) {
 
   const handleResetPasswordConfirm = async (e) => {
     e.preventDefault();
-    if (pwForm.new_password.length < 6) { setPwError("Password minimal 6 karakter."); return; }
+    if (pwForm.new_password.length < 8) { setPwError("Password minimal 8 karakter."); return; }
     if (pwForm.new_password !== pwForm.confirm) { setPwError("Konfirmasi password tidak cocok."); return; }
     setPwSaving(true);
     try {
@@ -454,7 +454,7 @@ export default function KelolaOperator({ operatorId }) {
                     autoFocus
                     value={pwForm.new_password}
                     onChange={e => { setPwForm(v => ({ ...v, new_password: e.target.value })); setPwError(""); }}
-                    placeholder="Minimal 6 karakter"
+                    placeholder="Minimal 8 karakter"
                     className="w-full px-4 py-3 pr-10 bg-gray-50 border border-gray-200 rounded-2xl text-[14px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
                   />
                   <button

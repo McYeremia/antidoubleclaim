@@ -4,9 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
-const apiFetch = (url, options = {}) => fetch(url, { ...options, headers: { "ngrok-skip-browser-warning": "true", ...(options.headers || {}) } });
+import { API_URL, apiFetch } from "../../dashboard/components/shared";
 
 // ── Konstanta ─────────────────────────────────────────────────────────────────
 const KOMPETISI_PUSPRESNAS = [

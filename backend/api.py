@@ -9,6 +9,7 @@ import json
 import traceback
 import uuid
 import io
+import random
 import imagehash
 from PIL import Image
 from pdf2image import convert_from_bytes
@@ -29,13 +30,17 @@ from backend.database import (
     get_periode_aktif, get_periode_terkini, get_all_periode, create_periode,
     update_periode_status, update_periode_data, delete_periode, reset_semua_data,
     arsipkan_periode, get_claims_by_periode_id, get_rewards_by_periode_id, get_periode_nama,
+    get_all_reward_konfirmasi,
     get_reward_konfirmasi_by_id,
     get_klaim_sebagai_anggota,
     update_operator_password,
+    get_operator_by_email,
+    create_operator_otp,
+    verify_operator_otp,
     PHASH_THRESHOLD, FUZZY_THRESHOLD,
 )
 from backend.nim_parser import parse_nim, is_valid_student_email
-from backend.image_hash import generate_phash, hamming_distance, POPPLER_PATH
+from backend.image_hash import POPPLER_PATH
 from backend.text_similarity import token_sort_ratio
 from backend.email_service import (
     kirim_email_klaim_disetujui,
@@ -43,6 +48,7 @@ from backend.email_service import (
     kirim_email_reward_diproses,
     kirim_email_reward_dikembalikan,
     kirim_email_reward_selesai,
+    kirim_email_otp_reset_operator,
 )
 
 app = FastAPI()
@@ -235,10 +241,14 @@ class ProfilUpdate(BaseModel):
 
 @app.get("/profil")
 async def get_profil(email: str):
+    if not is_valid_student_email(email):
+        raise HTTPException(status_code=400, detail="Email tidak valid")
     return get_profil_mahasiswa(email)
 
 @app.put("/profil")
 async def update_profil(email: str, body: ProfilUpdate):
+    if not is_valid_student_email(email):
+        raise HTTPException(status_code=400, detail="Email tidak valid")
     upsert_profil_mahasiswa(email, body.model_dump())
     return {"success": True}
 
@@ -272,8 +282,10 @@ async def list_periode():
     return get_all_periode()
 
 @app.post("/periode")
-async def buat_periode(body: PeriodeCreate):
+async def buat_periode(body: PeriodeCreate, x_operator_id: Optional[str] = Header(None)):
+    op = _require_operator(x_operator_id)
     periode_id = create_periode(body.model_dump())
+    insert_audit_log(op["id"], op["nama"], "buat_periode", "periode", periode_id, body.nama)
     return {"success": True, "id": periode_id}
 
 @app.put("/periode/{periode_id}")
@@ -308,8 +320,10 @@ class PeriodeEdit(BaseModel):
     tanggal_selesai: str
 
 @app.patch("/periode/{periode_id}")
-async def edit_periode(periode_id: int, body: PeriodeEdit):
+async def edit_periode(periode_id: int, body: PeriodeEdit, x_operator_id: Optional[str] = Header(None)):
+    op = _require_operator(x_operator_id)
     update_periode_data(periode_id, body.model_dump())
+    insert_audit_log(op["id"], op["nama"], "edit_periode", "periode", periode_id, body.nama)
     return {"success": True}
 
 @app.delete("/periode/{periode_id}")
@@ -691,25 +705,14 @@ class RewardStatusUpdate(BaseModel):
 async def list_rewards(email: Optional[str] = None):
     if email:
         return get_reward_konfirmasi_by_email(email)
-    from backend.database import _get_conn
-    conn = _get_conn()
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT rk.*, c.nama_lomba, p.estimasi_reward
-        FROM REWARD_KONFIRMASI rk
-        LEFT JOIN CLAIMS c ON c.id = rk.claim_id
-        LEFT JOIN PENGAJUAN p ON p.claim_id = rk.claim_id
-        LEFT JOIN PERIODE_KLAIM pk ON pk.id = c.periode_id
-        WHERE (pk.status IS NULL OR pk.status != 'diarsipkan')
-        ORDER BY rk.id DESC
-    """)
-    rows = cursor.fetchall()
-    cols = [d[0] for d in cursor.description]
-    conn.close()
-    return [dict(zip(cols, row)) for row in rows]
+    return get_all_reward_konfirmasi()
+
+_VALID_REWARD_STATUSES = {"menunggu", "diproses", "selesai", "dikembalikan", "ditolak"}
 
 @app.patch("/reward-konfirmasi/{reward_id}/status")
 async def update_reward(reward_id: int, body: RewardStatusUpdate, background_tasks: BackgroundTasks, x_operator_id: Optional[str] = Header(None)):
+    if body.status not in _VALID_REWARD_STATUSES:
+        raise HTTPException(status_code=400, detail=f"Status tidak valid. Gunakan: {', '.join(sorted(_VALID_REWARD_STATUSES))}")
     op = _require_operator(x_operator_id)
     reward = get_reward_konfirmasi_by_id(reward_id)
     update_reward_status(reward_id, body.status, body.catatan)
@@ -766,7 +769,7 @@ async def resubmit_reward(
         contents = upload.file.read()
         if len(contents) > MAX_FILE_SIZE:
             raise HTTPException(status_code=413, detail=f"File '{upload.filename}' melebihi batas maksimal 3 MB")
-        path = os.path.join(UPLOAD_FOLDER, f"{uuid.uuid4().hex}_{upload.filename}")
+        path = os.path.join(UPLOAD_FOLDER, f"reward_{uuid.uuid4().hex}_{upload.filename}")
         with open(path, "wb") as f:
             f.write(contents)
         return path
@@ -833,6 +836,36 @@ async def login_operator(body: OperatorLoginRequest):
         raise HTTPException(status_code=401, detail="Username atau password salah")
     return {"success": True, "user": user}
 
+class LupaPasswordRequest(BaseModel):
+    email: str
+
+class ResetPasswordRequest(BaseModel):
+    email: str
+    otp: str
+    new_password: str
+
+@app.post("/operator/lupa-password")
+async def lupa_password_operator(body: LupaPasswordRequest, background_tasks: BackgroundTasks):
+    op = get_operator_by_email(body.email)
+    otp = str(random.randint(100000, 999999))
+    create_operator_otp(body.email, otp)
+    if op:
+        background_tasks.add_task(kirim_email_otp_reset_operator, op["email"], op["nama"], otp)
+    # Selalu return sukses agar email tidak bisa dienumerasi
+    return {"success": True, "pesan": "Jika email terdaftar, kode OTP akan dikirimkan."}
+
+@app.post("/operator/reset-password")
+async def reset_password_operator(body: ResetPasswordRequest):
+    if not body.new_password or len(body.new_password) < 8:
+        raise HTTPException(status_code=400, detail="Password baru minimal 8 karakter")
+    if not verify_operator_otp(body.email, body.otp):
+        raise HTTPException(status_code=400, detail="Kode OTP tidak valid atau sudah kadaluarsa")
+    op = get_operator_by_email(body.email)
+    if not op:
+        raise HTTPException(status_code=400, detail="Kode OTP tidak valid atau sudah kadaluarsa")
+    update_operator_password(op["username"], body.new_password)
+    return {"success": True}
+
 @app.get("/operators")
 async def list_operators(x_operator_id: Optional[str] = Header(None)):
     _require_superadmin(x_operator_id)
@@ -844,6 +877,8 @@ async def add_operator(
     x_operator_id: Optional[str] = Header(None),
 ):
     op = _require_superadmin(x_operator_id)
+    if not body.password or len(body.password) < 8:
+        raise HTTPException(status_code=400, detail="Password minimal 8 karakter")
     role = body.role or "operator"
     ok = create_operator(body.username, body.password, body.nama, body.email, role)
     if not ok:
@@ -878,8 +913,8 @@ async def change_operator_password(
         if not authenticate_operator(target["username"], body.old_password):
             raise HTTPException(status_code=401, detail="Password lama tidak sesuai")
 
-    if not body.new_password or len(body.new_password) < 6:
-        raise HTTPException(status_code=400, detail="Password baru minimal 6 karakter")
+    if not body.new_password or len(body.new_password) < 8:
+        raise HTTPException(status_code=400, detail="Password baru minimal 8 karakter")
 
     update_operator_password(target["username"], body.new_password)
     insert_audit_log(op["id"], op["nama"], "ganti_password", "operator", operator_id, f"{target['nama']}|{target['role']}")
