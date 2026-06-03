@@ -1,14 +1,19 @@
+// Halaman kelola operator (superadmin only): tambah, hapus, reset password, dan cari akun operator.
 "use client";
 
 import { useEffect, useState } from "react";
 import { API, apiFetch } from "./shared";
 
+// Warna badge per role untuk ditampilkan di tabel daftar operator.
 const ROLE_BADGE = {
   superadmin: "bg-purple-100 text-purple-700",
   operator:   "bg-[#d4ebe0] text-[#046137]",
 };
 
+// Menampilkan daftar operator aktif, form tambah akun baru, dan modal konfirmasi hapus/reset password.
 export default function KelolaOperator({ operatorId }) {
+
+  // ─── STATE ────────────────────────────────────────────────────────────────
   const [operators, setOperators] = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [showForm,  setShowForm]  = useState(false);
@@ -16,11 +21,13 @@ export default function KelolaOperator({ operatorId }) {
   const [formError, setFormError] = useState("");
   const [form,        setForm]        = useState({ username: "", password: "", nama: "", email: "", role: "operator" });
   const [search,       setSearch]       = useState("");
-  const [deleteModal,  setDeleteModal]  = useState(null); // { id, nama, isSelf }
+  // Modal hapus: { id, nama, isSelf } — isSelf mencegah superadmin menghapus akunnya sendiri.
+  const [deleteModal,  setDeleteModal]  = useState(null);
   const [deletePw,     setDeletePw]     = useState("");
   const [deleteError,  setDeleteError]  = useState("");
   const [deleteSaving, setDeleteSaving] = useState(false);
-  const [passwordModal, setPasswordModal] = useState(null); // { id, nama }
+  // Modal reset password: { id, nama }
+  const [passwordModal, setPasswordModal] = useState(null);
   const [pwForm,        setPwForm]        = useState({ new_password: "", confirm: "" });
   const [pwError,       setPwError]       = useState("");
   const [pwSaving,      setPwSaving]      = useState(false);
@@ -28,8 +35,11 @@ export default function KelolaOperator({ operatorId }) {
   const [showDeletePw,  setShowDeletePw]  = useState(false);
   const [showResetPw,   setShowResetPw]   = useState({ new: false, confirm: false });
 
+  // Header standar untuk request API yang membutuhkan autentikasi operator.
   const headers = { "Content-Type": "application/json", "x-operator-id": String(operatorId) };
 
+  // ─── DATA FETCHING ────────────────────────────────────────────────────────
+  // Mengambil daftar semua operator dari API.
   const fetchOperators = async () => {
     setLoading(true);
     try {

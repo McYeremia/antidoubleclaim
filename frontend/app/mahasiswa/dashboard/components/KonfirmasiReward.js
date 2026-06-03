@@ -1,3 +1,4 @@
+// Halaman pencairan reward: menampilkan klaim yang perlu dilengkapi data rekening dan status reward yang sudah diisi.
 "use client";
 
 import { useState, useEffect } from "react";
@@ -9,8 +10,10 @@ import {
   InfoRow,
 } from "./shared";
 
+// Modal detail data reward yang sudah diisi mahasiswa beserta status terkini dari operator.
 function RewardDetailModal({ claim, reward, onClose }) {
   if (!claim || !reward) return null;
+  // Mengekstrak nama file dari path absolut untuk ditampilkan dan diakses via proxy.
   const filename = (path) => path ? path.split(/[\\/]/).pop() : null;
   const fileUrl  = (path) => { const f = filename(path); return f ? `/api/file?name=${f}` : null; };
 
@@ -101,7 +104,10 @@ function RewardDetailModal({ claim, reward, onClose }) {
   );
 }
 
+// Menampilkan daftar klaim yang sudah disetujui dan perlu dilengkapi data rekening untuk pencairan reward.
 export default function KonfirmasiReward({ session, search = "", initialClaimId = null, onClearInitial }) {
+
+  // ─── STATE ────────────────────────────────────────────────────────────────
   const [claims,            setClaims]            = useState([]);
   const [rewardMap,         setRewardMap]         = useState({});
   const [pengajuanMap,      setPengajuanMap]      = useState({});
@@ -109,7 +115,7 @@ export default function KonfirmasiReward({ session, search = "", initialClaimId 
   const [selectedClaimId,   setSelectedClaimId]   = useState(initialClaimId);
   const [detailRewardClaim, setDetailRewardClaim] = useState(null);
 
-  // Fix: tambah onClearInitial ke dependency array
+  // Sinkronkan klaim yang dibuka dari DaftarKlaim (via prop initialClaimId) ke state lokal.
   useEffect(() => {
     if (initialClaimId) {
       setSelectedClaimId(initialClaimId);
@@ -117,6 +123,8 @@ export default function KonfirmasiReward({ session, search = "", initialClaimId 
     }
   }, [initialClaimId, onClearInitial]);
 
+  // ─── DATA FETCHING ────────────────────────────────────────────────────────
+  // Mengambil klaim, reward, dan data pengajuan SIMKATMAWA secara paralel.
   const fetchAll = () => {
     setLoading(true);
     Promise.all([
@@ -127,6 +135,7 @@ export default function KonfirmasiReward({ session, search = "", initialClaimId 
       const claimData     = await claimRes.json();
       const rewardData    = rewardRes.ok    ? await rewardRes.json()    : [];
       const pengajuanData = pengajuanRes.ok ? await pengajuanRes.json() : [];
+      // Hanya tampilkan klaim yang sudah disetujui operator.
       setClaims(claimData.filter(c => c.status === "sudah dicek"));
       const rMap = {};
       rewardData.forEach(r => { rMap[r.claim_id] = r; });
@@ -140,11 +149,13 @@ export default function KonfirmasiReward({ session, search = "", initialClaimId 
 
   useEffect(() => { fetchAll(); }, []);
 
+  // ─── FILTER & PARTISI ────────────────────────────────────────────────────
   const filterFn = (c) =>
     [c.nama_lomba, c.tingkat, c.peringkat].some(v =>
       (v ?? "").toLowerCase().includes(search.toLowerCase())
     );
 
+  // Pisahkan klaim ke tiga bucket: belum diisi, dikembalikan operator, sudah diisi.
   const allBelum      = claims.filter(c => !rewardMap[c.id]);
   const allDikembali  = claims.filter(c => rewardMap[c.id]?.reward_status === "dikembalikan");
   const allSudah      = claims.filter(c => rewardMap[c.id] && rewardMap[c.id].reward_status !== "dikembalikan");

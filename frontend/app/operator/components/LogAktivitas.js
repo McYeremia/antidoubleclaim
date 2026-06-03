@@ -1,8 +1,10 @@
+// Halaman log aktivitas operator: menampilkan riwayat semua aksi penting dengan filter tanggal dan ekspor CSV.
 "use client";
 
 import { useEffect, useState, useRef } from "react";
 import { API, apiFetch, formatDatetime, formatTanggal } from "./shared";
 
+// Label dan warna badge untuk setiap jenis aksi yang dicatat di audit log.
 const AKSI_LABEL = {
   approve_klaim:      { label: "Approve Klaim",       style: "bg-green-100 text-green-700"   },
   tolak_klaim:        { label: "Tolak Klaim",         style: "bg-red-100 text-red-700"       },
@@ -20,10 +22,12 @@ const AKSI_LABEL = {
   reset_semua_data:   { label: "Reset Semua Data",    style: "bg-red-200 text-red-800"       },
 };
 
+// Mengubah objek Date ke string format "YYYY-MM-DD" untuk value input[type=date].
 function toLocalDateInput(date) {
   return date.toLocaleDateString("en-CA");
 }
 
+// Mengekspor array log ke file CSV dengan BOM UTF-8 agar Excel membaca karakter Indonesia dengan benar.
 function exportToCsv(logs) {
   const headers = ["No", "Waktu", "Operator", "Aksi", "Target", "Detail"];
   const rows = logs.map((log, idx) => [

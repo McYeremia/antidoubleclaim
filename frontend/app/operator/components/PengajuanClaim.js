@@ -1,17 +1,23 @@
+// Halaman pengajuan klaim operator: verifikasi, approve, tolak klaim, dan filter berdasarkan status.
 "use client";
 
 import { useEffect, useState } from "react";
 import { API, apiFetch, ConfirmModal, AlertModal } from "./shared";
 import ClaimSection from "./ClaimSection";
 
+// Mengelola antrean klaim masuk: memisahkan klaim aktif dan ditolak, lalu merender per status.
 export default function PengajuanClaim({ router }) {
+
+  // ─── STATE ────────────────────────────────────────────────────────────────
   const [claims,        setClaims]        = useState([]);
   const [ditolakClaims, setDitolakClaims] = useState([]);
   const [loading,       setLoading]       = useState(true);
   const [opId,          setOpId]          = useState(null);
-  const [discardModal,  setDiscardModal]  = useState(null); // { id, name }
-  const [approveModal,  setApproveModal]  = useState(null); // { id, name }
-  const [alertModal,    setAlertModal]    = useState(null); // { title, message }
+  // discardModal: { id, name } — menyimpan klaim yang menunggu konfirmasi penolakan.
+  const [discardModal,  setDiscardModal]  = useState(null);
+  // approveModal: { id, name } — menyimpan klaim yang menunggu konfirmasi persetujuan.
+  const [approveModal,  setApproveModal]  = useState(null);
+  const [alertModal,    setAlertModal]    = useState(null);
   const [search,        setSearch]        = useState("");
   const [statusFilter,  setStatusFilter]  = useState("semua");
 
@@ -20,6 +26,8 @@ export default function PengajuanClaim({ router }) {
     fetchClaims();
   }, []);
 
+  // ─── DATA FETCHING ────────────────────────────────────────────────────────
+  // Mengambil semua klaim aktif dan klaim yang sudah ditolak secara paralel.
   const fetchClaims = async () => {
     setLoading(true);
     try {
@@ -37,16 +45,19 @@ export default function PengajuanClaim({ router }) {
     }
   };
 
+  // Membangun header request dengan operator-id dari localStorage.
   const opHeaders = (extra = {}) => ({
     ...extra,
     ...(opId ? { "x-operator-id": opId } : {}),
   });
 
+  // ─── HANDLER ──────────────────────────────────────────────────────────────
+  // Membuka modal konfirmasi approve; memblokir rekognisi yang belum ada estimasi dana.
   const handleApprove = (id, e) => {
     e.stopPropagation();
     const claim = claims.find(c => c.id === id);
 
-    // Validasi Rekognisi: Harus ada estimasi dana
+    // Rekognisi wajib memiliki estimasi dana sebelum bisa disetujui.
     if (claim?.kategori === "rekognisi" && (!claim.estimasi_reward || Number(claim.estimasi_reward) === 0)) {
       setAlertModal({
         title: "Estimasi Dana Belum Diisi",

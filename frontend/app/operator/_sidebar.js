@@ -1,9 +1,12 @@
+// Sidebar navigasi operator beserta topbar yang memuat nama periode aktif dan menu akun.
 "use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { API, apiFetch } from "./components/shared";
+
+// ─── IKON NAVIGASI ────────────────────────────────────────────────────────────
 
 const IconClaim = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -47,6 +50,9 @@ const IconBeaker = () => (
   </svg>
 );
 
+// ─── TOPBAR ───────────────────────────────────────────────────────────────────
+
+// Topbar halaman detail operator: menampilkan indikator periode aktif dan dropdown akun.
 export function OperatorTopbar() {
   const router = useRouter();
   const [operatorNama, setOperatorNama] = useState("");
@@ -54,6 +60,7 @@ export function OperatorTopbar() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [periodeLabel, setPeriodeLabel] = useState(null);
 
+  // Ambil nama dan role dari localStorage, lalu cek periode aktif dari API.
   useEffect(() => {
     setOperatorNama(localStorage.getItem("operator_nama") || "Operator");
     setOperatorRole(localStorage.getItem("operator_role") || "operator");
@@ -123,8 +130,12 @@ export function OperatorTopbar() {
   );
 }
 
+// ─── SIDEBAR ──────────────────────────────────────────────────────────────────
+
+// Sidebar vertikal operator: menu role-based (superadmin mendapat menu tambahan).
 export default function OperatorSidebar({ activeKey = "claim" }) {
   const [superAdmin, setSuperAdmin] = useState(false);
+  // Baca role dari localStorage untuk menentukan menu superadmin yang ditampilkan.
   useEffect(() => {
     setSuperAdmin(localStorage.getItem("operator_role") === "superadmin");
   }, []);

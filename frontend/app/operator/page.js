@@ -1,3 +1,4 @@
+// Halaman utama dashboard operator: menampilkan menu aktif, topbar periode, dan modal ganti password.
 "use client";
 
 import { useEffect, useState, Suspense } from "react";
@@ -13,12 +14,14 @@ import VisualisasiDataOperator   from "./components/VisualisasiDataOperator";
 import LogAktivitas              from "./components/LogAktivitas";
 import SimulatorDeteksi         from "./components/SimulatorDeteksi";
 
-
+// Konten dashboard dibungkus terpisah agar useSearchParams bisa dipakai di dalam Suspense.
 function OperatorDashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  // Menu aktif dibaca dari query param; default ke "claim" jika tidak ada.
   const activeMenu = searchParams.get("menu") || "claim";
 
+  // ─── STATE ───────────────────────────────────────────────────────────────
   const [operatorNama, setOperatorNama] = useState("");
   const [operatorRole, setOperatorRole] = useState("");
   const [operatorId,   setOperatorId]   = useState(null);
@@ -31,6 +34,8 @@ function OperatorDashboardContent() {
   const [pwSuccess,         setPwSuccess]         = useState(false);
   const [showPwFields,      setShowPwFields]      = useState({ old: false, new: false, confirm: false });
 
+  // ─── GUARD AUTENTIKASI ────────────────────────────────────────────────────
+  // Redirect ke portal jika belum login atau sesi sudah lebih dari 3 jam.
   useEffect(() => {
     const loginAt = localStorage.getItem("operator_login_at");
     const expired = !loginAt || Date.now() - Number(loginAt) > 3 * 60 * 60 * 1000;
@@ -45,6 +50,8 @@ function OperatorDashboardContent() {
     setOperatorId(localStorage.getItem("operator_id"));
   }, [router]);
 
+  // ─── STATUS PERIODE ───────────────────────────────────────────────────────
+  // Memuat nama periode aktif setiap kali menu berpindah untuk topbar indicator.
   useEffect(() => {
     apiFetch(`${API}/periode/aktif`)
       .then(r => r.ok ? r.json() : { aktif: false })
@@ -52,6 +59,8 @@ function OperatorDashboardContent() {
       .catch(() => setPeriodeLabel(null));
   }, [activeMenu]);
 
+  // ─── HANDLER ──────────────────────────────────────────────────────────────
+  // Mengganti password operator sendiri; validasi panjang dan konfirmasi sebelum kirim ke API.
   const handleSelfPassword = async (e) => {
     e.preventDefault();
     if (pwForm.new.length < 8) { setPwError("Password baru minimal 8 karakter."); return; }
@@ -79,12 +88,14 @@ function OperatorDashboardContent() {
     }
   };
 
+  // Menghapus semua data sesi dari localStorage dan redirect ke portal login.
   const handleLogout = () => {
     ["role","operator_id","operator_nama","operator_username","operator_role","operator_login_at"]
       .forEach(k => localStorage.removeItem(k));
     router.push("/portal");
   };
 
+  // Menu superadmin (Kelola Operator, Periode, Arsip, Log) hanya tampil jika role superadmin.
   const isSuperAdmin = operatorRole === "superadmin";
 
   return (
@@ -261,6 +272,7 @@ function OperatorDashboardContent() {
   );
 }
 
+// Membungkus konten dalam Suspense agar useSearchParams tidak melempar error saat SSR.
 export default function OperatorDashboard() {
   return (
     <Suspense fallback={null}>

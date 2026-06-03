@@ -1,9 +1,13 @@
+// Modal detail reward konfirmasi: menampilkan data rekening mahasiswa dan aksi setujui/kembalikan oleh operator.
 "use client";
 
 import { useEffect, useState } from "react";
 import { API, apiFetch, KATEGORI_LABEL, REWARD_STATUS_BADGE, ConfirmModal, InfoRow, DocLink, formatTanggal, formatDatetime } from "./shared";
 
+// Mengambil data klaim dan pengajuan terkait, lalu merender detail lengkap reward beserta tombol aksi operator.
 export default function RewardDetailModal({ reward, onClose, onStatusUpdate }) {
+
+  // ─── STATE ────────────────────────────────────────────────────────────────
   const [claim,          setClaim]          = useState(null);
   const [pengajuan,      setPengajuan]      = useState(null);
   const [updating,       setUpdating]       = useState(false);

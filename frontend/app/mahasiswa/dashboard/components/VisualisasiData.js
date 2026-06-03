@@ -1,10 +1,12 @@
+// Halaman visualisasi statistik klaim mahasiswa UKDW dengan berbagai jenis chart (bar, donut, line, heatmap).
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
 import { API_URL, apiFetch } from "./shared";
 
-// ── Konstanta ────────────────────────────────────────────────────────────────
+// ─── KONSTANTA ────────────────────────────────────────────────────────────────
 
+// Nama singkat fakultas untuk label chart agar tidak terpotong.
 const FAK_SHORT = {
   "Fakultas Teknologi Informasi":   "FTI",
   "Fakultas Bisnis":                "F. Bisnis",
@@ -14,21 +16,24 @@ const FAK_SHORT = {
   "Fakultas Humaniora":             "F. Humaniora",
 };
 
+// Label singkat untuk jenis kegiatan pada legenda chart.
 const JENIS_SHORT = {
   "Lomba Mandiri Puspresnas":     "Puspresnas",
   "Lomba Mandiri Non-Puspresnas": "Non-Puspresnas",
   "Rekognisi Non-Lomba":          "Rekognisi",
 };
 
-// Violet-centric palette sesuai tema halaman mahasiswa
+// Palet warna violet-centric sesuai tema halaman mahasiswa.
 const PALETTE = ["#7c3aed","#0891b2","#059669","#d97706","#dc2626","#db2777","#0d9488","#f59e0b"];
 
-// ── Skeleton ─────────────────────────────────────────────────────────────────
+// ─── SKELETON ────────────────────────────────────────────────────────────────
 
+// Blok abu-abu animasi pulse sebagai placeholder saat data belum selesai dimuat.
 function Sk({ className = "" }) {
   return <div className={`animate-pulse bg-gray-100 rounded-xl ${className}`} />;
 }
 
+// Grid skeleton 7 kartu yang menyerupai tata letak chart setelah data dimuat.
 function DashboardSkeleton() {
   return (
     <div className="grid grid-cols-2 gap-5">
@@ -40,10 +45,9 @@ function DashboardSkeleton() {
   );
 }
 
-// ── Horizontal Bar Chart ─────────────────────────────────────────────────────
+// ─── HORIZONTAL BAR CHART ────────────────────────────────────────────────────
 // Terbaik untuk perbandingan ranking antar kategori (Cleveland 1984).
 // Horizontal karena label panjang; manusia lebih akurat membaca panjang vs sudut.
-
 function HBarChart({ data, formatLabel, maxItems = 8 }) {
   if (!data || data.length === 0)
     return <p className="text-sm text-gray-400 text-center py-8">Belum ada data.</p>;
@@ -77,11 +81,10 @@ function HBarChart({ data, formatLabel, maxItems = 8 }) {
   );
 }
 
-// ── Donut Chart ──────────────────────────────────────────────────────────────
+// ─── DONUT CHART ─────────────────────────────────────────────────────────────
 // Terbaik untuk data "bagian dari keseluruhan" dengan ≤6 kategori (Stephen Few).
 // Lubang tengah menampilkan total. Bar tertumpuk menyulitkan perbandingan
 // segmen non-pertama karena baseline berbeda (Cleveland 1984).
-
 function DonutChart({ data, total, colorFn, centerLabel = "Total", labelFn }) {
   if (!data || data.length === 0)
     return <p className="text-sm text-gray-400 text-center py-10">Belum ada data.</p>;
@@ -152,11 +155,10 @@ function DonutChart({ data, total, colorFn, centerLabel = "Total", labelFn }) {
   );
 }
 
-// ── Split Bar ────────────────────────────────────────────────────────────────
+// ─── SPLIT BAR ───────────────────────────────────────────────────────────────
 // Terbaik untuk data biner atau sedikit kategori (Tim / Individu).
 // Segmented bar memperlihatkan rasio secara langsung; angka besar menegaskan
 // kategori dominan — jauh lebih informatif dari dua mini-bar terpisah.
-
 function SplitBar({ data, total }) {
   if (!data || data.length === 0)
     return <p className="text-sm text-gray-400 text-center py-8">Belum ada data.</p>;
@@ -189,9 +191,8 @@ function SplitBar({ data, total }) {
   );
 }
 
-// ── Line Chart (SVG) ─────────────────────────────────────────────────────────
+// ─── LINE CHART ──────────────────────────────────────────────────────────────
 // Terbaik untuk time-series — garis menekankan kontinuitas perubahan (Tufte).
-
 function LineChart({ data }) {
   if (!data || data.length === 0)
     return <p className="text-sm text-gray-400 text-center py-8">Belum ada data.</p>;
@@ -256,8 +257,8 @@ function LineChart({ data }) {
   );
 }
 
-// ── Heatmap ──────────────────────────────────────────────────────────────────
-
+// ─── HEATMAP ─────────────────────────────────────────────────────────────────
+// Menampilkan distribusi klaim per fakultas × tahun dalam tabel warna intensitas.
 function HeatmapChart({ data }) {
   if (!data || !data.rows || data.rows.length === 0)
     return <p className="text-sm text-gray-400 text-center py-8">Belum ada data.</p>;
@@ -317,8 +318,8 @@ function HeatmapChart({ data }) {
   );
 }
 
-// ── Card wrapper ─────────────────────────────────────────────────────────────
-
+// ─── CARD WRAPPER ────────────────────────────────────────────────────────────
+// Membungkus setiap chart dalam kartu putih dengan label dan judul.
 function ChartCard({ label, title, children, fullWidth = false }) {
   return (
     <div className={`bg-white rounded-2xl border border-gray-100 shadow-sm p-6 ${fullWidth ? "col-span-2" : ""}`}>
@@ -331,8 +332,8 @@ function ChartCard({ label, title, children, fullWidth = false }) {
   );
 }
 
-// ── Filter Select ────────────────────────────────────────────────────────────
-
+// ─── FILTER SELECT ───────────────────────────────────────────────────────────
+// Dropdown filter dengan label; disabled saat opsi tidak tersedia (misal: prodi sebelum pilih fakultas).
 function FilterSelect({ label, value, onChange, options, disabled }) {
   return (
     <div className="flex flex-col gap-1">
@@ -356,19 +357,27 @@ function FilterSelect({ label, value, onChange, options, disabled }) {
   );
 }
 
-// ── Komponen utama ───────────────────────────────────────────────────────────
+// ─── KOMPONEN UTAMA ──────────────────────────────────────────────────────────
 
+// Nilai filter kosong — dipakai saat inisialisasi dan reset.
 const EMPTY_FILTERS = {
   fakultas: "", prodi: "", tahun: "", tingkatan: "", kategori: "", kepesertaan: "",
 };
 
+// Menampilkan statistik klaim seluruh mahasiswa dengan filter interaktif dan berbagai tipe chart.
 export default function VisualisasiData() {
+
+  // ─── STATE ──────────────────────────────────────────────────────────────
   const [stats,      setStats]      = useState(null);
   const [loading,    setLoading]    = useState(true);
   const [error,      setError]      = useState(null);
   const [filters,    setFilters]    = useState(EMPTY_FILTERS);
+  // Opsi dropdown filter (fakultas, prodi, tahun, dll) diambil dari endpoint saat filter kosong.
   const [filterOpts, setFilterOpts] = useState(null);
 
+  // ─── FETCH ──────────────────────────────────────────────────────────────
+
+  // Membangun URL endpoint statistik dari objek filter aktif.
   const buildUrl = useCallback((f) => {
     const p = new URLSearchParams();
     if (f.fakultas)    p.set("fakultas",    f.fakultas);
@@ -381,6 +390,7 @@ export default function VisualisasiData() {
     return `${API_URL}/stats/visualisasi${qs ? "?" + qs : ""}`;
   }, []);
 
+  // Mengambil data statistik dari API; menyimpan opsi filter hanya saat semua filter kosong.
   const fetchStats = useCallback((f) => {
     setLoading(true);
     apiFetch(buildUrl(f))
@@ -395,6 +405,9 @@ export default function VisualisasiData() {
 
   useEffect(() => { fetchStats(EMPTY_FILTERS); }, [fetchStats]);
 
+  // ─── HANDLER FILTER ─────────────────────────────────────────────────────
+
+  // Memperbarui satu filter; reset prodi jika fakultas berubah agar tidak ada prodi yg tidak relevan.
   const setFilter = (key, val) => {
     const next = { ...filters, [key]: val };
     if (key === "fakultas") next.prodi = "";
@@ -402,9 +415,11 @@ export default function VisualisasiData() {
     fetchStats(next);
   };
 
+  // Mereset semua filter ke nilai kosong dan re-fetch data tanpa filter.
   const resetFilters = () => { setFilters(EMPTY_FILTERS); fetchStats(EMPTY_FILTERS); };
 
   const activeCount  = Object.values(filters).filter(Boolean).length;
+  // Opsi prodi bergantung pada fakultas yang dipilih; tampilkan semua prodi jika belum ada pilihan.
   const prodiOptions = filters.fakultas
     ? (filterOpts?.prodi_by_fakultas?.[filters.fakultas] ?? [])
     : Object.values(filterOpts?.prodi_by_fakultas ?? {}).flat();

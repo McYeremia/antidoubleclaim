@@ -1,8 +1,10 @@
+// Halaman pengaturan periode klaim (superadmin only): buat, edit, buka, tutup, arsipkan, dan hapus periode.
 "use client";
 
 import { useEffect, useState } from "react";
 import { API, apiFetch, formatTanggal, ConfirmModal } from "./shared";
 
+// Warna badge dan label untuk setiap state periode yang dihitung dari tanggal dan status DB.
 const STATE_STYLE = {
   aktif:       { badge: "bg-green-100 text-green-700",   label: "Aktif" },
   tutup:       { badge: "bg-gray-100 text-gray-500",     label: "Tutup" },
@@ -11,15 +13,21 @@ const STATE_STYLE = {
   diarsipkan:  { badge: "bg-purple-100 text-purple-700", label: "Diarsipkan" },
 };
 
+// Mengelola siklus hidup periode klaim: dari pembuatan hingga pengarsipan.
 export default function PengaturanPeriode({ operatorNama, operatorId }) {
+
+  // ─── STATE ────────────────────────────────────────────────────────────────
   const [periodeList,    setPeriodeList]    = useState([]);
   const [loading,        setLoading]        = useState(true);
   const [showForm,       setShowForm]       = useState(false);
   const [editingPeriode, setEditingPeriode] = useState(null);
   const [saving,         setSaving]         = useState(false);
   const [form,         setForm]         = useState({ nama: "", tanggal_mulai: "", tanggal_selesai: "" });
-  const [confirmModal, setConfirmModal] = useState(null); // { title, message, variant, requireExactText, confirmLabel, onConfirm }
+  // confirmModal menyimpan konfigurasi dialog konfirmasi yang sedang aktif.
+  const [confirmModal, setConfirmModal] = useState(null);
 
+  // ─── HANDLER FORM ────────────────────────────────────────────────────────
+  // Membuka form kosong untuk membuat periode baru.
   const openCreate = () => {
     setEditingPeriode(null);
     setForm({ nama: "", tanggal_mulai: "", tanggal_selesai: "" });

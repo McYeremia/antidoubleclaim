@@ -1,6 +1,9 @@
+// Sidebar navigasi portal mahasiswa: menampilkan menu aktif dan menyesuaikan highlight berdasarkan activeKey.
 "use client";
 
 import Link from "next/link";
+
+// ─── IKON NAVIGASI ────────────────────────────────────────────────────────────
 
 const IconList = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -23,6 +26,9 @@ const IconDoc = () => (
 //   </svg>
 // );
 
+// ─── MENU ─────────────────────────────────────────────────────────────────────
+
+// Daftar item navigasi sidebar mahasiswa beserta key, href, dan ikonnya.
 const menus = [
   { key: "daftar",      href: "/mahasiswa/dashboard?menu=daftar",    label: "Daftar Klaim",     icon: <IconList />   },
   { key: "reward",      href: "/mahasiswa/dashboard?menu=reward",    label: "Pencairan Reward", icon: <IconReward /> },
@@ -30,6 +36,9 @@ const menus = [
   { key: "sk-rektor",   href: "/mahasiswa/dashboard?menu=sk-rektor", label: "SK Rektor",        icon: <IconDoc />    },
 ];
 
+// ─── KOMPONEN UTAMA ───────────────────────────────────────────────────────────
+
+// Sidebar vertikal dengan logo, daftar menu, dan footer institusi; digunakan di semua halaman mahasiswa.
 export default function MahasiswaSidebar({ activeKey = "daftar" }) {
   return (
     <aside className="w-[240px] bg-[#046137] flex flex-col flex-shrink-0 h-screen sticky top-0">

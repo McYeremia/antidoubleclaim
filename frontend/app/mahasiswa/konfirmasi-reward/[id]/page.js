@@ -1,3 +1,4 @@
+// Halaman konfirmasi reward standalone (URL /konfirmasi-reward/[id]) — versi halaman penuh dari KonfirmasiRewardFormPanel.
 "use client";
 
 import { useEffect, useState } from "react";
@@ -6,7 +7,7 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { API_URL, apiFetch } from "../../dashboard/components/shared";
 
-// ── Konstanta ─────────────────────────────────────────────────────────────────
+// ─── KONSTANTA ────────────────────────────────────────────────────────────────
 const KOMPETISI_PUSPRESNAS = [
   "PKM", "PPK ORMAWA", "P2MW", "NUDC", "KDMI",
   "ONMIPA", "KBMK", "GEMASTIK", "PILMAPRES",
@@ -14,7 +15,8 @@ const KOMPETISI_PUSPRESNAS = [
 
 const TAHUN_INI = new Date().getFullYear();
 
-// ── Helper UI ─────────────────────────────────────────────────────────────────
+// ─── HELPER UI ────────────────────────────────────────────────────────────────
+// Label field dengan tanda bintang merah jika required.
 function Label({ children, required }) {
   return (
     <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">
@@ -151,7 +153,8 @@ function PrefilledBadge() {
   );
 }
 
-// ── Halaman Utama ─────────────────────────────────────────────────────────────
+// ─── HALAMAN UTAMA ────────────────────────────────────────────────────────────
+// Mengambil data klaim dan reward, lalu merender form konfirmasi reward dengan pre-fill dari pengajuan.
 export default function KonfirmasiRewardForm() {
   const { id }                      = useParams();
   const router                      = useRouter();

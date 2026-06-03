@@ -1,9 +1,16 @@
+// Konstanta, utilitas, dan komponen UI bersama yang digunakan di seluruh halaman operator.
 "use client";
 
 import { useState, useEffect } from "react";
 
+// ─── KONSTANTA ────────────────────────────────────────────────────────────────
+
+// URL base backend — fallback ke localhost jika env tidak di-set.
 export const API = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
+// ─── FETCH HELPER ─────────────────────────────────────────────────────────────
+
+// Wrapper fetch yang menyisipkan header ngrok agar tidak diblokir ngrok browser warning.
 export function apiFetch(url, options = {}) {
   return fetch(url, {
     ...options,
@@ -11,12 +18,14 @@ export function apiFetch(url, options = {}) {
   });
 }
 
+// ─── FORMAT TANGGAL ───────────────────────────────────────────────────────────
+
 const BULAN = [
   "Januari","Februari","Maret","April","Mei","Juni",
   "Juli","Agustus","September","Oktober","November","Desember",
 ];
 
-/** "2026-04-18" → "18 April 2026" */
+// Mengubah string "YYYY-MM-DD" menjadi format "D Bulan YYYY".
 export function formatTanggal(str) {
   if (!str) return "—";
   const [y, m, d] = str.slice(0, 10).split("-");
@@ -32,6 +41,9 @@ export function formatDatetime(str) {
   return `${parseInt(d)} ${BULAN[parseInt(m) - 1]} ${y}${jam ? `, ${jam}` : ""}`;
 }
 
+// ─── STATUS & LABEL ───────────────────────────────────────────────────────────
+
+// Kelas Tailwind warna badge berdasarkan status klaim.
 export const STATUS_BADGE = {
   "perlu ditinjau": "bg-orange-100 text-orange-700",
   "belum dicek":    "bg-blue-100 text-blue-700",
@@ -39,6 +51,7 @@ export const STATUS_BADGE = {
   "ditolak":        "bg-red-100 text-red-700",
 };
 
+// Label teks yang ditampilkan di tabel untuk setiap status klaim.
 export const STATUS_LABEL = {
   "belum dicek":    "Antrean Verifikasi",
   "perlu ditinjau": "Terindikasi Duplikat",
@@ -46,12 +59,14 @@ export const STATUS_LABEL = {
   "ditolak":        "Ditolak",
 };
 
+// Label tampilan per kategori klaim SIMKATMAWA.
 export const KATEGORI_LABEL = {
   puspresnas:     "PUSPRESNAS",
   non_puspresnas: "Non PUSPRESNAS",
   publikasi:      "Publikasi / Karya / HKI",
 };
 
+// Kelas Tailwind badge untuk setiap status reward konfirmasi.
 export const REWARD_STATUS_BADGE = {
   menunggu:     "bg-[#d4ebe0] text-[#046137]",
   diproses:     "bg-[#d4ebe0] text-[#046137]",
@@ -60,6 +75,7 @@ export const REWARD_STATUS_BADGE = {
   dikembalikan: "bg-orange-100 text-orange-700",
 };
 
+// Label teks untuk setiap status reward konfirmasi.
 export const REWARD_STATUS_LABEL = {
   menunggu:     "Menunggu",
   diproses:     "Diproses",
@@ -68,6 +84,7 @@ export const REWARD_STATUS_LABEL = {
   ditolak:      "Ditolak",
 };
 
+// Warna badge dan label teks untuk setiap status periode klaim.
 export const ARSIP_STATUS_STYLE = {
   aktif:      { badge: "bg-green-100 text-green-700",   label: "Aktif" },
   tutup:      { badge: "bg-gray-100 text-gray-500",     label: "Tutup" },
@@ -75,15 +92,20 @@ export const ARSIP_STATUS_STYLE = {
   diarsipkan: { badge: "bg-purple-100 text-purple-700", label: "Diarsipkan" },
 };
 
+// Label kategori klaim lengkap untuk tampilan arsip.
 export const ARSIP_LABEL_KATEGORI = {
   lomba_mandiri_puspresnas:     "Lomba Mandiri — Puspresnas (DIKTI)",
   lomba_mandiri_non_puspresnas: "Lomba Mandiri — Non Puspresnas (Non DIKTI)",
   rekognisi:                    "Rekognisi Non-Lomba",
 };
 
+// Mengembalikan true jika kategori termasuk lomba mandiri (bukan rekognisi).
 export const arsipIsLomba = (kat) =>
   kat === "lomba_mandiri_puspresnas" || kat === "lomba_mandiri_non_puspresnas";
 
+// ─── KOMPONEN UI ──────────────────────────────────────────────────────────────
+
+// Menampilkan satu baris label-nilai; tidak merender jika value kosong.
 export function InfoRow({ label, value }) {
   if (!value && value !== 0) return null;
   return (
@@ -94,6 +116,7 @@ export function InfoRow({ label, value }) {
   );
 }
 
+// Tautan file dokumen dengan nama asli (strip UUID prefix); di-proxy via Next.js /api/file dengan op-id.
 export function DocLink({ label, path }) {
   if (!path) return null;
   const filename = path.split(/[\\/]/).pop();
@@ -120,6 +143,7 @@ export function DocLink({ label, path }) {
   );
 }
 
+// Baris label-nilai untuk tampilan detail arsip periode.
 export function ArsipField({ label, value }) {
   if (!value && value !== 0) return null;
   return (
@@ -130,6 +154,7 @@ export function ArsipField({ label, value }) {
   );
 }
 
+// Judul section arsip dengan garis bawah tipis dan huruf kapital tracking lebar.
 export function ArsipSectionTitle({ children }) {
   return (
     <h3 className="text-[11px] font-black text-gray-300 uppercase tracking-[0.3em] border-b border-gray-50 pb-2 mb-4 mt-6 first:mt-0">
@@ -138,6 +163,7 @@ export function ArsipSectionTitle({ children }) {
   );
 }
 
+// Tautan file arsip yang di-proxy via /api/file; nama ditampilkan dipotong jika terlalu panjang.
 export function ArsipFileLink({ label, path }) {
   if (!path) return null;
   const filename = path.split(/[\\/]/).pop();
@@ -160,6 +186,7 @@ export function ArsipFileLink({ label, path }) {
   );
 }
 
+// Modal konfirmasi aksi dengan dukungan catatan wajib, input teks tepat, dan varian warna.
 export function ConfirmModal({
   isOpen,
   title,
@@ -256,6 +283,7 @@ export function ConfirmModal({
   );
 }
 
+// Modal notifikasi satu tombol untuk pesan peringatan, bahaya, atau info.
 export function AlertModal({ isOpen, title, message, variant = "warning", onClose }) {
   if (!isOpen) return null;
 
@@ -289,6 +317,7 @@ export function AlertModal({ isOpen, title, message, variant = "warning", onClos
   );
 }
 
+// Preview sertifikat: iframe untuk PDF, tag img untuk gambar.
 export function ArsipCertPreview({ url, filename }) {
   if (!url || !filename) return null;
   const isPdf = filename.toLowerCase().endsWith(".pdf");
