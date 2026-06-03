@@ -1,3 +1,4 @@
+// Halaman pengajuan reward operator: verifikasi data rekening, setujui/kembalikan reward, dan ekspor laporan.
 "use client";
 
 import { useEffect, useState } from "react";
@@ -6,17 +7,24 @@ import { API, apiFetch, KATEGORI_LABEL, ConfirmModal, AlertModal, formatDatetime
 import RewardSection from "./RewardSection";
 import RewardDetailModal from "./RewardDetailModal";
 
+// Mengelola alur pencairan reward: menunggu → diproses → selesai, termasuk pengembalian untuk perbaikan.
 export default function PengajuanReward() {
+
+  // ─── STATE ────────────────────────────────────────────────────────────────
   const [rewards,           setRewards]           = useState([]);
   const [loading,           setLoading]           = useState(true);
   const [selectedReward,    setSelectedReward]    = useState(null);
+  // bermasalahTarget: reward yang sedang menunggu konfirmasi dikembalikan ke mahasiswa.
   const [bermasalahTarget,  setBermasalahTarget]  = useState(null);
   const [bermasalahCatatan, setBermasalahCatatan] = useState("");
   const [bermasalahLoading, setBermasalahLoading] = useState(false);
-  const [confirmKirim,      setConfirmKirim]      = useState(null); // reward object
+  // confirmKirim: reward tunggal yang menunggu konfirmasi dikirim.
+  const [confirmKirim,      setConfirmKirim]      = useState(null);
   const [confirmKirimSemua, setConfirmKirimSemua] = useState(false);
-  const [alertModal,        setAlertModal]        = useState(null); // { title, message }
+  const [alertModal,        setAlertModal]        = useState(null);
 
+  // ─── DATA FETCHING ────────────────────────────────────────────────────────
+  // Mengambil semua reward konfirmasi dari API.
   const fetchRewards = async () => {
     setLoading(true);
     try {
@@ -32,7 +40,8 @@ export default function PengajuanReward() {
 
   useEffect(() => { fetchRewards(); }, []);
 
-  // Deklarasikan filter lebih awal agar handler di bawah bisa menggunakannya
+  // ─── FILTER ──────────────────────────────────────────────────────────────
+  // Pisahkan reward ke tiga bucket status untuk dirender di RewardSection masing-masing.
   const menunggu = rewards.filter(r => r.reward_status === "menunggu");
   const diproses = rewards.filter(r => r.reward_status === "diproses");
   const selesai  = rewards.filter(r => r.reward_status === "selesai");

@@ -1,8 +1,12 @@
+// Panel profil mahasiswa: menampilkan info NIM/akademik dan form pengisian data rekening BNI.
 "use client";
 
 import { useState, useEffect } from "react";
 import { API_URL, apiFetch } from "./shared";
 
+// ─── VALIDASI ─────────────────────────────────────────────────────────────────
+
+// Memvalidasi format nomor WhatsApp: harus diawali 08, panjang 10–13 digit.
 function validateNomorWA(nomor) {
   if (!nomor) return { status: "empty", msg: "" };
   const digits = nomor.replace(/\D/g, "");
@@ -13,6 +17,7 @@ function validateNomorWA(nomor) {
   return { status: "valid", msg: "Format nomor WhatsApp valid" };
 }
 
+// Memvalidasi format nomor rekening BNI: harus tepat 10 digit angka.
 function validateRekeningBNI(nomor) {
   if (!nomor) return { status: "empty", msg: "" };
   const digits = nomor.replace(/\D/g, "");
@@ -22,7 +27,12 @@ function validateRekeningBNI(nomor) {
   return { status: "valid", msg: "Format nomor rekening BNI valid" };
 }
 
+// ─── KOMPONEN UTAMA ──────────────────────────────────────────────────────────
+
+// Menampilkan info akademik dari NIM dan form simpan data rekening mahasiswa.
 export default function ProfilPanel({ session, onBack, onProfilSaved }) {
+
+  // ─── STATE ────────────────────────────────────────────────────────────────
   const [nimInfo, setNimInfo] = useState(null);
   const [profil,  setProfil]  = useState(null);
   const [form,    setForm]    = useState({ nomor_wa: "", nama_pemilik_rekening: "", nomor_rekening: "" });
@@ -30,6 +40,8 @@ export default function ProfilPanel({ session, onBack, onProfilSaved }) {
   const [saving,  setSaving]  = useState(false);
   const [saved,   setSaved]   = useState(false);
 
+  // ─── DATA FETCHING ────────────────────────────────────────────────────────
+  // Mengambil info NIM (fakultas, prodi, angkatan) dan data profil tersimpan secara paralel.
   useEffect(() => {
     Promise.all([
       apiFetch(`${API_URL}/nim-info?email=${encodeURIComponent(session.user.email)}`),
@@ -39,6 +51,7 @@ export default function ProfilPanel({ session, onBack, onProfilSaved }) {
       const prof = profilRes.ok ? await profilRes.json() : {};
       setNimInfo(nim);
       setProfil(prof);
+      // Isi form dari data profil yang sudah tersimpan sebelumnya.
       setForm({
         nomor_wa:              prof.nomor_wa              ?? "",
         nama_pemilik_rekening: prof.nama_pemilik_rekening ?? "",
@@ -47,12 +60,16 @@ export default function ProfilPanel({ session, onBack, onProfilSaved }) {
     }).finally(() => setLoading(false));
   }, [session.user.email]);
 
+  // ─── HANDLER ──────────────────────────────────────────────────────────────
+
+  // Memperbarui state form dan mereset indikator "tersimpan" saat ada perubahan input.
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm(f => ({ ...f, [name]: value }));
     setSaved(false);
   };
 
+  // Menyimpan perubahan profil ke API lalu memanggil callback agar parent ikut diperbarui.
   const handleSave = async (e) => {
     e.preventDefault();
     setSaving(true);

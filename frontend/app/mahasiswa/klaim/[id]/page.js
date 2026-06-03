@@ -1,3 +1,4 @@
+// Halaman detail klaim mahasiswa: menampilkan info kegiatan, timeline, sertifikat, dan form edit data pengajuan.
 "use client";
 
 import { useState, useEffect } from "react";
@@ -7,6 +8,7 @@ import Link from "next/link";
 import MahasiswaSidebar from "../../_sidebar";
 import { API_URL, apiFetch } from "../../dashboard/components/shared";
 
+// Helper badge status klaim — teks dan warna Tailwind.
 const STATUS_LABEL = (s) => s === "sudah dicek" ? "Selesai" : s === "ditolak" ? "Ditolak" : "Dalam Proses";
 const STATUS_STYLE = (s) => s === "sudah dicek" ? "bg-green-100 text-green-700" : s === "ditolak" ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700";
 
@@ -64,6 +66,9 @@ function formatDatetime(str) {
   return `${parseInt(d)} ${BULAN[parseInt(m) - 1]} ${y}${jam ? `, ${jam}` : ""}`;
 }
 
+// ─── KOMPONEN HELPER ──────────────────────────────────────────────────────────
+
+// Menampilkan satu baris label-nilai; tidak merender jika value kosong.
 function InfoRow({ label, value }) {
   if (!value && value !== 0) return null;
   return (
@@ -74,10 +79,12 @@ function InfoRow({ label, value }) {
   );
 }
 
+// Judul section dengan garis bawah dan huruf kapital.
 function SectionTitle({ children }) {
   return <h3 className="text-[11px] font-black text-gray-500 uppercase tracking-[0.3em] border-b border-gray-100 pb-2 mb-5 mt-7 first:mt-0">{children}</h3>;
 }
 
+// Tautan file yang di-proxy melalui Next.js /api/file; mengekstrak nama asli dari prefix UUID.
 function FileLink({ label, path }) {
   if (!path) return null;
   const filename = path.split(/[\\/]/).pop();
@@ -154,11 +161,14 @@ function CertPreview({ url, filename }) {
   return <img src={url} alt="Sertifikat" className="w-full rounded-xl border border-gray-100 object-contain max-h-72" />;
 }
 
+// ─── HALAMAN UTAMA ────────────────────────────────────────────────────────────
+// Menampilkan detail klaim beserta data pengajuan; mode readonly untuk anggota tim.
 export default function KlaimDetailPage() {
   const { data: session, status: authStatus } = useSession();
   const router = useRouter();
   const { id }  = useParams();
   const searchParams = useSearchParams();
+  // Anggota tim hanya bisa melihat, tidak bisa mengedit data pengajuan.
   const isReadonly   = searchParams.get("readonly") === "true";
 
   const [claim,     setClaim]     = useState(null);
@@ -171,6 +181,8 @@ export default function KlaimDetailPage() {
   const [saveMsg,     setSaveMsg]     = useState("");
   const [showUserMenu, setShowUserMenu] = useState(false);
 
+  // ─── DATA FETCHING ──────────────────────────────────────────────────────────
+  // Mengambil data klaim, pengajuan, dan reward secara paralel saat halaman dimuat.
   useEffect(() => {
     if (authStatus === "unauthenticated") { router.replace("/"); return; }
     if (authStatus !== "authenticated" || !id) return;

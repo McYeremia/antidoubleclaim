@@ -1,3 +1,4 @@
+// Tampilan detail satu klaim arsip: data pengajuan lengkap, dokumen, anggota tim, dan reward terkait.
 "use client";
 
 import { useEffect, useState } from "react";
@@ -7,9 +8,11 @@ import {
   formatTanggal, formatDatetime,
 } from "./shared";
 
+// Mengambil data pengajuan berdasarkan claim_id, lalu merender detail lengkap klaim dari arsip.
 export default function ArsipDetailView({ detailItem, rewards, onBack }) {
   const [pengajuan, setPengajuan] = useState(null);
   const [pLoading,  setPLoading]  = useState(true);
+  // Cari reward yang sesuai dengan klaim ini dari daftar reward periode.
   const reward = rewards.find(r => r.claim_id === detailItem.id);
 
   useEffect(() => {

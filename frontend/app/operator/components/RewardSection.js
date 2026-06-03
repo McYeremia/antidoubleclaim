@@ -1,7 +1,9 @@
+// Komponen tabel reward konfirmasi dengan tombol bulk kirim, ekspor Excel, dan ekspor PDF.
 "use client";
 
 import { KATEGORI_LABEL, formatDatetime } from "./shared";
 
+// Merender satu grup reward (misalnya: menunggu, diproses, selesai) dalam kartu tabel dengan aksi per-baris.
 export default function RewardSection({
   title, color, items,
   onExport, onExportPDF, onBulkKirim, rowActions, onSelectReward,

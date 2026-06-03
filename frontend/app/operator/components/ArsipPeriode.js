@@ -1,3 +1,4 @@
+// Halaman arsip periode: melihat klaim dan reward per periode, ekspor Excel, dan kelola status arsip.
 "use client";
 
 import { useEffect, useState } from "react";
@@ -5,7 +6,10 @@ import * as XLSX from "xlsx";
 import { API, apiFetch, ARSIP_STATUS_STYLE, STATUS_BADGE, STATUS_LABEL, REWARD_STATUS_BADGE, REWARD_STATUS_LABEL, KATEGORI_LABEL, formatTanggal, ConfirmModal, formatDatetime } from "./shared";
 import ArsipDetailView from "./ArsipDetailView";
 
+// Menampilkan daftar periode dan data klaim/reward di dalamnya; superadmin dapat menutup atau mengarsipkan periode.
 export default function ArsipPeriode() {
+
+  // ─── STATE ────────────────────────────────────────────────────────────────
   const [periodeList,   setPeriodeList]   = useState([]);
   const [loading,       setLoading]       = useState(true);
   const [selected,      setSelected]      = useState(null);
@@ -31,6 +35,7 @@ export default function ArsipPeriode() {
 
   useEffect(() => { fetchPeriode(); }, []);
 
+  // Mengambil semua klaim dan reward dalam periode yang dipilih secara paralel.
   const openPeriode = async (p) => {
     setSelected(p);
     setActiveTab("claims");

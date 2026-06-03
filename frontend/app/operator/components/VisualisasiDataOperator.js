@@ -1,11 +1,13 @@
+// Halaman visualisasi statistik klaim versi operator: chart interaktif dengan filter dan ekspor Excel.
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
 import * as XLSX from "xlsx";
 import { API as API_URL, apiFetch } from "./shared";
 
-// ── Konstanta ─────────────────────────────────────────────────────────────────
+// ─── KONSTANTA ────────────────────────────────────────────────────────────────
 
+// Nama lengkap fakultas untuk label tabel (operator mendapat tampilan penuh, bukan singkatan).
 const FAK_SHORT = {
   "Fakultas Teknologi Informasi":   "Fakultas Teknologi Informasi",
   "Fakultas Bisnis":                "Fakultas Bisnis",

@@ -1,3 +1,4 @@
+// Halaman utama dashboard mahasiswa: menampilkan menu navigasi dan merender panel aktif sesuai query ?menu=.
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
@@ -12,26 +13,34 @@ import ProfilPanel from "./components/ProfilPanel";
 import VisualisasiData from "./components/VisualisasiData";
 import SKRektor from "./components/SKRektor";
 
+// Konten dashboard dibungkus terpisah agar useSearchParams bisa dipakai di dalam Suspense.
 function MahasiswaDashboardContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
+  // Menu aktif dibaca dari query param; default ke "daftar" jika tidak ada.
   const activeMenu = searchParams.get("menu") || "daftar";
 
+  // ─── STATE ───────────────────────────────────────────────────────────────────
   const [showTambah,       setShowTambah]       = useState(false);
   const [search,           setSearch]           = useState("");
   const [searchReward,     setSearchReward]     = useState("");
+  // Key incremental untuk memaksa DaftarKlaim re-fetch setelah klaim baru berhasil ditambah.
   const [claimsRefreshKey, setClaimsRefreshKey] = useState(0);
   const [rewardOpenId,     setRewardOpenId]     = useState(null);
   const [showUserMenu,     setShowUserMenu]     = useState(false);
   const [profil,           setProfil]           = useState(null);
 
+  // ─── GUARD AUTENTIKASI ────────────────────────────────────────────────────────
+  // Redirect ke landing page jika sesi tidak valid atau bukan email mahasiswa UKDW.
   useEffect(() => {
     if (status === "unauthenticated" || (status === "authenticated" && !session?.user?.email?.endsWith("@students.ukdw.ac.id"))) {
       router.replace("/");
     }
   }, [status, session, router]);
 
+  // ─── AMBIL PROFIL ─────────────────────────────────────────────────────────────
+  // Mengambil data profil mahasiswa (rekening, WA) saat sesi sudah tersedia.
   useEffect(() => {
     if (status !== "authenticated" || !session?.user?.email) return;
     apiFetch(`${API_URL}/profil?email=${encodeURIComponent(session.user.email)}`)
@@ -47,6 +56,9 @@ function MahasiswaDashboardContent() {
     return null;
   }
 
+  // ─── HANDLER ──────────────────────────────────────────────────────────────────
+
+  // Berpindah menu: reset search yang tidak relevan lalu push URL baru.
   const navigateTo = (key) => {
     if (key !== "daftar") setSearch("");
     if (key !== "reward") setSearchReward("");
@@ -56,6 +68,7 @@ function MahasiswaDashboardContent() {
     router.push(url);
   };
 
+  // Memaksa DaftarKlaim re-fetch dengan menaikkan refresh key setelah klaim berhasil dibuat.
   const handleClaimSuccess = () => {
     setClaimsRefreshKey((k) => k + 1);
   };

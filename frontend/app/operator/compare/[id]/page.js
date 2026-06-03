@@ -1,3 +1,4 @@
+// Halaman compare klaim duplikat: menampilkan dua sertifikat berdampingan untuk verifikasi visual oleh operator.
 "use client";
 
 import { useEffect, useState } from "react";
@@ -7,12 +8,14 @@ import { useParams } from "next/navigation";
 import OperatorSidebar, { OperatorTopbar } from "../../_sidebar";
 import { API, apiFetch, formatTanggal } from "../../components/shared";
 
+// Map status klaim ke teks dan kelas Tailwind untuk badge.
 const STATUS_LABEL = {
   "belum dicek":    { text: "Belum Dicek",    cls: "bg-[#d4ebe0] text-[#046137]" },
   "perlu ditinjau": { text: "Perlu Ditinjau", cls: "bg-orange-100 text-orange-700" },
   "sudah dicek":    { text: "Sudah Dicek",    cls: "bg-green-100 text-green-700" },
 };
 
+// Badge status klaim kecil yang dipakai di header setiap panel sertifikat.
 function StatusBadge({ status }) {
   const s = STATUS_LABEL[status] ?? { text: status, cls: "bg-gray-100 text-gray-600" };
   return (
@@ -22,6 +25,7 @@ function StatusBadge({ status }) {
   );
 }
 
+// Panel satu sisi perbandingan: menampilkan sertifikat (PDF/gambar) dan info singkat klaim.
 function CertPanel({ claim, label, accent }) {
   if (!claim) return (
     <div className="flex-1 bg-white rounded-[28px] border border-gray-100 shadow-sm p-8 flex items-center justify-center min-h-[400px]">

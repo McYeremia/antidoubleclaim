@@ -1,3 +1,4 @@
+// Menampilkan daftar klaim mahasiswa (klaim sendiri & klaim tim) beserta status dan aksi reward.
 "use client";
 
 import { useState, useEffect } from "react";
@@ -10,14 +11,20 @@ import {
   InfoRow,
 } from "./shared";
 
-
+// Menampilkan riwayat klaim, status reward, dan tombol aksi per klaim.
 export default function DaftarKlaim({ session, search, onOpenForm, onTambahKlaim, onGoProfil, profilLengkap, profil }) {
   const router = useRouter();
+
+  // ─── STATE ────────────────────────────────────────────────────────────────
   const [claims, setClaims]              = useState([]);
   const [rewardMap, setRewardMap]        = useState({});
   const [pengajuanMap, setPengajuanMap]  = useState({});
   const [loading, setLoading]            = useState(true);
+  // Modal peringatan jika profil belum lengkap saat tombol Tambah Klaim ditekan.
   const [showProfilGate, setShowProfilGate] = useState(false);
+
+  // ─── DATA FETCHING ────────────────────────────────────────────────────────
+  // Mengambil klaim, reward, pengajuan, dan klaim sebagai anggota tim secara paralel.
   const fetchClaims = async () => {
     setLoading(true);
     try {
@@ -32,7 +39,7 @@ export default function DaftarKlaim({ session, search, onOpenForm, onTambahKlaim
       const pengajuanData = pengajuanRes.ok ? await pengajuanRes.json() : [];
       const anggotaData   = anggotaRes.ok   ? await anggotaRes.json()   : [];
 
-      // Merge: klaim sendiri + klaim sebagai anggota, hindari duplikat by id
+      // Gabungkan klaim sendiri + klaim tim; hindari duplikat berdasarkan id.
       const ownIds = new Set(claimData.map(c => c.id));
       const merged = [
         ...claimData,
@@ -40,6 +47,7 @@ export default function DaftarKlaim({ session, search, onOpenForm, onTambahKlaim
       ];
       setClaims(merged);
 
+      // Buat lookup map reward dan pengajuan berdasarkan claim_id untuk akses O(1).
       const map = {};
       rewardData.forEach(r => { map[r.claim_id] = r; });
       setRewardMap(map);
@@ -55,11 +63,14 @@ export default function DaftarKlaim({ session, search, onOpenForm, onTambahKlaim
 
   useEffect(() => { fetchClaims(); }, []);
 
+  // ─── FILTER & PARTISI ────────────────────────────────────────────────────
+  // Menyaring klaim berdasarkan teks pencarian pada nama lomba, tingkat, peringkat, atau status.
   const filterFn = (c) =>
     [c.nama_lomba, c.tingkat, c.peringkat, c.status].some((v) =>
       (v ?? "").toLowerCase().includes(search.toLowerCase())
     );
 
+  // Pisahkan klaim milik sendiri dan klaim sebagai anggota tim.
   const ownClaims     = claims.filter(c => !c.is_anggota);
   const anggotaClaims = claims.filter(c =>  c.is_anggota);
   const filteredOwn     = ownClaims.filter(filterFn);

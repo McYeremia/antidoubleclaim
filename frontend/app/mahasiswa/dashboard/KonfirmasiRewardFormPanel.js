@@ -1,10 +1,14 @@
+// Panel pengisian data rekening untuk pencairan reward, dirender di dalam dashboard (bukan halaman terpisah).
 "use client";
 
 import { useEffect, useState } from "react";
 import { API_URL as API, apiFetch } from "./components/shared";
+
+// Batas ukuran file upload reward dalam megabyte.
 const MAX_FILE_MB = 3;
 
 const _BULAN = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+// Mengubah string "YYYY-MM-DD" menjadi format "D Bulan YYYY".
 function formatTanggal(str) {
   if (!str) return "";
   const [y, m, d] = str.slice(0, 10).split("-");
@@ -18,7 +22,8 @@ const KOMPETISI_PUSPRESNAS = [
 
 const TAHUN_INI = new Date().getFullYear();
 
-// ── Helper UI ─────────────────────────────────────────────────────────────────
+// ─── HELPER UI ────────────────────────────────────────────────────────────────
+// Label field dengan tanda bintang merah jika required.
 function Label({ children, required }) {
   return (
     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -144,7 +149,8 @@ function PrefilledBadge() {
   );
 }
 
-// ── Panel utama — dirender di dalam dashboard (tanpa layout halaman sendiri) ──
+// ─── PANEL UTAMA ──────────────────────────────────────────────────────────────
+// Mengambil data klaim, pengajuan, dan reward lama, lalu merender form pengisian atau perbaikan rekening.
 export default function KonfirmasiRewardFormPanel({ claimId, session, onBack, onSuccess }) {
   const [claim,          setClaim]          = useState(null);
   const [pengajuan,      setPengajuan]      = useState(null);

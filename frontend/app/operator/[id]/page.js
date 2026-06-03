@@ -1,3 +1,4 @@
+// Halaman detail klaim versi operator: preview sertifikat, edit data pengajuan, approve/tolak, dan isi estimasi reward.
 "use client";
 
 import { useEffect, useState } from "react";
@@ -6,13 +7,14 @@ import { useParams, useRouter } from "next/navigation";
 import OperatorSidebar, { OperatorTopbar } from "../_sidebar";
 import { API, apiFetch, ConfirmModal } from "../components/shared";
 
+// Kelas Tailwind warna badge per status klaim untuk tampilan header halaman.
 const STATUS_STYLE = {
   "belum dicek":    "bg-blue-100 text-blue-700",
   "perlu ditinjau": "bg-orange-100 text-orange-700",
   "sudah dicek":    "bg-green-100 text-green-700",
 };
 
-// ── Konstanta pilihan (sinkron dengan TambahKlaimWizard) ──────────────────────
+// ─── KONSTANTA PILIHAN (sinkron dengan TambahKlaimWizard) ────────────────────
 const TAHUN_INI = new Date().getFullYear();
 const OPT_TAHUN = [String(TAHUN_INI), String(TAHUN_INI - 1), String(TAHUN_INI - 2)];
 
@@ -61,7 +63,7 @@ const OPT_KATEGORI_REKOGNISI = [
 ];
 const OPT_JENIS_KARYA = ["Teknologi Tepat Guna", "Seni Budaya", "Produk Kreatif"];
 
-// ── Kalkulasi estimasi reward (sinkron dengan TambahKlaimWizard) ──────────────
+// ─── KALKULASI ESTIMASI REWARD (sinkron dengan TambahKlaimWizard) ────────────
 const PENGALI_REWARD = 225_000;
 const TABEL_PUSPRESNAS = { peserta: 0.5, didanai: 3, final: 6, juara3: 12, juara2: 15, juara1: 18 };
 const TABEL_NON_PUSPRESNAS = {
@@ -70,6 +72,7 @@ const TABEL_NON_PUSPRESNAS = {
   "Internasional":      { peserta: 0.5, didanai: 3, final: 6, juara3: 12, juara2: 15, juara1: 18 },
 };
 
+// Memetakan string capaian ke kunci level (juara1, juara2, ..., peserta) untuk lookup tabel poin.
 function capaianKeLevel(capaian) {
   if (!capaian) return null;
   if (capaian.includes("Juara 1"))                                                          return "juara1";

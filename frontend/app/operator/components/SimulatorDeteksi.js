@@ -1,8 +1,9 @@
+// Halaman simulator deteksi duplikat: pengujian interaktif pHash (gambar) dan fuzzy matching (teks nama lomba).
 "use client";
 import { useState, useRef, useCallback } from "react";
 import { API as API_URL, apiFetch } from "./shared";
 
-// ── SIMULATOR ─ Komponen ini adalah bagian sistem terpisah dari alur produksi.
+// Komponen ini adalah bagian sistem terpisah dari alur produksi.
 // Tidak menyimpan data ke database, tidak mempengaruhi klaim yang ada.
 // Digunakan hanya untuk pengujian dan visualisasi cara kerja deteksi duplikat.
 

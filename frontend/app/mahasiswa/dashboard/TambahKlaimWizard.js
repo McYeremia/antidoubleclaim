@@ -1,10 +1,11 @@
+// Wizard multi-step pengajuan klaim prestasi mahasiswa: data diri → dospem → kategori → detail → kelompok → konfirmasi.
 "use client";
 
 import { useState, useEffect, useRef } from "react";
 import { API_URL, apiFetch } from "./components/shared";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Konstanta
+// KONSTANTA
 // ─────────────────────────────────────────────────────────────────────────────
 const TAHUN_INI  = new Date().getFullYear();
 const TAHUN_OPSI = [String(TAHUN_INI), String(TAHUN_INI - 1)];
@@ -317,7 +318,7 @@ function validateStep(step, data, files, showKelompok, totalSteps) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Design tokens (sama dengan dashboard)
+// DESIGN TOKENS
 // ─────────────────────────────────────────────────────────────────────────────
 const T = {
   border:  "#e2ddd4",
@@ -332,7 +333,7 @@ const T = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Atoms UI
+// ATOM KOMPONEN UI
 // ─────────────────────────────────────────────────────────────────────────────
 function FieldLabel({ children, required, htmlFor }) {
   return (
@@ -1294,16 +1295,22 @@ const INITIAL_DATA = {
   setuju: false,
 };
 
+// Modal wizard pengajuan klaim: menampilkan form multi-step dan mengirim data ke backend saat konfirmasi.
 export default function TambahKlaimWizard({ session, profil, onClose, onSuccess }) {
+
+  // ─── STATE ─────────────────────────────────────────────────────────────────
   const [step,         setStep]         = useState(1);
   const [data,         setData]         = useState({ ...INITIAL_DATA, nama_lengkap: session.user.name ?? "", email: session.user.email ?? "" });
   const [files,        setFiles]        = useState({});
   const [nimInfo,      setNimInfo]      = useState(null);
   const [fieldErrors,  setFieldErrors]  = useState({});
   const [loading,      setLoading]      = useState(false);
-  const [periodeCheck,    setPeriodeCheck]    = useState("loading"); // "loading" | "aktif" | "tutup"
+  // "loading" | "aktif" | "tutup" — wizard tidak dapat dibuka jika periode tutup.
+  const [periodeCheck,    setPeriodeCheck]    = useState("loading");
   const [periodeTanggalSelesai, setPeriodeTanggalSelesai] = useState(null);
 
+  // ─── INISIALISASI ──────────────────────────────────────────────────────────
+  // Memeriksa status periode aktif dan mengambil info NIM saat wizard dibuka.
   useEffect(() => {
     Promise.all([
       apiFetch(`${API_URL}/nim-info?email=${encodeURIComponent(session.user.email)}`),
@@ -1316,6 +1323,9 @@ export default function TambahKlaimWizard({ session, profil, onClose, onSuccess 
     }).catch(() => setPeriodeCheck("tutup"));
   }, []);
 
+  // ─── HANDLER FORM ──────────────────────────────────────────────────────────
+
+  // Memperbarui satu field data; jika kategori_simkatmawa berubah, semua field detail direset.
   const onChange = (key, value) => {
     if (key === "kategori_simkatmawa") {
       setFiles((prev) => ({ ...prev, dokumen_sertifikat: undefined, foto_penyerahan: undefined, dokumen_lainnya: undefined }));
@@ -1333,10 +1343,11 @@ export default function TambahKlaimWizard({ session, profil, onClose, onSuccess 
       return;
     }
     setData((prev) => ({ ...prev, [key]: value }));
-    // clear error for this field on change
+    // Hapus error field yang baru saja diubah.
     if (fieldErrors[key]) setFieldErrors((prev) => { const n = { ...prev }; delete n[key]; return n; });
   };
 
+  // Memvalidasi ukuran file lalu menyimpannya ke state.
   const onFileChange = (key, e) => {
     const file = e.target.files[0];
     const err = validateFile(file);
@@ -1349,12 +1360,14 @@ export default function TambahKlaimWizard({ session, profil, onClose, onSuccess 
     if (fieldErrors[key]) setFieldErrors((prev) => { const n = { ...prev }; delete n[key]; return n; });
   };
 
+  // Step Kelompok ditampilkan hanya jika kepesertaan kelompok di kategori lomba atau rekognisi.
   const showKelompok = data.jenis_kepesertaan === "kelompok" && (isLombaMandiri(data.kategori_simkatmawa) || data.kategori_simkatmawa === "rekognisi");
   const stepLabels   = ["Data Diri", "Dosen Pembimbing", "Kategori", "Detail", ...(showKelompok ? ["Kelompok"] : []), "Konfirmasi"];
   const totalSteps   = stepLabels.length;
   const getStepLabel = () => stepLabels[step - 1] ?? "";
   const isLastStep   = step === totalSteps;
 
+  // Memvalidasi step saat ini; lanjut jika tidak ada error.
   const handleNext = () => {
     const errs = validateStep(step, data, files, showKelompok, totalSteps);
     if (Object.keys(errs).length > 0) {
@@ -1365,11 +1378,13 @@ export default function TambahKlaimWizard({ session, profil, onClose, onSuccess 
     if (step < totalSteps) setStep((s) => s + 1);
   };
 
+  // Kembali ke step sebelumnya dan bersihkan error.
   const handleBack = () => {
     setFieldErrors({});
     if (step > 1) setStep((s) => s - 1);
   };
 
+  // Validasi satu field saat blur untuk feedback inline lebih cepat.
   const handleBlur = (fieldKey) => {
     const errs = validateStep(step, data, files, showKelompok, totalSteps);
     if (errs[fieldKey] !== undefined) {
@@ -1377,6 +1392,8 @@ export default function TambahKlaimWizard({ session, profil, onClose, onSuccess 
     }
   };
 
+  // ─── SUBMIT ────────────────────────────────────────────────────────────────
+  // Mengirim sertifikat terlebih dahulu (POST /upload), lalu data pengajuan lengkap (POST /pengajuan).
   const handleSubmit = async () => {
     const errs = validateStep(step, data, files, showKelompok, totalSteps);
     if (Object.keys(errs).length > 0) { setFieldErrors(errs); return; }

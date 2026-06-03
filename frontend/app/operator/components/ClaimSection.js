@@ -1,7 +1,9 @@
+// Komponen tabel klaim yang dapat dikonfigurasi: mendukung mode aksi, tampilan duplikat, dan info verifikasi.
 "use client";
 
 import { formatTanggal, formatDatetime } from "./shared";
 
+// Merender satu grup klaim (misalnya: antrean, duplikat, atau selesai) dalam kartu tabel dengan judul dan aksi.
 export default function ClaimSection({
   title, color, items,
   showActions, showMirip, showVerified,

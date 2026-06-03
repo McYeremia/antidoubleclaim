@@ -1,7 +1,9 @@
+// Halaman informasi SK Rektor UKDW No. 078/B.02/UKDW/2023 tentang aturan pemberian reward kemahasiswaan.
 "use client";
 
 import { useState } from "react";
 
+// Kartu konten berseksi dengan judul dan garis pemisah.
 function Section({ title, children }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5">
@@ -11,6 +13,7 @@ function Section({ title, children }) {
   );
 }
 
+// Menampilkan isi SK Rektor dalam tiga tab: Ketentuan Umum, Tabel Penghargaan, dan Petunjuk Teknis.
 export default function SKRektor() {
   const [activeTab, setActiveTab] = useState("ketentuan");
 
