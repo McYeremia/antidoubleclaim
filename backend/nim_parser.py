@@ -1,19 +1,14 @@
-"""
-nim_parser.py
-Parsing NIM mahasiswa UKDW dari email @students.ukdw.ac.id
-
-Format NIM (8 digit): FPAAXXXX
-  F    = kode Fakultas   (digit 1)
-  P    = kode Prodi      (digit 2)
-  AA   = angkatan        (digit 3-4, contoh: 22 → 2022)
-  XXXX = nomor urut      (digit 5-8)
-
-Contoh: 71220001 → FTI / Informatika / Angkatan 2022 / Nomor 0001
-"""
+# Parser NIM mahasiswa UKDW dari email @students.ukdw.ac.id.
+# Format NIM (8 digit): FPAAXXXX
+#   F    = kode Fakultas   (digit 1)
+#   P    = kode Prodi      (digit 2)
+#   AA   = angkatan        (digit 3-4, contoh: 22 → 2022)
+#   XXXX = nomor urut      (digit 5-8)
+# Contoh: 71220001 → FTI / Informatika / Angkatan 2022 / Nomor 0001
 
 EMAIL_DOMAIN = "students.ukdw.ac.id"
 
-FAKULTAS = {
+FAKULTAS = {    # Kode digit-1 NIM → nama lengkap fakultas
     "0": "Fakultas Teologi",
     "1": "Fakultas Bisnis",
     "3": "Fakultas Bioteknologi",
@@ -23,7 +18,7 @@ FAKULTAS = {
     "8": "Fakultas Kependidikan dan Humaniora",
 }
 
-PRODI = {
+PRODI = {       # Kode digit-1 (fakultas) → { digit-2 (prodi) → nama prodi }
     "0": {
         "1": "Prodi Filsafat Keilahian",
     },
@@ -53,7 +48,7 @@ PRODI = {
 
 
 def is_valid_student_email(email: str) -> bool:
-    """Cek apakah email berformat [NIM]@students.ukdw.ac.id."""
+    # Cek apakah email berformat [NIM 8 digit]@students.ukdw.ac.id.
     if "@" not in email:
         return False
     local, domain = email.split("@", 1)
@@ -61,26 +56,15 @@ def is_valid_student_email(email: str) -> bool:
 
 
 def parse_nim(email: str) -> dict:
-    """
-    Parsing NIM dari email mahasiswa.
-
-    Returns dict:
-        nim          : str   — NIM lengkap (8 digit)
-        kode_fakultas: str   — digit ke-1
-        kode_prodi   : str   — digit ke-2
-        angkatan     : str   — tahun angkatan (contoh: "2022")
-        nomor_urut   : str   — 4 digit terakhir
-        fakultas     : str   — nama fakultas (atau "Tidak Diketahui")
-        prodi        : str   — nama prodi    (atau "Tidak Diketahui")
-        valid        : bool  — apakah email & NIM valid
-    """
+    # Parsing NIM dari email mahasiswa; mengembalikan dict berisi NIM, kode fakultas/prodi,
+    # angkatan, nomor urut, nama fakultas, nama prodi, dan flag valid.
     if not is_valid_student_email(email):
         return {"valid": False, "pesan": "Email bukan domain @students.ukdw.ac.id atau NIM tidak valid."}
 
-    nim          = email.split("@")[0]
+    nim           = email.split("@")[0]
     kode_fakultas = nim[0]
     kode_prodi    = nim[1]
-    angkatan      = "20" + nim[2:4]
+    angkatan      = "20" + nim[2:4]     # digit 3-4 → tahun angkatan lengkap, contoh "22" → "2022"
     nomor_urut    = nim[4:8]
 
     fakultas = FAKULTAS.get(kode_fakultas, "Tidak Diketahui")

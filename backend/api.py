@@ -1,3 +1,4 @@
+# Modul utama FastAPI: mendefinisikan semua endpoint REST untuk klaim, pengajuan, reward, operator, periode, dan simulator.
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Header, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -65,7 +66,7 @@ app.add_middleware(
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
-MAX_FILE_SIZE = 3 * 1024 * 1024  # 3 MB
+MAX_FILE_SIZE = 3 * 1024 * 1024  # Batas ukuran file upload: maks 3 MB per file
 
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
@@ -84,7 +85,7 @@ class SimulatorFuzzyInput(BaseModel):
     title2: str
 
 def _open_image_from_bytes(filename: str, contents: bytes) -> Image.Image:
-    """Buka gambar dari bytes tanpa menyimpan ke disk. Mendukung JPG, PNG, PDF."""
+    # Membuka gambar dari bytes tanpa menyimpan ke disk. Mendukung JPG, PNG, PDF (halaman pertama).
     ext = os.path.splitext(filename)[1].lower()
     if ext == ".pdf":
         images = convert_from_bytes(contents, poppler_path=POPPLER_PATH)
@@ -102,7 +103,7 @@ async def simulator_phash(
     image2: UploadFile = File(...),
     x_operator_id: Optional[str] = Header(None, alias="x-operator-id"),
 ):
-    # SIMULATOR: Gambar diproses in-memory, tidak disimpan ke disk.
+    # SIMULATOR: Menghitung dan membandingkan pHash dua gambar in-memory; tidak menyimpan data apapun.
     contents1 = await image1.read()
     contents2 = await image2.read()
 
@@ -152,7 +153,7 @@ async def simulator_fuzzy(
     body: SimulatorFuzzyInput,
     x_operator_id: Optional[str] = Header(None, alias="x-operator-id"),
 ):
-    # SIMULATOR: Hanya menghitung skor, tidak ada data yang disimpan.
+    # SIMULATOR: Menghitung skor Token Sort Ratio antara dua judul; tidak ada data yang disimpan.
     if not body.title1.strip() or not body.title2.strip():
         raise HTTPException(status_code=400, detail="Judul tidak boleh kosong")
 
@@ -193,6 +194,7 @@ async def simulator_fuzzy(
 # ── Root ────────────────────────────────────────────────────────────────────
 @app.get("/")
 async def root():
+    # Endpoint root untuk verifikasi bahwa backend aktif.
     return {"message": "Backend Anti-Double Claim Aktif"}
 
 # ── Statistik Visualisasi ────────────────────────────────────────────────────
@@ -205,6 +207,7 @@ async def stats_visualisasi(
     kategori:  Optional[str] = None,
     periode:   Optional[str] = None,
 ):
+    # Mengambil data statistik visualisasi dengan filter opsional (fakultas, prodi, tahun, tingkatan, kategori, periode).
     return get_stats_visualisasi(
         filter_fakultas=fakultas,
         filter_prodi=prodi,
@@ -224,6 +227,7 @@ async def export_data(
     kategori:    Optional[str] = None,
     kepesertaan: Optional[str] = None,
 ):
+    # Mengambil data mentah klaim untuk diekspor sebagai tabel (dengan filter opsional).
     return get_export_data(
         filter_fakultas=fakultas,
         filter_prodi=prodi,
@@ -241,12 +245,14 @@ class ProfilUpdate(BaseModel):
 
 @app.get("/profil")
 async def get_profil(email: str):
+    # Mengambil data profil tersimpan (nomor WA, rekening) milik mahasiswa berdasarkan email.
     if not is_valid_student_email(email):
         raise HTTPException(status_code=400, detail="Email tidak valid")
     return get_profil_mahasiswa(email)
 
 @app.put("/profil")
 async def update_profil(email: str, body: ProfilUpdate):
+    # Memperbarui atau membuat data profil mahasiswa (nomor WA, nama dan nomor rekening).
     if not is_valid_student_email(email):
         raise HTTPException(status_code=400, detail="Email tidak valid")
     upsert_profil_mahasiswa(email, body.model_dump())
@@ -263,6 +269,7 @@ class PeriodeCreate(BaseModel):
 
 @app.get("/periode/aktif")
 async def periode_aktif():
+    # Mengambil periode klaim yang statusnya 'aktif' dan waktunya mencakup hari ini.
     result = get_periode_aktif()
     if not result:
         return {"aktif": False, "periode": None}
@@ -270,7 +277,7 @@ async def periode_aktif():
 
 @app.get("/periode/terkini")
 async def periode_terkini():
-    """Periode yang mencakup hari ini berdasarkan tanggal (tidak peduli status aktif/tutup)."""
+    # Mengambil periode yang mencakup hari ini berdasarkan tanggal (tidak peduli status aktif/tutup).
     result = get_periode_terkini()
     if not result:
         return {"ditemukan": False, "periode": None}
@@ -279,10 +286,12 @@ async def periode_terkini():
 
 @app.get("/periode")
 async def list_periode():
+    # Mengambil semua periode klaim yang ada di database.
     return get_all_periode()
 
 @app.post("/periode")
 async def buat_periode(body: PeriodeCreate, x_operator_id: Optional[str] = Header(None)):
+    # Membuat periode klaim baru dan mencatat aksi ke audit log — hanya operator.
     op = _require_operator(x_operator_id)
     periode_id = create_periode(body.model_dump())
     insert_audit_log(op["id"], op["nama"], "buat_periode", "periode", periode_id, body.nama)
@@ -290,6 +299,7 @@ async def buat_periode(body: PeriodeCreate, x_operator_id: Optional[str] = Heade
 
 @app.put("/periode/{periode_id}")
 async def ubah_status_periode(periode_id: int, status: str, x_operator_id: Optional[str] = Header(None)):
+    # Mengubah status periode (tutup/aktif/ditutup) dengan validasi transisi — hanya operator.
     op = _require_operator(x_operator_id)
     result = update_periode_status(periode_id, status)
     if not result["ok"]:
@@ -299,6 +309,7 @@ async def ubah_status_periode(periode_id: int, status: str, x_operator_id: Optio
 
 @app.post("/periode/{periode_id}/arsip")
 async def arsip_periode(periode_id: int, x_operator_id: Optional[str] = Header(None)):
+    # Mengarsipkan periode beserta semua klaim dan reward di dalamnya — hanya superadmin.
     op = _require_superadmin(x_operator_id)
     result = arsipkan_periode(periode_id)
     if not result["ok"]:
@@ -308,10 +319,12 @@ async def arsip_periode(periode_id: int, x_operator_id: Optional[str] = Header(N
 
 @app.get("/periode/{periode_id}/claims")
 async def claims_by_periode(periode_id: int):
+    # Mengambil semua klaim yang terhubung ke periode tertentu.
     return get_claims_by_periode_id(periode_id)
 
 @app.get("/periode/{periode_id}/rewards")
 async def rewards_by_periode(periode_id: int):
+    # Mengambil semua data reward yang terhubung ke periode tertentu.
     return get_rewards_by_periode_id(periode_id)
 
 class PeriodeEdit(BaseModel):
@@ -321,6 +334,7 @@ class PeriodeEdit(BaseModel):
 
 @app.patch("/periode/{periode_id}")
 async def edit_periode(periode_id: int, body: PeriodeEdit, x_operator_id: Optional[str] = Header(None)):
+    # Mengedit nama dan tanggal periode yang belum diarsipkan — hanya operator.
     op = _require_operator(x_operator_id)
     update_periode_data(periode_id, body.model_dump())
     insert_audit_log(op["id"], op["nama"], "edit_periode", "periode", periode_id, body.nama)
@@ -328,6 +342,7 @@ async def edit_periode(periode_id: int, body: PeriodeEdit, x_operator_id: Option
 
 @app.delete("/periode/{periode_id}")
 async def hapus_periode(periode_id: int, x_operator_id: Optional[str] = Header(None)):
+    # Menghapus periode yang tidak sedang aktif; gagal jika periode masih aktif — hanya superadmin.
     op = _require_superadmin(x_operator_id)
     nama_periode = get_periode_nama(periode_id)
     ok = delete_periode(periode_id)
@@ -338,6 +353,7 @@ async def hapus_periode(periode_id: int, x_operator_id: Optional[str] = Header(N
 
 @app.post("/admin/reset-data")
 async def reset_data(x_operator_id: Optional[str] = Header(None)):
+    # Menghapus semua data (klaim, pengajuan, reward, periode) kecuali tabel USERS — hanya superadmin.
     op = _require_superadmin(x_operator_id)
     reset_semua_data()
     insert_audit_log(op["id"], op["nama"], "reset_semua_data", None, None, None)
@@ -350,23 +366,27 @@ async def list_audit_log(
     date_to:   Optional[str] = None,
     x_operator_id: Optional[str] = Header(None),
 ):
+    # Mengambil riwayat aktivitas operator dengan filter rentang tanggal — hanya superadmin.
     _require_superadmin(x_operator_id)
     return get_audit_log(date_from=date_from, date_to=date_to)
 
 # ── NIM Info ─────────────────────────────────────────────────────────────────
 @app.get("/nim-info")
 async def nim_info(email: str):
+    # Parsing NIM dari email mahasiswa dan mengembalikan info fakultas, prodi, angkatan.
     return parse_nim(email)
 
 # ── Claims ──────────────────────────────────────────────────────────────────
 @app.get("/claims")
 async def list_claims(email: str = None):
+    # Jika email diberikan, kembalikan klaim milik mahasiswa tersebut; jika tidak, kembalikan semua klaim.
     if email:
         return get_claims_by_email(email)
     return get_all_claims()
 
 @app.get("/klaim-sebagai-anggota")
 async def klaim_sebagai_anggota(email: str):
+    # Mengambil klaim di mana mahasiswa terdaftar sebagai anggota kelompok (bukan ketua).
     if not is_valid_student_email(email):
         return []
     nim = email.split("@")[0]
@@ -374,10 +394,12 @@ async def klaim_sebagai_anggota(email: str):
 
 @app.get("/claims/ditolak")
 async def get_claims_ditolak():
+    # Mengambil semua klaim berstatus ditolak untuk riwayat di panel operator.
     return get_ditolak_claims()
 
 @app.get("/claims/{claim_id}")
 async def detail_claim(claim_id: int):
+    # Mengambil detail satu klaim beserta info operator yang memverifikasi.
     claim = get_claim_by_id(claim_id)
     if not claim:
         raise HTTPException(status_code=404, detail="Klaim tidak ditemukan")
@@ -385,6 +407,7 @@ async def detail_claim(claim_id: int):
 
 @app.patch("/claims/{claim_id}/approve")
 async def approve(claim_id: int, background_tasks: BackgroundTasks, x_operator_id: Optional[str] = Header(None)):
+    # Menyetujui klaim, mencatat audit log, dan mengirim email notifikasi ke mahasiswa.
     op = _require_operator(x_operator_id)
     claim = get_claim_by_id(claim_id)
     if not claim:
@@ -399,6 +422,7 @@ class DiscardBody(BaseModel):
 
 @app.delete("/claims/{claim_id}")
 async def discard(claim_id: int, background_tasks: BackgroundTasks, body: Optional[DiscardBody] = None, x_operator_id: Optional[str] = Header(None)):
+    # Menolak klaim dengan catatan alasan, mencatat audit log, dan mengirim email notifikasi ke mahasiswa.
     op = _require_operator(x_operator_id)
     claim = get_claim_by_id(claim_id)
     if not claim:
@@ -421,6 +445,7 @@ async def upload_certificate(
     file: UploadFile = File(...),
     kategori_simkatmawa: Optional[str] = Form(None),
 ):
+    # Menerima upload sertifikat, menyimpan file ke disk, dan menjalankan deteksi duplikat.
     try:
         print(f"--- Menerima upload: {nama_lomba} dari {mahasiswa_email} ---")
 
@@ -495,8 +520,10 @@ async def submit_pengajuan(
     dokumen_sertifikat:  Optional[UploadFile] = File(None),
     dokumen_lainnya:     Optional[UploadFile] = File(None),
 ):
+    # Menerima data pengajuan SIMKATMAWA lengkap beserta file-file dokumen pendukung.
     try:
         def save_file(upload: Optional[UploadFile], prefix: str) -> Optional[str]:
+            # Menyimpan file upload ke folder uploads dengan nama unik; kembalikan path-nya.
             if not upload or not upload.filename:
                 return None
             contents = upload.file.read()
@@ -563,10 +590,12 @@ async def submit_pengajuan(
 
 @app.get("/pengajuan")
 async def list_pengajuan(email: str):
+    # Mengambil semua pengajuan milik mahasiswa berdasarkan email.
     return get_pengajuan_by_email(email)
 
 @app.get("/pengajuan/by-claim/{claim_id}")
 async def pengajuan_by_claim(claim_id: int):
+    # Mengambil data pengajuan yang terhubung ke klaim tertentu.
     data = get_pengajuan_by_claim_id(claim_id)
     if not data:
         raise HTTPException(status_code=404, detail="Data pengajuan tidak ditemukan")
@@ -602,10 +631,11 @@ class PengajuanUpdate(BaseModel):
     keterangan_kelompok: Optional[str] = None
     estimasi_reward:     Optional[int] = None
 
-EDITABLE_STATUSES = {"belum dicek", "perlu ditinjau"}
+EDITABLE_STATUSES = {"belum dicek", "perlu ditinjau"}  # Status klaim yang masih boleh diedit oleh mahasiswa
 
 @app.patch("/pengajuan/{pengajuan_id}")
 async def edit_pengajuan(pengajuan_id: int, body: PengajuanUpdate):
+    # Mengedit data pengajuan selama klaimnya belum diproses operator (belum dicek/perlu ditinjau).
     pengajuan = get_pengajuan_by_id(pengajuan_id)
     if not pengajuan:
         raise HTTPException(status_code=404, detail="Pengajuan tidak ditemukan")
@@ -649,8 +679,10 @@ async def submit_reward_konfirmasi(
     laporan_akhir:          Optional[UploadFile]   = File(None),
     karya_publikasi:        Optional[UploadFile]   = File(None),
 ):
+    # Menerima data konfirmasi reward dari mahasiswa beserta dokumen rekening dan laporan akhir.
     try:
         def save_file(upload: Optional[UploadFile], prefix: str) -> Optional[str]:
+            # Menyimpan file upload ke folder uploads dengan nama unik; kembalikan path-nya.
             if not upload or not upload.filename:
                 return None
             contents = upload.file.read()
@@ -703,14 +735,16 @@ class RewardStatusUpdate(BaseModel):
 
 @app.get("/reward-konfirmasi")
 async def list_rewards(email: Optional[str] = None):
+    # Mengambil semua reward (tanpa filter) atau reward milik mahasiswa tertentu berdasarkan email.
     if email:
         return get_reward_konfirmasi_by_email(email)
     return get_all_reward_konfirmasi()
 
-_VALID_REWARD_STATUSES = {"menunggu", "diproses", "selesai", "dikembalikan", "ditolak"}
+_VALID_REWARD_STATUSES = {"menunggu", "diproses", "selesai", "dikembalikan", "ditolak"}  # Status reward yang diizinkan
 
 @app.patch("/reward-konfirmasi/{reward_id}/status")
 async def update_reward(reward_id: int, body: RewardStatusUpdate, background_tasks: BackgroundTasks, x_operator_id: Optional[str] = Header(None)):
+    # Mengubah status reward, mencatat audit log, dan mengirim email notifikasi sesuai status baru.
     if body.status not in _VALID_REWARD_STATUSES:
         raise HTTPException(status_code=400, detail=f"Status tidak valid. Gunakan: {', '.join(sorted(_VALID_REWARD_STATUSES))}")
     op = _require_operator(x_operator_id)
@@ -733,6 +767,7 @@ async def update_reward(reward_id: int, body: RewardStatusUpdate, background_tas
 
 @app.get("/reward-konfirmasi/{claim_id}")
 async def get_reward(claim_id: int):
+    # Mengambil data reward konfirmasi berdasarkan claim_id (bukan reward_id).
     data = get_reward_konfirmasi_by_claim_id(claim_id)
     if not data:
         raise HTTPException(status_code=404, detail="Data reward tidak ditemukan")
@@ -763,7 +798,9 @@ async def resubmit_reward(
     laporan_akhir:         Optional[UploadFile] = File(None),
     karya_publikasi:       Optional[UploadFile] = File(None),
 ):
+    # Memperbarui data reward konfirmasi setelah dikembalikan oleh operator untuk diperbaiki.
     def save_file(upload: Optional[UploadFile]) -> Optional[str]:
+        # Menyimpan file upload baru ke folder uploads; kembalikan path-nya atau None jika tidak ada file.
         if not upload or not upload.filename:
             return None
         contents = upload.file.read()
@@ -814,7 +851,7 @@ class CreateOperatorRequest(BaseModel):
     role: Optional[str] = "operator"
 
 def _require_operator(x_operator_id: Optional[str]):
-    """Raise 401/403 jika header tidak ada atau ID tidak ada di DB. Kembalikan data operator."""
+    # Raise 401/403 jika header tidak ada atau ID tidak ada di DB. Kembalikan data operator.
     if not x_operator_id or not x_operator_id.isdigit():
         raise HTTPException(status_code=401, detail="Akses ditolak: header X-Operator-ID diperlukan")
     op = get_operator_by_id(int(x_operator_id))
@@ -823,7 +860,7 @@ def _require_operator(x_operator_id: Optional[str]):
     return op
 
 def _require_superadmin(x_operator_id: Optional[str]):
-    """Raise 403 jika requester bukan superadmin. Kembalikan data operator."""
+    # Raise 403 jika requester bukan superadmin. Kembalikan data operator.
     op = _require_operator(x_operator_id)
     if op.get("role") != "superadmin":
         raise HTTPException(status_code=403, detail="Akses ditolak: hanya Super Admin yang dapat melakukan ini")
@@ -831,6 +868,7 @@ def _require_superadmin(x_operator_id: Optional[str]):
 
 @app.post("/login-operator")
 async def login_operator(body: OperatorLoginRequest):
+    # Autentikasi operator dengan username dan password; mengembalikan data user jika berhasil.
     user = authenticate_operator(body.username, body.password)
     if not user:
         raise HTTPException(status_code=401, detail="Username atau password salah")
@@ -846,6 +884,7 @@ class ResetPasswordRequest(BaseModel):
 
 @app.post("/operator/lupa-password")
 async def lupa_password_operator(body: LupaPasswordRequest, background_tasks: BackgroundTasks):
+    # Membuat OTP reset password dan mengirimkannya ke email operator jika terdaftar.
     op = get_operator_by_email(body.email)
     otp = str(random.randint(100000, 999999))
     create_operator_otp(body.email, otp)
@@ -856,6 +895,7 @@ async def lupa_password_operator(body: LupaPasswordRequest, background_tasks: Ba
 
 @app.post("/operator/reset-password")
 async def reset_password_operator(body: ResetPasswordRequest):
+    # Mereset password operator menggunakan OTP yang valid; OTP langsung hangus setelah digunakan.
     if not body.new_password or len(body.new_password) < 8:
         raise HTTPException(status_code=400, detail="Password baru minimal 8 karakter")
     if not verify_operator_otp(body.email, body.otp):
@@ -868,6 +908,7 @@ async def reset_password_operator(body: ResetPasswordRequest):
 
 @app.get("/operators")
 async def list_operators(x_operator_id: Optional[str] = Header(None)):
+    # Mengambil daftar semua akun operator yang ada — hanya superadmin.
     _require_superadmin(x_operator_id)
     return get_all_operators()
 
@@ -876,6 +917,7 @@ async def add_operator(
     body: CreateOperatorRequest,
     x_operator_id: Optional[str] = Header(None),
 ):
+    # Membuat akun operator baru dengan validasi minimal 8 karakter password — hanya superadmin.
     op = _require_superadmin(x_operator_id)
     if not body.password or len(body.password) < 8:
         raise HTTPException(status_code=400, detail="Password minimal 8 karakter")
@@ -896,6 +938,8 @@ async def change_operator_password(
     body: ChangePasswordRequest,
     x_operator_id: Optional[str] = Header(None),
 ):
+    # Mengubah password operator; operator hanya bisa mengubah milik sendiri (dengan verifikasi password lama).
+    # Superadmin bisa mengubah milik operator lain, kecuali sesama superadmin.
     op = _require_operator(x_operator_id)
     target = get_operator_by_id(operator_id)
     if not target:
@@ -929,6 +973,7 @@ async def remove_operator(
     body: DeleteOperatorBody = DeleteOperatorBody(),
     x_operator_id: Optional[str] = Header(None),
 ):
+    # Menghapus akun operator dengan konfirmasi password superadmin; tidak bisa menghapus superadmin terakhir.
     op = _require_superadmin(x_operator_id)
     if not body.current_password:
         raise HTTPException(status_code=400, detail="Password diperlukan untuk mengkonfirmasi penghapusan")

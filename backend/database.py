@@ -13,7 +13,7 @@ FUZZY_THRESHOLD  = 80   # Minimum skor fuzzy nama lomba (0–100) agar dianggap 
 # Helper koneksi
 # ---------------------------------------------------------------------------
 def _fmt_datetime(value: str) -> str:
-    """Ubah ISO datetime dari SQLite menjadi format Indonesia, e.g. '3 Mei 2026, 14:30'."""
+    # Mengubah format datetime SQLite menjadi format Indonesia, contoh: '3 Mei 2026, 14:30'.
     if not value:
         return ""
     from datetime import datetime
@@ -34,6 +34,7 @@ def _fmt_datetime(value: str) -> str:
 
 
 def _get_conn():
+    # Membuka koneksi ke file claims.db dengan foreign key aktif.
     conn = sqlite3.connect("claims.db", timeout=10)
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
@@ -42,6 +43,7 @@ def _get_conn():
 # Inisialisasi skema database
 # ---------------------------------------------------------------------------
 def create_database():
+    # Membuat semua tabel jika belum ada, menjalankan migrasi kolom baru, dan seed akun superadmin default.
     conn = _get_conn()
     cursor = conn.cursor()
 
@@ -319,6 +321,7 @@ def insert_claim(nama_lomba, tingkat, tanggal, peringkat, sertifikat_path,
                  mahasiswa_email="placeholder@students.ukdw.ac.id",
                  nama_display="Mahasiswa",
                  kategori_simkatmawa=None):
+    # Menyimpan klaim baru ke DB dan mendeteksi duplikat via pHash + fuzzy nama lomba.
 
     conn = _get_conn()
     cursor = conn.cursor()
@@ -417,6 +420,7 @@ def insert_claim(nama_lomba, tingkat, tanggal, peringkat, sertifikat_path,
 # Approve & Discard
 # ---------------------------------------------------------------------------
 def approve_claim(claim_id, operator_id=None):
+    # Mengubah status klaim menjadi 'sudah dicek' dan mencatat operator yang memverifikasi.
     conn = _get_conn()
     if operator_id:
         conn.execute(
@@ -429,6 +433,7 @@ def approve_claim(claim_id, operator_id=None):
     conn.close()
 
 def reject_claim(claim_id: int, operator_id: int = None, catatan: str = None):
+    # Mengubah status klaim menjadi 'ditolak' beserta catatan alasan penolakan.
     conn = _get_conn()
     conn.execute(
         "UPDATE CLAIMS SET status = 'ditolak', verified_by = ?, catatan_penolakan = ? WHERE id = ?",
@@ -441,6 +446,7 @@ def reject_claim(claim_id: int, operator_id: int = None, catatan: str = None):
 # Helper: row DB → dict
 # ---------------------------------------------------------------------------
 def _row_to_dict(row):
+    # Mengubah row hasil query CLAIMS menjadi dictionary Python.
     return {
         "id":                  row[0],
         "nama_lomba":          row[1],
@@ -470,7 +476,7 @@ def _row_to_dict(row):
 # Query
 # ---------------------------------------------------------------------------
 def get_all_claims():
-    """Kembalikan semua klaim KECUALI yang berasal dari periode diarsipkan."""
+    # Mengambil semua klaim aktif kecuali yang berasal dari periode diarsipkan dan klaim ditolak.
     conn = _get_conn()
     cursor = conn.cursor()
     cursor.execute("""
@@ -494,7 +500,7 @@ def get_all_claims():
     return [_row_to_dict(row) for row in rows]
 
 def get_ditolak_claims():
-    """Kembalikan semua klaim berstatus ditolak (untuk riwayat operator)."""
+    # Mengambil semua klaim berstatus ditolak untuk ditampilkan di riwayat operator.
     conn = _get_conn()
     cursor = conn.cursor()
     cursor.execute("""
@@ -514,6 +520,7 @@ def get_ditolak_claims():
     return [_row_to_dict(row) for row in rows]
 
 def insert_pengajuan(data: dict, anggota: list = None) -> int:
+    # Menyimpan data pengajuan SIMKATMAWA beserta daftar anggota kelompok jika ada.
     conn = _get_conn()
     cursor = conn.cursor()
     cursor.execute("""
@@ -563,6 +570,7 @@ def insert_pengajuan(data: dict, anggota: list = None) -> int:
 
 
 def get_pengajuan_by_email(email: str) -> list:
+    # Mengambil semua pengajuan milik mahasiswa berdasarkan email beserta daftar anggotanya.
     conn = _get_conn()
     cursor = conn.cursor()
     cursor.execute("""
@@ -580,6 +588,7 @@ def get_pengajuan_by_email(email: str) -> list:
 
 
 def get_pengajuan_by_id(pengajuan_id: int):
+    # Mengambil satu data pengajuan berdasarkan ID-nya.
     conn = _get_conn()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM PENGAJUAN WHERE id = ?", (pengajuan_id,))
@@ -591,6 +600,7 @@ def get_pengajuan_by_id(pengajuan_id: int):
 
 
 def get_pengajuan_by_claim_id(claim_id: int):
+    # Mengambil data pengajuan yang terhubung ke klaim tertentu beserta daftar anggotanya.
     conn = _get_conn()
     cursor = conn.cursor()
     cursor.execute("""
@@ -610,6 +620,7 @@ def get_pengajuan_by_claim_id(claim_id: int):
 
 
 def get_klaim_sebagai_anggota(nim: str) -> list:
+    # Mengambil klaim di mana mahasiswa terdaftar sebagai anggota kelompok (bukan ketua).
     conn = _get_conn()
     cursor = conn.cursor()
     cursor.execute("""
@@ -632,6 +643,7 @@ def get_klaim_sebagai_anggota(nim: str) -> list:
 
 
 def update_pengajuan(pengajuan_id: int, data: dict):
+    # Memperbarui data pengajuan dan menyinkronkan field terkait ke tabel CLAIMS.
     # Kolom yang boleh diedit oleh operator
     EDITABLE = [
         "nama_display", "nomor_wa", "ada_dospem", "nidn_dospem",
@@ -685,6 +697,7 @@ def update_pengajuan(pengajuan_id: int, data: dict):
 
 
 def get_claims_by_email(email):
+    # Mengambil semua klaim milik satu mahasiswa berdasarkan email.
     conn = _get_conn()
     cursor = conn.cursor()
     cursor.execute("""
@@ -705,6 +718,7 @@ def get_claims_by_email(email):
     return [_row_to_dict(row) for row in rows]
 
 def get_claim_by_id(claim_id):
+    # Mengambil detail satu klaim beserta data pengajuan, periode, dan operator yang memverifikasi.
     conn = _get_conn()
     cursor = conn.cursor()
     cursor.execute("""
@@ -730,6 +744,7 @@ def get_claim_by_id(claim_id):
 # Reward Konfirmasi
 # ---------------------------------------------------------------------------
 def insert_reward_konfirmasi(data: dict) -> int:
+    # Menyimpan data konfirmasi reward yang diisi mahasiswa setelah klaim disetujui.
     conn = _get_conn()
     cursor = conn.cursor()
     cursor.execute("""
@@ -764,7 +779,7 @@ def insert_reward_konfirmasi(data: dict) -> int:
 
 
 def update_reward_konfirmasi(reward_id: int, data: dict):
-    """Update data form reward + reset status ke 'menunggu' untuk pengiriman ulang."""
+    # Memperbarui data form reward dan mereset statusnya ke 'menunggu' untuk pengiriman ulang.
     # periode dan periode_id TIDAK diupdate — dicatat sekali saat pertama submit, immutable
     TEXT_FIELDS = [
         "tahun_klaim", "nomor_urut_lampiran", "kategori_lomba",
@@ -812,6 +827,7 @@ def update_reward_konfirmasi(reward_id: int, data: dict):
 
 
 def get_reward_konfirmasi_by_claim_id(claim_id: int):
+    # Mengambil data reward berdasarkan ID klaim yang terhubung.
     conn = _get_conn()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM REWARD_KONFIRMASI WHERE claim_id = ?", (claim_id,))
@@ -825,6 +841,7 @@ def get_reward_konfirmasi_by_claim_id(claim_id: int):
 
 
 def get_reward_konfirmasi_by_email(email: str) -> list:
+    # Mengambil semua data reward milik satu mahasiswa berdasarkan email.
     conn = _get_conn()
     cursor = conn.cursor()
     cursor.execute(
@@ -838,7 +855,7 @@ def get_reward_konfirmasi_by_email(email: str) -> list:
 
 
 def get_all_reward_konfirmasi() -> list:
-    """Kembalikan semua reward konfirmasi kecuali dari periode yang diarsipkan."""
+    # Mengambil semua data reward konfirmasi kecuali yang berasal dari periode diarsipkan.
     conn = _get_conn()
     cursor = conn.cursor()
     cursor.execute("""
@@ -857,6 +874,7 @@ def get_all_reward_konfirmasi() -> list:
 
 
 def get_reward_konfirmasi_by_id(reward_id: int):
+    # Mengambil satu data reward berdasarkan ID reward-nya.
     conn = _get_conn()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM REWARD_KONFIRMASI WHERE id = ?", (reward_id,))
@@ -870,6 +888,7 @@ def get_reward_konfirmasi_by_id(reward_id: int):
 
 
 def update_reward_status(reward_id: int, status: str, catatan: str = None):
+    # Mengubah status reward dan mencatat waktu diproses jika status berubah menjadi 'diproses'.
     conn = _get_conn()
     ts = "DATETIME('now', 'localtime')" if status == "diproses" else "NULL"
     if catatan is not None:
@@ -890,6 +909,7 @@ def update_reward_status(reward_id: int, status: str, catatan: str = None):
 # Autentikasi Operator
 # ---------------------------------------------------------------------------
 def get_all_operators() -> list:
+    # Mengambil semua akun operator yang terdaftar di sistem.
     conn = _get_conn()
     cursor = conn.cursor()
     cursor.execute("SELECT id, username, nama, email, role FROM USERS ORDER BY id")
@@ -900,6 +920,7 @@ def get_all_operators() -> list:
 
 
 def get_operator_by_id(operator_id: int):
+    # Mengambil data satu operator berdasarkan ID-nya.
     conn = _get_conn()
     cursor = conn.cursor()
     cursor.execute(
@@ -915,7 +936,7 @@ def get_operator_by_id(operator_id: int):
 
 
 def authenticate_operator(username: str, password: str):
-    """Verifikasi username + password. Kembalikan dict user jika valid, None jika tidak."""
+    # Memverifikasi username dan password operator menggunakan bcrypt. Mengembalikan data user jika valid.
     conn = _get_conn()
     cursor = conn.cursor()
     cursor.execute(
@@ -937,7 +958,7 @@ def authenticate_operator(username: str, password: str):
 
 
 def create_operator(username: str, password: str, nama: str, email: str, role: str = "operator"):
-    """Buat akun operator baru. role: 'operator' atau 'superadmin'."""
+    # Membuat akun operator baru dengan password terenkripsi. Role bisa 'operator' atau 'superadmin'.
     if role not in ("operator", "superadmin"):
         return False
     pw_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
@@ -960,6 +981,7 @@ def create_operator(username: str, password: str, nama: str, email: str, role: s
 # ---------------------------------------------------------------------------
 def insert_audit_log(operator_id: int, operator_nama: str, aksi: str,
                      target_tipe: str = None, target_id: int = None, detail: str = None):
+    # Mencatat setiap aksi yang dilakukan operator ke tabel AUDIT_LOG.
     conn = _get_conn()
     conn.execute(
         """INSERT INTO AUDIT_LOG (operator_id, operator_nama, aksi, target_tipe, target_id, detail)
@@ -971,6 +993,7 @@ def insert_audit_log(operator_id: int, operator_nama: str, aksi: str,
 
 
 def get_audit_log(date_from: str = None, date_to: str = None, limit: int = 1000) -> list:
+    # Mengambil riwayat aksi operator dengan filter tanggal opsional, maksimal 1000 baris.
     conn = _get_conn()
     cursor = conn.cursor()
     conditions = []
@@ -1003,6 +1026,7 @@ def get_audit_log(date_from: str = None, date_to: str = None, limit: int = 1000)
 # Profil Mahasiswa
 # ---------------------------------------------------------------------------
 def get_profil_mahasiswa(email: str):
+    # Mengambil data profil dan rekening mahasiswa berdasarkan email.
     conn = _get_conn()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM MAHASISWA_PROFIL WHERE email = ?", (email,))
@@ -1015,6 +1039,7 @@ def get_profil_mahasiswa(email: str):
 
 
 def upsert_profil_mahasiswa(email: str, data: dict):
+    # Menyimpan atau memperbarui data profil mahasiswa (insert jika belum ada, update jika sudah ada).
     conn = _get_conn()
     conn.execute("""
         INSERT INTO MAHASISWA_PROFIL (email, nomor_wa, nama_pemilik_rekening, nomor_rekening, updated_at)
@@ -1045,6 +1070,7 @@ def get_stats_visualisasi(
     filter_kategori:  str = None,
     filter_periode:   str = None,
 ) -> dict:
+    # Menghasilkan data statistik klaim yang sudah disetujui untuk keperluan visualisasi dan grafik.
     from backend.nim_parser import parse_nim
 
     conn = _get_conn()
@@ -1174,11 +1200,7 @@ def get_stats_visualisasi(
 # Periode Klaim
 # ---------------------------------------------------------------------------
 def get_periode_terkini():
-    """
-    Kembalikan periode berdasarkan rentang tanggal (tidak peduli status aktif/tutup).
-    Prioritas: periode yang rentang tanggalnya mencakup hari ini.
-    Fallback: periode terakhir yang sudah lewat (paling baru).
-    """
+    # Mengambil periode yang mencakup hari ini. Jika tidak ada, fallback ke periode terakhir yang sudah lewat.
     conn = _get_conn()
     cursor = conn.cursor()
     # Periode yang tanggalnya mencakup hari ini (bisa aktif atau tutup)
@@ -1203,7 +1225,7 @@ def get_periode_terkini():
 
 
 def get_periode_aktif():
-    """Kembalikan periode yang sedang aktif (status='aktif' dan hari ini dalam rentang tanggal)."""
+    # Mengambil periode yang sedang aktif saat ini (status 'aktif' dan tanggal hari ini masuk rentangnya).
     conn = _get_conn()
     cursor = conn.cursor()
     cursor.execute("""
@@ -1222,7 +1244,7 @@ def get_periode_aktif():
 
 
 def get_all_periode():
-    """Kembalikan semua periode, terbaru di atas. Sertakan jumlah klaim per periode."""
+    # Mengambil semua periode beserta statistik jumlah klaim dan reward di masing-masing periode.
     conn = _get_conn()
     cursor = conn.cursor()
     cursor.execute("""
@@ -1246,6 +1268,7 @@ def get_all_periode():
 
 
 def get_periode_nama(periode_id: int):
+    # Mengambil nama periode berdasarkan ID-nya, digunakan untuk keperluan audit log.
     conn = _get_conn()
     cursor = conn.cursor()
     cursor.execute("SELECT nama FROM PERIODE_KLAIM WHERE id = ?", (periode_id,))
@@ -1255,7 +1278,7 @@ def get_periode_nama(periode_id: int):
 
 
 def create_periode(data: dict) -> int:
-    """Buat periode baru dengan status 'tutup' (harus diaktifkan manual)."""
+    # Membuat periode klaim baru dengan status awal 'tutup', harus diaktifkan manual oleh operator.
     conn = _get_conn()
     cursor = conn.cursor()
     cursor.execute("""
@@ -1276,7 +1299,7 @@ def create_periode(data: dict) -> int:
 
 
 def update_periode_status(periode_id: int, status: str) -> dict:
-    """Ubah status periode: 'aktif', 'tutup', atau 'ditutup'. Hanya 1 periode aktif sekaligus."""
+    # Mengubah status periode. Hanya satu periode yang boleh aktif sekaligus.
     if status not in ("aktif", "tutup", "ditutup"):
         return {"ok": False, "alasan": "Status tidak valid. Gunakan 'aktif', 'tutup', atau 'ditutup'."}
     conn = _get_conn()
@@ -1305,11 +1328,7 @@ def update_periode_status(periode_id: int, status: str) -> dict:
 
 
 def arsipkan_periode(periode_id: int) -> dict:
-    """
-    Arsipkan periode: ubah status menjadi 'diarsipkan'.
-    Hanya berhasil jika semua reward pada periode tsb sudah selesai.
-    Kembalikan {"ok": True} atau {"ok": False, "alasan": str, "pending": int}.
-    """
+    # Mengarsipkan periode jika semua klaim sudah diverifikasi dan semua reward sudah selesai diproses.
     conn = _get_conn()
     cursor = conn.cursor()
 
@@ -1377,7 +1396,7 @@ def arsipkan_periode(periode_id: int) -> dict:
 
 
 def get_claims_by_periode_id(periode_id: int) -> list:
-    """Ambil semua klaim yang terdaftar pada periode tertentu."""
+    # Mengambil semua klaim yang terdaftar pada periode tertentu beserta data anggota kelompok.
     conn = _get_conn()
     cursor = conn.cursor()
     cursor.execute("""
@@ -1411,7 +1430,7 @@ def get_claims_by_periode_id(periode_id: int) -> list:
 
 
 def get_rewards_by_periode_id(periode_id: int) -> list:
-    """Ambil semua reward konfirmasi pada periode tertentu (via claim.periode_id)."""
+    # Mengambil semua data reward konfirmasi yang terhubung ke klaim pada periode tertentu.
     conn = _get_conn()
     cursor = conn.cursor()
     cursor.execute("""
@@ -1429,7 +1448,7 @@ def get_rewards_by_periode_id(periode_id: int) -> list:
 
 
 def update_periode_data(periode_id: int, data: dict) -> bool:
-    """Edit nama, tanggal_mulai, tanggal_selesai periode."""
+    # Memperbarui nama dan tanggal mulai/selesai periode.
     conn = _get_conn()
     conn.execute(
         "UPDATE PERIODE_KLAIM SET nama = ?, tanggal_mulai = ?, tanggal_selesai = ? WHERE id = ?",
@@ -1441,7 +1460,7 @@ def update_periode_data(periode_id: int, data: dict) -> bool:
 
 
 def delete_periode(periode_id: int) -> bool:
-    """Hapus periode. Tidak bisa hapus periode yang sedang aktif."""
+    # Menghapus periode. Tidak bisa menghapus periode yang sedang berstatus aktif.
     conn = _get_conn()
     cursor = conn.cursor()
     cursor.execute("SELECT status FROM PERIODE_KLAIM WHERE id = ?", (periode_id,))
@@ -1466,6 +1485,7 @@ def get_export_data(
     filter_kategori:    str = None,
     filter_kepesertaan: str = None,
 ) -> list:
+    # Mengambil data klaim yang sudah disetujui untuk keperluan export ke Excel/CSV.
     from backend.nim_parser import parse_nim
 
     conn = _get_conn()
@@ -1576,7 +1596,7 @@ def get_export_data(
 
 
 def reset_semua_data() -> None:
-    """Hapus semua data kecuali tabel USERS."""
+    # Menghapus semua data di semua tabel kecuali USERS (akun operator tetap utuh).
     conn = _get_conn()
     # Urutan sesuai FK: child dulu baru parent
     conn.execute("DELETE FROM REWARD_KONFIRMASI")
@@ -1591,7 +1611,7 @@ def reset_semua_data() -> None:
 
 
 def delete_operator(operator_id: int) -> bool:
-    """Hapus akun operator. Tidak bisa hapus superadmin terakhir."""
+    # Menghapus akun operator. Tidak bisa menghapus superadmin terakhir yang tersisa di sistem.
     conn = _get_conn()
     cursor = conn.cursor()
     # Cek apakah ini superadmin terakhir
@@ -1615,7 +1635,7 @@ def delete_operator(operator_id: int) -> bool:
 
 
 def update_operator_password(username: str, new_password: str):
-    """Ganti password operator."""
+    # Memperbarui password operator dengan hash bcrypt yang baru.
     pw_hash = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt()).decode()
     conn = _get_conn()
     conn.execute(
@@ -1627,6 +1647,7 @@ def update_operator_password(username: str, new_password: str):
 
 
 def get_operator_by_email(email: str):
+    # Mengambil data operator berdasarkan alamat email, digunakan untuk alur reset password.
     conn = _get_conn()
     cursor = conn.cursor()
     cursor.execute(
@@ -1641,7 +1662,7 @@ def get_operator_by_email(email: str):
 
 
 def create_operator_otp(email: str, otp: str):
-    """Simpan OTP reset password operator. Hapus OTP lama untuk email yang sama."""
+    # Menyimpan kode OTP reset password operator. OTP lama untuk email yang sama dihapus terlebih dahulu.
     from datetime import datetime, timedelta
     expired_at = (datetime.now() + timedelta(minutes=15)).strftime("%Y-%m-%d %H:%M:%S")
     conn = _get_conn()
@@ -1658,7 +1679,7 @@ def create_operator_otp(email: str, otp: str):
 
 
 def verify_operator_otp(email: str, otp: str) -> bool:
-    """Verifikasi OTP operator. Tandai sebagai used jika valid."""
+    # Memverifikasi OTP operator dan menandainya sebagai sudah digunakan jika valid.
     from datetime import datetime
     conn = _get_conn()
     cursor = conn.cursor()

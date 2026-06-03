@@ -1,3 +1,4 @@
+# Modul untuk mengirim email notifikasi ke mahasiswa dan operator via Gmail SMTP.
 import smtplib
 import ssl
 import os
@@ -15,10 +16,11 @@ EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 if not EMAIL_PASSWORD:
     raise RuntimeError("EMAIL_PASSWORD tidak ditemukan di environment. Isi di file .env terlebih dahulu.")
 SMTP_HOST      = "smtp.gmail.com"
-SMTP_PORT      = 587
+SMTP_PORT      = 587   # Port SMTP dengan STARTTLS
 
 
 def _kirim(to: str, subjek: str, body_html: str):
+    # Mengirim satu email HTML ke alamat tujuan via Gmail SMTP; gagal diam-diam (hanya log error).
     try:
         msg = MIMEMultipart("alternative")
         msg["Subject"] = f"[Antidoubleclaim] {subjek}"
@@ -37,6 +39,7 @@ def _kirim(to: str, subjek: str, body_html: str):
 
 
 def _template(konten: str) -> str:
+    # Membungkus konten HTML ke dalam template email bermerek Antidoubleclaim UKDW.
     return f"""<!DOCTYPE html>
 <html lang="id">
 <body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,sans-serif;">
@@ -63,6 +66,7 @@ def _template(konten: str) -> str:
 
 # ── Klaim disetujui ───────────────────────────────────────────────────────────
 def kirim_email_klaim_disetujui(email: str, nama_lomba: str):
+    # Mengirim notifikasi ke mahasiswa bahwa klaimnya telah disetujui operator dan siap proses reward.
     konten = f"""
       <p style="margin:0 0 20px;font-size:15px;font-weight:bold;color:#16a34a;">✓ Klaim Anda Telah Disetujui</p>
       <p style="margin:0 0 12px;color:#374151;font-size:14px;">Yth. Mahasiswa UKDW,</p>
@@ -82,6 +86,7 @@ def kirim_email_klaim_disetujui(email: str, nama_lomba: str):
 
 # ── Klaim tidak lolos ─────────────────────────────────────────────────────────
 def kirim_email_klaim_tidak_lolos(email: str, nama_lomba: str, catatan: str = None):
+    # Mengirim notifikasi ke mahasiswa bahwa klaimnya ditolak, beserta catatan alasan jika ada.
     catatan_html = f"""
       <div style="background:#fef2f2;border-left:4px solid #dc2626;padding:14px 18px;border-radius:6px;margin:16px 0;">
         <p style="margin:0 0 6px;font-size:11px;font-weight:bold;color:#dc2626;text-transform:uppercase;letter-spacing:1px;">Alasan dari Operator:</p>
@@ -108,6 +113,7 @@ def kirim_email_klaim_tidak_lolos(email: str, nama_lomba: str, catatan: str = No
 
 # ── Reward: data rekening diterima ────────────────────────────────────────────
 def kirim_email_reward_diproses(email: str, nama_lomba: str):
+    # Mengirim notifikasi ke mahasiswa bahwa data rekening diterima dan reward sedang diproses.
     konten = f"""
       <p style="margin:0 0 20px;font-size:15px;font-weight:bold;color:#2563eb;">📋 Data Rekening Diterima</p>
       <p style="margin:0 0 12px;color:#374151;font-size:14px;">Yth. Mahasiswa UKDW,</p>
@@ -127,6 +133,7 @@ def kirim_email_reward_diproses(email: str, nama_lomba: str):
 
 # ── Reward: dikembalikan ──────────────────────────────────────────────────────
 def kirim_email_reward_dikembalikan(email: str, nama_lomba: str, catatan: str = None):
+    # Mengirim notifikasi ke mahasiswa bahwa data reward dikembalikan dan perlu diperbaiki.
     catatan_html = f"""
       <div style="background:#fff7ed;border-left:4px solid #ea580c;padding:14px 18px;border-radius:6px;margin:16px 0;">
         <p style="margin:0 0 6px;font-size:11px;font-weight:bold;color:#ea580c;text-transform:uppercase;letter-spacing:1px;">Catatan dari Operator:</p>
@@ -154,6 +161,7 @@ def kirim_email_reward_dikembalikan(email: str, nama_lomba: str, catatan: str = 
 
 # ── Reset password operator ───────────────────────────────────────────────────
 def kirim_email_otp_reset_operator(email: str, nama: str, otp: str):
+    # Mengirim kode OTP 6 digit ke email operator untuk keperluan reset password (berlaku 15 menit).
     konten = f"""
       <p style="margin:0 0 20px;font-size:15px;font-weight:bold;color:#111;">&#128273; Reset Password Akun Operator</p>
       <p style="margin:0 0 12px;color:#374151;font-size:14px;">Yth. {nama},</p>
@@ -175,6 +183,7 @@ def kirim_email_otp_reset_operator(email: str, nama: str, otp: str):
 
 # ── Reward: selesai ───────────────────────────────────────────────────────────
 def kirim_email_reward_selesai(email: str, nama_lomba: str):
+    # Mengirim notifikasi ke mahasiswa bahwa dana reward telah berhasil ditransfer.
     konten = f"""
       <p style="margin:0 0 20px;font-size:15px;font-weight:bold;color:#16a34a;">🎉 Reward Telah Dikirim!</p>
       <p style="margin:0 0 12px;color:#374151;font-size:14px;">Yth. Mahasiswa UKDW,</p>
