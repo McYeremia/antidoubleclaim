@@ -818,7 +818,7 @@ function Step4Rekognisi({ data, onChange, onBlur, onFileChange, files, errors, p
         {KATEGORI_REKOGNISI.map((k) => <option key={k}>{k}</option>)}
       </FSelect>
 
-      <FInput id="nama_kegiatan" label="Nama Kegiatan / Rekognisi / Karya" required
+      <FInput id="nama_kegiatan" label="Nama Kegiatan / Rekognisi / Karya (sesuai dengan sertifikat)" required
         placeholder="Masukkan nama kegiatan atau karya"
         value={data.nama_kegiatan} onChange={(e) => onChange("nama_kegiatan", e.target.value)}
         onBlur={() => onBlur("nama_kegiatan")}
@@ -857,7 +857,8 @@ function Step4Rekognisi({ data, onChange, onBlur, onFileChange, files, errors, p
         <FFile id="dokumen_sertifikat" label="Dokumen Sertifikat / Karya" required
           onChange={(e) => onFileChange("dokumen_sertifikat", e)}
           currentFile={files?.dokumen_sertifikat} error={errors?.dokumen_sertifikat} />
-        <FFile id="foto_penyerahan" label="Bukti Pendukung Sertifikat" required
+        <FFile id="foto_penyerahan" label="Dokumen Pendukung Sertifikat" required
+          hint="Bukti penyerahan sertifikat"
           onChange={(e) => onFileChange("foto_penyerahan", e)}
           currentFile={files?.foto_penyerahan} error={errors?.foto_penyerahan} />
       </div>
@@ -989,7 +990,7 @@ function Step4Lomba({ data, onChange, onBlur, onFileChange, files, errors }) {
         error={errors?.jenis_kepesertaan}
       />
 
-      <FInput id="nama_kegiatan" label="Nama Kegiatan / Lomba" required
+      <FInput id="nama_kegiatan" label="Nama Kegiatan / Lomba (sesuai dengan sertifikat)" required
         placeholder="Nama lomba atau kompetisi"
         value={data.nama_kegiatan} onChange={(e) => onChange("nama_kegiatan", e.target.value)}
         onBlur={() => onBlur("nama_kegiatan")}
@@ -1076,7 +1077,8 @@ function Step4Lomba({ data, onChange, onBlur, onFileChange, files, errors }) {
         <FFile id="dokumen_sertifikat" label="Dokumen Sertifikat" required
           onChange={(e) => onFileChange("dokumen_sertifikat", e)}
           currentFile={files?.dokumen_sertifikat} error={errors?.dokumen_sertifikat} />
-        <FFile id="foto_penyerahan" label="Foto Penyerahan Sertifikat" required
+        <FFile id="foto_penyerahan" label="Dokumen Pendukung Sertifikat" required
+          hint="Bukti penyerahan sertifikat"
           onChange={(e) => onFileChange("foto_penyerahan", e)}
           currentFile={files?.foto_penyerahan} error={errors?.foto_penyerahan} />
       </div>
