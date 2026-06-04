@@ -119,9 +119,14 @@ export function InfoRow({ label, value }) {
 // Tautan file dokumen dengan nama asli (strip UUID prefix); di-proxy via Next.js /api/file dengan op-id.
 export function DocLink({ label, path }) {
   if (!path) return null;
-  const filename = path.split(/[\\/]/).pop();
-  const match = filename.match(/^.+?_[0-9a-f]{32}_(.+)$/);
+  const filename = path.split(/[\\/]/).pop(); // ambil nama file saja dari full path (pisah "/" atau "\")
+
+  // Nama file di server: "{prefix}_{uuid32hex}_{nama_asli}" — regex ini mengekstrak nama_asli saja
+  // Contoh: "sertifikat_a1b2c3d4...e5f6_lomba.pdf" → "lomba.pdf"
+  const match       = filename.match(/^.+?_[0-9a-f]{32}_(.+)$/);
   const displayName = match ? match[1] : filename;
+
+  // typeof window !== "undefined" diperlukan agar tidak error saat rendering di server (SSR)
   const opId = typeof window !== "undefined" ? localStorage.getItem("operator_id") : "";
   const href = `/api/file?name=${filename}${opId ? `&op=${opId}` : ""}`;
   return (
@@ -167,8 +172,8 @@ export function ArsipSectionTitle({ children }) {
 export function ArsipFileLink({ label, path }) {
   if (!path) return null;
   const filename = path.split(/[\\/]/).pop();
-  const display  = filename.length > 36 ? filename.slice(0, 33) + "…" : filename;
-  const opId = typeof window !== "undefined" ? localStorage.getItem("operator_id") : "";
+  const display  = filename.length > 36 ? filename.slice(0, 33) + "…" : filename; // potong jika > 36 karakter
+  const opId = typeof window !== "undefined" ? localStorage.getItem("operator_id") : ""; // SSR-safe localStorage
   const href = `/api/file?name=${filename}${opId ? `&op=${opId}` : ""}`;
   return (
     <div className="min-w-0">
@@ -216,6 +221,9 @@ export function ConfirmModal({
     default: { btn: "bg-gray-900 hover:bg-gray-700 text-white",   iconBg: "bg-gray-100",  icon: "text-gray-500"   },
   }[variant];
 
+  // Tombol konfirmasi aktif hanya jika semua syarat terpenuhi:
+  // - requireNote: catatan harus diisi (tidak boleh kosong)
+  // - requireExactText: user harus mengetik teks yang persis sama (untuk aksi destruktif seperti reset data)
   const canConfirm =
     (!requireNote || note.trim().length > 0) &&
     (!requireExactText || input === requireExactText);

@@ -122,11 +122,14 @@ export default function ComparePage() {
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
+
+      // claimA = klaim yang sedang ditinjau (URL param :id)
       const resA = await apiFetch(`${API}/claims/${id}`);
       if (!resA.ok) { setNotFound(true); setLoading(false); return; }
       const a = await resA.json();
       setClaimA(a);
 
+      // claimB = klaim lama yang dianggap mirip, ID-nya tersimpan di field mirip_dengan_id
       if (a.mirip_dengan_id) {
         const resB = await apiFetch(`${API}/claims/${a.mirip_dengan_id}`);
         if (resB.ok) setClaimB(await resB.json());
