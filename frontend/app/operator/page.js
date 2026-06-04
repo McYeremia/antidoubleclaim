@@ -3,16 +3,26 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+
+// Modul layout: sidebar navigasi (file terpisah _sidebar.js)
 import OperatorSidebar from "./_sidebar";
+
+// Modul shared: konstanta API_URL dan wrapper fetch dipusatkan di satu file
 import { API, apiFetch } from "./components/shared";
-import PengajuanClaim          from "./components/PengajuanClaim";
-import PengajuanReward          from "./components/PengajuanReward";
-import KelolaOperator            from "./components/KelolaOperator";
-import PengaturanPeriode         from "./components/PengaturanPeriode";
-import ArsipPeriode              from "./components/ArsipPeriode";
-import VisualisasiDataOperator   from "./components/VisualisasiDataOperator";
-import LogAktivitas              from "./components/LogAktivitas";
-import SimulatorDeteksi         from "./components/SimulatorDeteksi";
+
+// ─── MODUL FITUR (masing-masing file terpisah di /components/) ───────────────
+// Setiap modul di bawah ini adalah komponen independen:
+// - Mengelola state-nya sendiri
+// - Berkomunikasi langsung ke backend API
+// - Tidak bergantung satu sama lain
+import PengajuanClaim          from "./components/PengajuanClaim";         // daftar & verifikasi klaim
+import PengajuanReward          from "./components/PengajuanReward";        // pengelolaan reward mahasiswa
+import KelolaOperator            from "./components/KelolaOperator";         // manajemen akun operator (superadmin)
+import PengaturanPeriode         from "./components/PengaturanPeriode";      // buka/tutup periode klaim (superadmin)
+import ArsipPeriode              from "./components/ArsipPeriode";           // arsip periode lama (superadmin)
+import VisualisasiDataOperator   from "./components/VisualisasiDataOperator";// grafik & statistik klaim
+import LogAktivitas              from "./components/LogAktivitas";           // audit log aksi operator (superadmin)
+import SimulatorDeteksi          from "./components/SimulatorDeteksi";       // pengujian pHash & fuzzy interaktif
 
 // Konten dashboard dibungkus terpisah agar useSearchParams bisa dipakai di dalam Suspense.
 function OperatorDashboardContent() {
@@ -165,6 +175,19 @@ function OperatorDashboardContent() {
           </div>
         </header>
 
+        {/*
+          ─── LAZY MODULE SWAP ────────────────────────────────────────────────
+          Hanya satu modul yang aktif dan dirender ke DOM pada satu waktu.
+          Saat menu berpindah, modul lama di-unmount dan modul baru di-mount.
+          Ini adalah bukti modularitas: setiap komponen berdiri sendiri dan
+          dapat ditukar tanpa mempengaruhi komponen lain di halaman yang sama.
+
+          Pola: {activeMenu === "X" && <ModulX />}
+          - true  → ModulX dirender
+          - false → tidak ada DOM yang dihasilkan (tidak ada rendering sia-sia)
+
+          Modul yang ditandai "isSuperAdmin" hanya bisa diakses oleh superadmin.
+          ──────────────────────────────────────────────────────────────────── */}
         <main className="flex-1 px-10 py-10 overflow-y-auto">
           {activeMenu === "claim"       && <PengajuanClaim router={router} />}
           {activeMenu === "reward"      && <PengajuanReward />}
@@ -272,7 +295,15 @@ function OperatorDashboardContent() {
   );
 }
 
-// Membungkus konten dalam Suspense agar useSearchParams tidak melempar error saat SSR.
+// ─── SUSPENSE BOUNDARY (Modularitas SSR) ─────────────────────────────────────
+// OperatorDashboard (default export) dan OperatorDashboardContent dipisahkan menjadi
+// dua komponen berbeda. Ini juga bentuk modularitas: pemisahan antara shell halaman
+// (yang di-render server) dan konten dinamis (yang membutuhkan browser).
+//
+// Mengapa perlu Suspense?
+// useSearchParams() di dalam OperatorDashboardContent membaca URL di sisi klien.
+// Next.js App Router mengharuskan komponen yang menggunakan useSearchParams dibungkus
+// Suspense agar server rendering tidak hang menunggu data yang hanya tersedia di browser.
 export default function OperatorDashboard() {
   return (
     <Suspense fallback={null}>
