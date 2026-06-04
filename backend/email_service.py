@@ -5,6 +5,7 @@ import os
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
+# dotenv opsional — jika tidak terpasang (mis. di server produksi), env var diambil langsung dari OS
 try:
     from dotenv import load_dotenv
     load_dotenv()
@@ -14,27 +15,32 @@ except ImportError:
 EMAIL_SENDER   = os.getenv("EMAIL_SENDER",   "test.antidoubleclaim@gmail.com")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 if not EMAIL_PASSWORD:
+    # Aplikasi tidak bisa berjalan tanpa password SMTP — gagal cepat saat startup lebih baik daripada error saat kirim email
     raise RuntimeError("EMAIL_PASSWORD tidak ditemukan di environment. Isi di file .env terlebih dahulu.")
 SMTP_HOST      = "smtp.gmail.com"
-SMTP_PORT      = 587   # Port SMTP dengan STARTTLS
+SMTP_PORT      = 587   # Port 587 menggunakan STARTTLS (upgrade koneksi biasa ke TLS); berbeda dengan port 465 yang SSL langsung
 
 
 def _kirim(to: str, subjek: str, body_html: str):
     # Mengirim satu email HTML ke alamat tujuan via Gmail SMTP; gagal diam-diam (hanya log error).
+    # Fungsi ini dipanggil sebagai BackgroundTask dari FastAPI — error tidak boleh crash request utama
     try:
+        # MIMEMultipart("alternative") memungkinkan email memiliki versi plain-text dan HTML sekaligus
+        # (di sini hanya HTML yang dilampirkan)
         msg = MIMEMultipart("alternative")
         msg["Subject"] = f"[Antidoubleclaim] {subjek}"
         msg["From"]    = f"Antidoubleclaim UKDW <{EMAIL_SENDER}>"
         msg["To"]      = to
         msg.attach(MIMEText(body_html, "html", "utf-8"))
 
-        context = ssl.create_default_context()
+        context = ssl.create_default_context()   # verifikasi sertifikat SSL default sistem
         with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-            server.starttls(context=context)
+            server.starttls(context=context)      # upgrade koneksi ke TLS sebelum login
             server.login(EMAIL_SENDER, EMAIL_PASSWORD)
             server.sendmail(EMAIL_SENDER, to, msg.as_string())
         print(f"[Email] ✓ Terkirim ke {to} — {subjek}")
     except Exception as e:
+        # Gagal diam-diam agar proses utama (approve/reject klaim) tetap berjalan meski email gagal
         print(f"[Email] ✗ GAGAL ke {to} — {e}")
 
 
@@ -87,6 +93,7 @@ def kirim_email_klaim_disetujui(email: str, nama_lomba: str):
 # ── Klaim tidak lolos ─────────────────────────────────────────────────────────
 def kirim_email_klaim_tidak_lolos(email: str, nama_lomba: str, catatan: str = None):
     # Mengirim notifikasi ke mahasiswa bahwa klaimnya ditolak, beserta catatan alasan jika ada.
+    # catatan_html hanya dirender jika operator mengisi catatan — jika tidak ada, string kosong
     catatan_html = f"""
       <div style="background:#fef2f2;border-left:4px solid #dc2626;padding:14px 18px;border-radius:6px;margin:16px 0;">
         <p style="margin:0 0 6px;font-size:11px;font-weight:bold;color:#dc2626;text-transform:uppercase;letter-spacing:1px;">Alasan dari Operator:</p>
@@ -134,6 +141,7 @@ def kirim_email_reward_diproses(email: str, nama_lomba: str):
 # ── Reward: dikembalikan ──────────────────────────────────────────────────────
 def kirim_email_reward_dikembalikan(email: str, nama_lomba: str, catatan: str = None):
     # Mengirim notifikasi ke mahasiswa bahwa data reward dikembalikan dan perlu diperbaiki.
+    # catatan_html hanya dirender jika operator mengisi catatan — jika tidak ada, string kosong
     catatan_html = f"""
       <div style="background:#fff7ed;border-left:4px solid #ea580c;padding:14px 18px;border-radius:6px;margin:16px 0;">
         <p style="margin:0 0 6px;font-size:11px;font-weight:bold;color:#ea580c;text-transform:uppercase;letter-spacing:1px;">Catatan dari Operator:</p>

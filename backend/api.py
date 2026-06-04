@@ -80,6 +80,7 @@ app.mount("/uploads", StaticFiles(directory=UPLOAD_FOLDER), name="uploads")
 # Hanya untuk keperluan pengujian dan demonstrasi cara kerja sistem.
 # ══════════════════════════════════════════════════════════════════════════════
 
+# Body JSON untuk endpoint /simulator/fuzzy — dua judul yang ingin dibandingkan
 class SimulatorFuzzyInput(BaseModel):
     title1: str
     title2: str
@@ -238,6 +239,7 @@ async def export_data(
     )
 
 # ── Profil Mahasiswa ──────────────────────────────────────────────────────────
+# Body JSON untuk PUT /profil — field yang bisa diperbarui oleh mahasiswa
 class ProfilUpdate(BaseModel):
     nomor_wa:              Optional[str] = None
     nama_pemilik_rekening: Optional[str] = None
@@ -259,6 +261,7 @@ async def update_profil(email: str, body: ProfilUpdate):
     return {"success": True}
 
 # ── Periode Klaim ─────────────────────────────────────────────────────────────
+# Body JSON untuk POST /periode — data yang dibutuhkan saat membuat periode klaim baru
 class PeriodeCreate(BaseModel):
     nama:            str
     tanggal_mulai:   str
@@ -327,6 +330,7 @@ async def rewards_by_periode(periode_id: int):
     # Mengambil semua data reward yang terhubung ke periode tertentu.
     return get_rewards_by_periode_id(periode_id)
 
+# Body JSON untuk PATCH /periode/{id} — field periode yang boleh diedit setelah dibuat
 class PeriodeEdit(BaseModel):
     nama:            str
     tanggal_mulai:   str
@@ -417,6 +421,7 @@ async def approve(claim_id: int, background_tasks: BackgroundTasks, x_operator_i
     background_tasks.add_task(kirim_email_klaim_disetujui, claim["mahasiswa_email"], claim["nama_lomba"])
     return {"message": "Klaim disetujui", "id": claim_id}
 
+# Body JSON untuk DELETE /claims/{id} — catatan alasan penolakan (opsional)
 class DiscardBody(BaseModel):
     catatan: Optional[str] = None
 
@@ -453,6 +458,7 @@ async def upload_certificate(
         if len(contents) > MAX_FILE_SIZE:
             raise HTTPException(status_code=413, detail="Ukuran file melebihi batas maksimal 3 MB")
 
+        # Nama file diberi prefix UUID agar unik meski mahasiswa mengirim file bernama sama
         unique_name   = f"{uuid.uuid4().hex}_{file.filename}"
         file_location = os.path.join(UPLOAD_FOLDER, unique_name)
         with open(file_location, "wb") as buffer:
@@ -729,6 +735,7 @@ async def submit_reward_konfirmasi(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# Body JSON untuk PATCH /reward-konfirmasi/{id}/status — status baru dan catatan opsional dari operator
 class RewardStatusUpdate(BaseModel):
     status: str
     catatan: Optional[str] = None
@@ -839,17 +846,22 @@ async def resubmit_reward(
 
 
 # ── Autentikasi & Manajemen Operator ─────────────────────────────────────────
+# Body JSON untuk POST /login-operator
 class OperatorLoginRequest(BaseModel):
     username: str
     password: str
 
+# Body JSON untuk POST /operators — data akun operator baru yang akan dibuat oleh superadmin
 class CreateOperatorRequest(BaseModel):
     username: str
     password: str
     nama: str
     email: str
-    role: Optional[str] = "operator"
+    role: Optional[str] = "operator"  # nilai valid: "operator" atau "superadmin"
 
+# Guard function: dipanggil di awal setiap endpoint yang membutuhkan login operator.
+# Autentikasi menggunakan header X-Operator-ID (ID numerik dari DB), bukan token/JWT.
+# Alasan tidak pakai JWT: sistem digunakan dalam jaringan kampus tertutup, cukup ID sesi.
 def _require_operator(x_operator_id: Optional[str]):
     # Raise 401/403 jika header tidak ada atau ID tidak ada di DB. Kembalikan data operator.
     if not x_operator_id or not x_operator_id.isdigit():
@@ -859,6 +871,7 @@ def _require_operator(x_operator_id: Optional[str]):
         raise HTTPException(status_code=403, detail="Akses ditolak: operator tidak ditemukan")
     return op
 
+# Guard function: dipanggil di endpoint yang hanya boleh diakses superadmin (hapus periode, kelola operator, dll.)
 def _require_superadmin(x_operator_id: Optional[str]):
     # Raise 403 jika requester bukan superadmin. Kembalikan data operator.
     op = _require_operator(x_operator_id)
@@ -874,9 +887,11 @@ async def login_operator(body: OperatorLoginRequest):
         raise HTTPException(status_code=401, detail="Username atau password salah")
     return {"success": True, "user": user}
 
+# Body JSON untuk POST /operator/lupa-password — hanya membutuhkan email operator
 class LupaPasswordRequest(BaseModel):
     email: str
 
+# Body JSON untuk POST /operator/reset-password — verifikasi OTP lalu set password baru
 class ResetPasswordRequest(BaseModel):
     email: str
     otp: str
@@ -885,12 +900,12 @@ class ResetPasswordRequest(BaseModel):
 @app.post("/operator/lupa-password")
 async def lupa_password_operator(body: LupaPasswordRequest, background_tasks: BackgroundTasks):
     # Membuat OTP reset password dan mengirimkannya ke email operator jika terdaftar.
-    op = get_operator_by_email(body.email)
-    otp = str(random.randint(100000, 999999))
-    create_operator_otp(body.email, otp)
+    op  = get_operator_by_email(body.email)
+    otp = str(random.randint(100000, 999999))   # OTP 6 digit acak
+    create_operator_otp(body.email, otp)         # simpan ke DB meski email tidak terdaftar
     if op:
         background_tasks.add_task(kirim_email_otp_reset_operator, op["email"], op["nama"], otp)
-    # Selalu return sukses agar email tidak bisa dienumerasi
+    # Selalu return sukses meski email tidak terdaftar — mencegah penyerang menebak email yang ada
     return {"success": True, "pesan": "Jika email terdaftar, kode OTP akan dikirimkan."}
 
 @app.post("/operator/reset-password")
@@ -928,6 +943,7 @@ async def add_operator(
     insert_audit_log(op["id"], op["nama"], "tambah_operator", "operator", None, f"{body.nama}|{role}")
     return {"success": True}
 
+# Body JSON untuk PATCH /operators/{id}/password — operator mengisi old_password, superadmin tidak perlu
 class ChangePasswordRequest(BaseModel):
     new_password: str
     old_password: Optional[str] = None
@@ -940,18 +956,22 @@ async def change_operator_password(
 ):
     # Mengubah password operator; operator hanya bisa mengubah milik sendiri (dengan verifikasi password lama).
     # Superadmin bisa mengubah milik operator lain, kecuali sesama superadmin.
-    op = _require_operator(x_operator_id)
-    target = get_operator_by_id(operator_id)
+    op     = _require_operator(x_operator_id)    # operator yang melakukan request
+    target = get_operator_by_id(operator_id)     # operator yang passwordnya ingin diubah
     if not target:
         raise HTTPException(status_code=404, detail="Operator tidak ditemukan")
 
-    is_self = op["id"] == operator_id
+    is_self = op["id"] == operator_id   # True jika operator mengubah password miliknya sendiri
+
+    # Operator biasa hanya boleh ubah password sendiri; superadmin boleh ubah milik operator lain
     if not is_self and op.get("role") != "superadmin":
         raise HTTPException(status_code=403, detail="Akses ditolak: hanya Super Admin yang dapat mengubah password operator lain")
+    # Superadmin tidak boleh mengubah password superadmin lain — mencegah privilege escalation
     if not is_self and target.get("role") == "superadmin":
         raise HTTPException(status_code=403, detail="Akses ditolak: password Super Admin lain tidak dapat diubah")
 
     if is_self:
+        # Operator yang mengubah milik sendiri harus memverifikasi password lama terlebih dahulu
         if not body.old_password:
             raise HTTPException(status_code=400, detail="Password lama diperlukan")
         if not authenticate_operator(target["username"], body.old_password):
@@ -964,6 +984,7 @@ async def change_operator_password(
     insert_audit_log(op["id"], op["nama"], "ganti_password", "operator", operator_id, f"{target['nama']}|{target['role']}")
     return {"success": True}
 
+# Body JSON untuk DELETE /operators/{id} — superadmin harus konfirmasi dengan password sendiri sebelum hapus
 class DeleteOperatorBody(BaseModel):
     current_password: Optional[str] = None
 

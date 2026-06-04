@@ -332,43 +332,59 @@ def insert_claim(nama_lomba, tingkat, tanggal, peringkat, sertifikat_path,
     cursor.execute("SELECT id, nama_lomba, peringkat, phash, kategori_simkatmawa FROM CLAIMS WHERE status != 'ditolak'")
     rows = cursor.fetchall()
 
-    flagged         = False
-    mirip_dengan_id = None
-    detail          = {}
+    flagged         = False   # True jika klaim baru terdeteksi mirip dengan klaim lain
+    mirip_dengan_id = None    # ID klaim lama yang paling mirip (diisi jika flagged)
+    detail          = {}      # Informasi detail kemiripan untuk dikembalikan ke pemanggil
 
+    # Dua sub-kategori lomba yang diperlakukan sama dalam proses perbandingan
     _LOMBA_GRUP = {"lomba_mandiri_puspresnas", "lomba_mandiri_non_puspresnas"}
+
+    # Tentukan tipe klaim BARU — digunakan untuk memastikan perbandingan hanya dilakukan antar tipe yang sama
     is_rekognisi = (kategori_simkatmawa == "rekognisi")
     is_lomba     = (kategori_simkatmawa in _LOMBA_GRUP)
 
     for row in rows:
         old_id, old_nama, old_peringkat, old_phash_str, old_kategori = row
+        # old_kategori = tipe klaim LAMA (rekognisi / lomba_mandiri_puspresnas / lomba_mandiri_non_puspresnas)
 
-        # Hanya bandingkan dalam grup yang sama; klaim lama tanpa kategori dilewati
+        # Klaim lama tanpa kategori (data sebelum fitur kategori ditambahkan) tidak bisa dibandingkan
         if old_kategori is None:
             continue
+
         old_is_rekognisi = (old_kategori == "rekognisi")
         old_is_lomba     = (old_kategori in _LOMBA_GRUP)
+
+        # Rekognisi hanya dibandingkan dengan rekognisi, lomba hanya dengan lomba
+        # Alasan: rekognisi dan lomba memiliki definisi peringkat yang berbeda, tidak bisa disilangkan
         if is_rekognisi and not old_is_rekognisi:
             continue
         if is_lomba and not old_is_lomba:
             continue
 
-        # Deteksi kemiripan: TSR + pHash untuk semua kategori
+        # --- Tahap 1: Bandingkan nama lomba menggunakan Token Sort Ratio (TSR) ---
+        # TSR mengurutkan token dulu sebelum dibandingkan, sehingga urutan kata tidak mempengaruhi skor
         sim_nama   = token_sort_ratio(nama_lomba, old_nama)
-        nama_mirip = sim_nama >= FUZZY_THRESHOLD
+        nama_mirip = sim_nama >= FUZZY_THRESHOLD   # FUZZY_THRESHOLD = 80
         print(f"[Tahap 1] vs ID {old_id} ({old_kategori}): similarity nama={sim_nama}% → {'MIRIP' if nama_mirip else 'aman'}")
 
+        # --- Tahap 2: Bandingkan gambar sertifikat menggunakan pHash + Hamming distance ---
+        # old_phash_str disimpan sebagai hex string di DB, diubah kembali ke objek ImageHash
         old_hash    = imagehash.hex_to_hash(old_phash_str)
-        distance    = int(hamming_distance(new_hash, old_hash))
-        phash_mirip = distance <= PHASH_THRESHOLD
+        distance    = int(hamming_distance(new_hash, old_hash))  # semakin kecil = semakin mirip
+        phash_mirip = distance <= PHASH_THRESHOLD  # PHASH_THRESHOLD = 10
         print(f"[Tahap 2] vs ID {old_id}: Hamming distance={distance} → {'MIRIP' if phash_mirip else 'aman'}")
 
+        # --- Tahap 3: Jika salah satu metode mendeteksi kemiripan, cek apakah peringkat sama ---
+        # Menggunakan OR (bukan AND) agar sistem lebih sensitif — lebih baik false positive
+        # daripada duplikat lolos tanpa terdeteksi
         if phash_mirip or nama_mirip:
             alasan = []
             if phash_mirip: alasan.append("gambar")
             if nama_mirip:  alasan.append("nama")
             print(f"[Tahap 3] vs ID {old_id}: kemiripan terdeteksi ({', '.join(alasan)}) — cek peringkat/kategori...")
 
+            # Peringkat harus sama untuk dianggap duplikat.
+            # Jika peringkat berbeda → lomba yang sama tapi capaian berbeda, bukan double claim
             if peringkat == old_peringkat:
                 flagged         = True
                 mirip_dengan_id = old_id
@@ -379,7 +395,7 @@ def insert_claim(nama_lomba, tingkat, tanggal, peringkat, sertifikat_path,
                     "flag_alasan":        ", ".join(alasan),
                 }
                 print(f"[FLAGGED] Mirip dengan ID {old_id} — alasan: {', '.join(alasan)}, peringkat/kategori sama ({peringkat})")
-                break
+                break  # cukup temukan satu klaim yang mirip, tidak perlu scan semua klaim lainnya
             else:
                 print(f"[Info] vs ID {old_id}: kemiripan terdeteksi tapi peringkat/kategori berbeda ({peringkat} vs {old_peringkat}) — tidak di-flag")
 
@@ -557,6 +573,8 @@ def insert_pengajuan(data: dict, anggota: list = None) -> int:
     ))
     pengajuan_id = cursor.lastrowid
 
+    # Simpan daftar anggota kelompok ke tabel terpisah (PENGAJUAN_ANGGOTA)
+    # anggota adalah list of dict: [{"nama": "...", "nim": "..."}, ...]
     if anggota:
         for a in anggota:
             cursor.execute(
@@ -578,12 +596,13 @@ def get_pengajuan_by_email(email: str) -> list:
         FROM PENGAJUAN p
         LEFT JOIN PENGAJUAN_ANGGOTA a ON a.pengajuan_id = p.id
         WHERE p.mahasiswa_email = ?
-        GROUP BY p.id
+        GROUP BY p.id   -- GROUP BY diperlukan agar GROUP_CONCAT bekerja per pengajuan
         ORDER BY p.id DESC
     """, (email,))
     rows = cursor.fetchall()
     cols = [d[0] for d in cursor.description]
     conn.close()
+    # dict(zip(cols, row)) mengubah row tuple menjadi dict dengan nama kolom sebagai key
     return [dict(zip(cols, row)) for row in rows]
 
 
@@ -677,11 +696,19 @@ def update_pengajuan(pengajuan_id: int, data: dict):
     if row:
         claim_id, nama_kegiatan, kategori_kegiatan, tingkatan, capaian, tanggal_mulai, tahun_kegiatan, kategori_simkatmawa = row
         is_lomba = kategori_simkatmawa in ("lomba_mandiri_puspresnas", "lomba_mandiri_non_puspresnas")
-        # Lomba: tingkat=kategori_kegiatan, peringkat=capaian
-        # Rekognisi: tingkat=tingkatan, peringkat=kategori_kegiatan
+
+        # Pemetaan field PENGAJUAN → CLAIMS berbeda tergantung kategori:
+        #
+        #   Lomba    : tingkat  = kategori_kegiatan (mis. "Nasional", "Internasional")
+        #              peringkat = capaian           (mis. "Juara 1", "Juara 2")
+        #
+        #   Rekognisi: tingkat  = tingkatan          (mis. "Nasional")
+        #              peringkat = kategori_kegiatan  (mis. "Presenter", "Peserta")
+        #
+        # Ini karena makna "peringkat" dan "tingkat" berbeda antara lomba dan rekognisi
         tingkat_baru   = kategori_kegiatan if is_lomba else tingkatan
         peringkat_baru = capaian if is_lomba else kategori_kegiatan
-        tanggal_baru   = tanggal_mulai or tahun_kegiatan
+        tanggal_baru   = tanggal_mulai or tahun_kegiatan  # tanggal_mulai diutamakan, fallback ke tahun
         claim_updates = {}
         if nama_kegiatan:  claim_updates["nama_lomba"] = nama_kegiatan
         if tingkat_baru:   claim_updates["tingkat"]    = tingkat_baru
@@ -890,6 +917,8 @@ def get_reward_konfirmasi_by_id(reward_id: int):
 def update_reward_status(reward_id: int, status: str, catatan: str = None):
     # Mengubah status reward dan mencatat waktu diproses jika status berubah menjadi 'diproses'.
     conn = _get_conn()
+    # ts adalah ekspresi SQL (bukan nilai user), sehingga aman dimasukkan langsung ke query via f-string.
+    # Jika status 'diproses', catat waktu sekarang; status lain reset diproses_at ke NULL
     ts = "DATETIME('now', 'localtime')" if status == "diproses" else "NULL"
     if catatan is not None:
         conn.execute(
@@ -961,6 +990,7 @@ def create_operator(username: str, password: str, nama: str, email: str, role: s
     # Membuat akun operator baru dengan password terenkripsi. Role bisa 'operator' atau 'superadmin'.
     if role not in ("operator", "superadmin"):
         return False
+    # bcrypt.gensalt() menghasilkan salt acak setiap kali — password sama pun menghasilkan hash berbeda
     pw_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
     conn = _get_conn()
     try:
@@ -971,6 +1001,7 @@ def create_operator(username: str, password: str, nama: str, email: str, role: s
         conn.commit()
         return True
     except sqlite3.IntegrityError:
+        # UNIQUE constraint pada username/email dilanggar — username atau email sudah terdaftar
         return False
     finally:
         conn.close()
@@ -996,14 +1027,15 @@ def get_audit_log(date_from: str = None, date_to: str = None, limit: int = 1000)
     # Mengambil riwayat aksi operator dengan filter tanggal opsional, maksimal 1000 baris.
     conn = _get_conn()
     cursor = conn.cursor()
+    # Bangun klausa WHERE secara dinamis hanya jika filter tanggal diberikan
     conditions = []
     params = []
     if date_from:
         conditions.append("a.created_at >= ?")
-        params.append(date_from + " 00:00:00")
+        params.append(date_from + " 00:00:00")   # awal hari
     if date_to:
         conditions.append("a.created_at <= ?")
-        params.append(date_to + " 23:59:59")
+        params.append(date_to + " 23:59:59")     # akhir hari
     where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
     params.append(limit)
     cursor.execute(f"""
@@ -1016,6 +1048,8 @@ def get_audit_log(date_from: str = None, date_to: str = None, limit: int = 1000)
         ORDER BY a.created_at DESC
         LIMIT ?
     """, params)
+    # op_nama_saat_ini = nama operator saat ini (dari tabel USERS, bisa berbeda dengan operator_nama
+    # yang direkam saat aksi terjadi jika nama operator pernah diubah)
     rows = cursor.fetchall()
     cols = [d[0] for d in cursor.description]
     conn.close()
@@ -1041,6 +1075,9 @@ def get_profil_mahasiswa(email: str):
 def upsert_profil_mahasiswa(email: str, data: dict):
     # Menyimpan atau memperbarui data profil mahasiswa (insert jika belum ada, update jika sudah ada).
     conn = _get_conn()
+    # ON CONFLICT(email) DO UPDATE = pola "upsert" SQLite:
+    # jika email belum ada → INSERT, jika sudah ada → UPDATE kolom yang disebut
+    # 'excluded.' merujuk ke nilai yang baru saja dicoba di-INSERT
     conn.execute("""
         INSERT INTO MAHASISWA_PROFIL (email, nomor_wa, nama_pemilik_rekening, nomor_rekening, updated_at)
         VALUES (?, ?, ?, ?, DATETIME('now', 'localtime'))
@@ -1089,6 +1126,9 @@ def get_stats_visualisasi(
     rows = cursor.fetchall()
     conn.close()
 
+    # Normalisasi setiap baris hasil query menjadi dict yang siap difilter dan dihitung.
+    # Fakultas dan prodi diambil dari NIM (parsing email), bukan dari field bebas.
+    # row_tahun: prioritaskan tahun_kegiatan dari pengajuan, fallback ke 4 karakter pertama tanggal klaim
     all_rows = []
     for (email, tanggal, tingkat, kat_simkat, tahun_keg, periode_nama) in rows:
         parsed    = parse_nim(email)
@@ -1104,9 +1144,13 @@ def get_stats_visualisasi(
             "periode":   periode_nama or "Tanpa Periode",
         })
 
+    # Kembalikan nilai unik terurut, kecuali label generik (Lainnya, dll.)
+    # Digunakan untuk membangun pilihan dropdown filter di frontend
     def unique_sorted(vals):
         return sorted(v for v in set(vals) if v and v not in ("Lainnya", "Tidak Diketahui", "tidak_diketahui", "Tanpa Periode"))
 
+    # Buat mapping: { "Fakultas A": ["Prodi 1", "Prodi 2"], ... }
+    # Digunakan agar dropdown prodi di frontend hanya menampilkan prodi milik fakultas yang dipilih
     prodi_by_fak = {}
     for d in all_rows:
         prodi_by_fak.setdefault(d["fakultas"], set())
@@ -1114,6 +1158,7 @@ def get_stats_visualisasi(
             prodi_by_fak[d["fakultas"]].add(d["prodi"])
     prodi_by_fak = {k: sorted(v) for k, v in prodi_by_fak.items()}
 
+    # filter_options dikirim ke frontend untuk mengisi pilihan dropdown filter
     filter_options = {
         "fakultas":          unique_sorted(d["fakultas"]  for d in all_rows),
         "prodi_by_fakultas": prodi_by_fak,
@@ -1122,6 +1167,7 @@ def get_stats_visualisasi(
         "periode":           unique_sorted(d["periode"]   for d in all_rows),
     }
 
+    # Terapkan filter yang dikirim dari frontend — filter dijalankan satu per satu secara berurutan
     filtered = all_rows
     if filter_fakultas:
         filtered = [d for d in filtered if d["fakultas"]  == filter_fakultas]
@@ -1136,13 +1182,14 @@ def get_stats_visualisasi(
     if filter_periode:
         filtered = [d for d in filtered if d["periode"]   == filter_periode]
 
+    # Hitung jumlah klaim per dimensi (fakultas, prodi, jenis, tahun, tingkatan, periode)
     from collections import defaultdict
-    fak_count     = defaultdict(int)
-    prod_count    = defaultdict(int)
-    jenis_count   = defaultdict(int)
-    tahun_count   = defaultdict(int)
-    tingkat_count = defaultdict(int)
-    periode_count = defaultdict(int)
+    fak_count     = defaultdict(int)  # jumlah klaim per fakultas
+    prod_count    = defaultdict(int)  # jumlah klaim per prodi
+    jenis_count   = defaultdict(int)  # jumlah klaim per kategori SIMKATMAWA (label ramah-baca)
+    tahun_count   = defaultdict(int)  # jumlah klaim per tahun kegiatan
+    tingkat_count = defaultdict(int)  # jumlah klaim per tingkatan (nasional/internasional/dll)
+    periode_count = defaultdict(int)  # jumlah klaim per periode pengumpulan
 
     for d in filtered:
         fak_count[d["fakultas"]]        += 1
@@ -1151,6 +1198,7 @@ def get_stats_visualisasi(
         tingkat_count[d["tingkatan"]]   += 1
         periode_count[d["periode"]]     += 1
 
+        # Ubah nilai internal kategori menjadi label yang lebih mudah dibaca manusia
         k = d["kategori"]
         if k == "lomba_mandiri_puspresnas":
             jenis_count["Lomba Mandiri Puspresnas"] += 1
@@ -1161,12 +1209,16 @@ def get_stats_visualisasi(
         else:
             jenis_count["Tidak Diketahui"] += 1
 
+    # to_list: urutkan dari count terbesar (untuk chart batang/pie)
     def to_list(d):
         return sorted([{"name": k, "count": v} for k, v in d.items()], key=lambda x: -x["count"])
 
+    # to_list_key: urutkan berdasarkan nama (untuk chart tahun agar tampil kronologis)
     def to_list_key(d):
         return sorted([{"name": k, "count": v} for k, v in d.items()], key=lambda x: x["name"])
 
+    # Heatmap: matriks 2D (baris=fakultas, kolom=tahun) untuk menampilkan distribusi klaim
+    # heatmap_cells[fakultas][tahun] = jumlah klaim
     heatmap_cells: dict = {}
     for d in filtered:
         fak   = d["fakultas"]
@@ -1174,9 +1226,9 @@ def get_stats_visualisasi(
         heatmap_cells.setdefault(fak, {})
         heatmap_cells[fak][tahun] = heatmap_cells[fak].get(tahun, 0) + 1
 
-    heatmap_cols = sorted({t for cells in heatmap_cells.values() for t in cells})
-    heatmap_rows = sorted(heatmap_cells.keys(), key=lambda f: -sum(heatmap_cells[f].values()))
-    heatmap_max  = max((v for cells in heatmap_cells.values() for v in cells.values()), default=1)
+    heatmap_cols = sorted({t for cells in heatmap_cells.values() for t in cells})  # semua tahun unik, terurut
+    heatmap_rows = sorted(heatmap_cells.keys(), key=lambda f: -sum(heatmap_cells[f].values()))  # fakultas terbanyak klaim di atas
+    heatmap_max  = max((v for cells in heatmap_cells.values() for v in cells.values()), default=1)  # untuk skala warna
 
     return {
         "total":          len(filtered),
@@ -1319,6 +1371,8 @@ def update_periode_status(periode_id: int, status: str) -> dict:
                 "alasan": f"Masih ada {klaim_pending} klaim yang belum diverifikasi (belum dicek / perlu ditinjau). Selesaikan semua klaim terlebih dahulu sebelum menutup periode.",
             }
 
+    # Hanya satu periode yang boleh aktif sekaligus:
+    # sebelum mengaktifkan periode ini, semua periode lain yang aktif direset ke 'tutup'
     if status == "aktif":
         conn.execute("UPDATE PERIODE_KLAIM SET status = 'tutup' WHERE status = 'aktif'")
     conn.execute("UPDATE PERIODE_KLAIM SET status = ? WHERE id = ?", (status, periode_id))
@@ -1329,10 +1383,11 @@ def update_periode_status(periode_id: int, status: str) -> dict:
 
 def arsipkan_periode(periode_id: int) -> dict:
     # Mengarsipkan periode jika semua klaim sudah diverifikasi dan semua reward sudah selesai diproses.
+    # Periode yang sudah diarsipkan tidak akan muncul lagi di daftar klaim/reward aktif.
     conn = _get_conn()
     cursor = conn.cursor()
 
-    # Cek status periode
+    # [Validasi 1] Periode harus sudah ditutup terlebih dahulu sebelum bisa diarsipkan
     cursor.execute("SELECT status FROM PERIODE_KLAIM WHERE id = ?", (periode_id,))
     row = cursor.fetchone()
     if not row:
@@ -1342,7 +1397,7 @@ def arsipkan_periode(periode_id: int) -> dict:
         conn.close()
         return {"ok": False, "alasan": "Hanya periode yang sudah ditutup yang dapat diarsipkan"}
 
-    # Cek klaim yang belum diverifikasi pada periode ini
+    # [Validasi 2] Semua klaim pada periode ini harus sudah diverifikasi (approved/rejected)
     cursor.execute("""
         SELECT COUNT(*) FROM CLAIMS
         WHERE periode_id = ? AND status IN ('belum dicek', 'perlu ditinjau')
@@ -1357,7 +1412,8 @@ def arsipkan_periode(periode_id: int) -> dict:
             "klaim_pending": klaim_pending,
         }
 
-    # Cek klaim yang sudah disetujui tapi mahasiswa belum mengisi data reward sama sekali
+    # [Validasi 3] Klaim yang sudah disetujui harus sudah diisi data reward oleh mahasiswa
+    # (rk.id IS NULL artinya mahasiswa belum pernah submit form konfirmasi reward)
     cursor.execute("""
         SELECT COUNT(*) FROM CLAIMS c
         LEFT JOIN REWARD_KONFIRMASI rk ON rk.claim_id = c.id
@@ -1373,7 +1429,7 @@ def arsipkan_periode(periode_id: int) -> dict:
             "reward_belum_diisi": reward_belum_diisi,
         }
 
-    # Hitung reward yang sudah diisi tapi belum selesai diproses operator
+    # [Validasi 4] Semua reward yang sudah diisi harus sudah selesai diproses operator (status 'selesai')
     cursor.execute("""
         SELECT COUNT(*) FROM REWARD_KONFIRMASI rk
         JOIN CLAIMS c ON c.id = rk.claim_id
@@ -1405,6 +1461,8 @@ def get_claims_by_periode_id(periode_id: int) -> list:
                c.mirip_dengan_id, c.verified_by, c.verified_at,
                u.nama AS verified_by_nama, c.flag_alasan, c.catatan_penolakan,
                p.tanggal_mulai, p.tanggal_selesai, p.jenis_kepesertaan, p.nama_ketua,
+               -- anggota_list: daftar anggota kelompok dalam format "nama|nim;;nama|nim"
+               -- dipisah ';;' antar anggota, '|' antara nama dan NIM
                GROUP_CONCAT(a.nama_anggota || '|' || a.nim_anggota, ';;') AS anggota_list
         FROM CLAIMS c
         LEFT JOIN USERS u             ON u.id            = c.verified_by
@@ -1523,10 +1581,12 @@ def get_export_data(
         prodi     = parsed.get("prodi",    "Lainnya")        if parsed.get("valid") else "Lainnya"
         angkatan  = parsed.get("angkatan", "")               if parsed.get("valid") else ""
 
+        # Nilai dari PENGAJUAN diutamakan; fallback ke nilai di CLAIMS jika PENGAJUAN kosong.
+        # Hal ini terjadi karena CLAIMS diisi saat upload sertifikat, PENGAJUAN diisi di step berikutnya.
         tahun_final    = tahun_keg or (tanggal[:4] if tanggal and len(tanggal) >= 4 else "")
-        nama_keg_final = nama_keg or nama_lomba
-        tingkat_final  = tingkatan_p or tingkat
-        capaian_final  = capaian or peringkat
+        nama_keg_final = nama_keg or nama_lomba   # nama_kegiatan (PENGAJUAN) lebih lengkap dari nama_lomba (CLAIMS)
+        tingkat_final  = tingkatan_p or tingkat   # tingkatan dari PENGAJUAN, fallback ke tingkat di CLAIMS
+        capaian_final  = capaian or peringkat     # capaian dari PENGAJUAN, fallback ke peringkat di CLAIMS
 
         # Terapkan filter
         if filter_fakultas    and fakultas      != filter_fakultas:    continue
@@ -1554,17 +1614,19 @@ def get_export_data(
         else:
             kat_label = ""
 
-        # Susun daftar anggota kelompok (ketua + anggota lainnya)
+        # Susun string anggota kelompok untuk kolom ekspor:
+        # format: "Nama Ketua (NIM) - Ketua, Nama Anggota1 (NIM1), Nama Anggota2 (NIM2)"
+        # anggota_list dari DB adalah "nama|nim;;nama|nim" — perlu di-parse terlebih dahulu
         anggota_gabung = ""
         if kepesertaan == "kelompok":
             parts = []
             if nama_ketua:
-                nim_ketua = email.split("@")[0] if "@" in email else ""
+                nim_ketua = email.split("@")[0] if "@" in email else ""   # NIM ketua = bagian lokal email
                 parts.append(f"{nama_ketua} ({nim_ketua}) - Ketua")
             if anggota_list:
-                for entry in anggota_list.split(";;"):
+                for entry in anggota_list.split(";;"):   # pisah antar anggota
                     if "|" in entry:
-                        nama_a, nim_a = entry.split("|", 1)
+                        nama_a, nim_a = entry.split("|", 1)   # pisah nama dan NIM
                         parts.append(f"{nama_a} ({nim_a})")
                     else:
                         parts.append(entry)

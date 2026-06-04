@@ -8,8 +8,10 @@ import { API_URL, apiFetch } from "./components/shared";
 // KONSTANTA
 // ─────────────────────────────────────────────────────────────────────────────
 const TAHUN_INI  = new Date().getFullYear();
-const TAHUN_OPSI = [String(TAHUN_INI), String(TAHUN_INI - 1)];
+const TAHUN_OPSI = [String(TAHUN_INI), String(TAHUN_INI - 1)]; // hanya 2 tahun terakhir yang bisa dipilih
 
+// Nilai rupiah per 1 poin reward, sesuai SK Rektor UKDW.
+// Estimasi reward = totalPoin × bonusFactor × PENGALI_REWARD
 const PENGALI_REWARD = 225_000;
 
 // ── Tabel Poin SK Rektor 078/B.02/UKDW/2023 ──────────────────────────────────
@@ -79,15 +81,27 @@ function capaianKePoin(capaian, tabel) {
 
 function hitungReward(data) {
   const { kategori_simkatmawa, kategori_kegiatan, capaian, jenis_kepesertaan, jumlah_anggota } = data;
+  // Hanya lomba mandiri (puspresnas/non-puspresnas) yang memiliki estimasi reward otomatis.
+  // Rekognisi tidak dihitung di sini karena nilainya ditentukan manual oleh operator.
   if (!isLombaMandiri(kategori_simkatmawa)) return null;
+
+  // Pilih tabel poin yang sesuai:
+  // - PUSPRESNAS: satu tabel tetap (tidak tergantung tingkatan)
+  // - Non-puspresnas: tiga tabel berbeda tergantung tingkatan kegiatan (Provinsi/Nasional/Internasional)
   const tabel = kategori_simkatmawa === "lomba_mandiri_puspresnas"
     ? TABEL_PUSPRESNAS
     : TABEL_NON_PUSPRESNAS[kategori_kegiatan];
+
   const hasil = capaianKePoin(capaian, tabel);
   if (!hasil) return null;
-  const n = Math.max(1, parseInt(jumlah_anggota) || 1);
+
+  const n = Math.max(1, parseInt(jumlah_anggota) || 1); // jumlah anggota kelompok, minimal 1
+
+  // Bonus multiplier untuk klaim kelompok sesuai SK Rektor:
+  // ≥ 11 anggota → ×1.5, 6–10 anggota → ×1.25, < 6 atau individu → ×1 (tidak ada bonus)
   const bonusFactor = jenis_kepesertaan === "kelompok"
     ? (n > 10 ? 1.5 : n >= 6 ? 1.25 : 1) : 1;
+
   return {
     poinDasar:  hasil.totalPoin,
     rincian:    hasil.rincian,
@@ -232,7 +246,8 @@ function validateStep(step, data, files, showKelompok, totalSteps) {
       if (!data.tanggal_mulai) {
         e.tanggal_mulai = "Tanggal mulai wajib diisi.";
       } else {
-        if (data.tanggal_mulai > todayStr)     e.tanggal_mulai = "Tanggal mulai tidak boleh di masa depan.";
+        if (data.tanggal_mulai > todayStr)          e.tanggal_mulai = "Tanggal mulai tidak boleh di masa depan.";
+        // SK Rektor Pasal 5: pengajuan hanya berlaku untuk kegiatan dalam 12 bulan terakhir
         else if (data.tanggal_mulai < batasLaluStr) e.tanggal_mulai = "Melebihi batas 12 bulan pengajuan (SK Rektor Pasal 5).";
       }
 
