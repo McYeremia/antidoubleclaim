@@ -9,11 +9,7 @@ import os
 import json
 import traceback
 import uuid
-import io
 import random
-import imagehash
-from PIL import Image
-from pdf2image import convert_from_bytes
 
 from backend.database import (
     insert_claim, create_database,
@@ -38,11 +34,8 @@ from backend.database import (
     get_operator_by_email,
     create_operator_otp,
     verify_operator_otp,
-    PHASH_THRESHOLD, FUZZY_THRESHOLD,
 )
 from backend.nim_parser import parse_nim, is_valid_student_email
-from backend.image_hash import POPPLER_PATH
-from backend.text_similarity import token_sort_ratio
 from backend.email_service import (
     kirim_email_klaim_disetujui,
     kirim_email_klaim_tidak_lolos,
@@ -72,125 +65,6 @@ if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
 app.mount("/uploads", StaticFiles(directory=UPLOAD_FOLDER), name="uploads")
-
-# ══════════════════════════════════════════════════════════════════════════════
-# ── SIMULATOR ─ Bagian Terpisah: Alat Pengujian & Visualisasi Deteksi Duplikat
-# Endpoint di bawah ini BUKAN bagian dari alur produksi klaim.
-# Tidak ada data yang disimpan ke database atau disk.
-# Hanya untuk keperluan pengujian dan demonstrasi cara kerja sistem.
-# ══════════════════════════════════════════════════════════════════════════════
-
-# Body JSON untuk endpoint /simulator/fuzzy — dua judul yang ingin dibandingkan
-class SimulatorFuzzyInput(BaseModel):
-    title1: str
-    title2: str
-
-def _open_image_from_bytes(filename: str, contents: bytes) -> Image.Image:
-    # Membuka gambar dari bytes tanpa menyimpan ke disk. Mendukung JPG, PNG, PDF (halaman pertama).
-    ext = os.path.splitext(filename)[1].lower()
-    if ext == ".pdf":
-        images = convert_from_bytes(contents, poppler_path=POPPLER_PATH)
-        if not images:
-            raise ValueError("PDF tidak mengandung halaman yang bisa dibaca")
-        return images[0]
-    elif ext in (".jpg", ".jpeg", ".png"):
-        return Image.open(io.BytesIO(contents))
-    else:
-        raise ValueError(f"Format tidak didukung: {ext}. Gunakan JPG, PNG, atau PDF.")
-
-@app.post("/simulator/phash")
-async def simulator_phash(
-    image1: UploadFile = File(...),
-    image2: UploadFile = File(...),
-    x_operator_id: Optional[str] = Header(None, alias="x-operator-id"),
-):
-    # SIMULATOR: Menghitung dan membandingkan pHash dua gambar in-memory; tidak menyimpan data apapun.
-    contents1 = await image1.read()
-    contents2 = await image2.read()
-
-    if len(contents1) > MAX_FILE_SIZE or len(contents2) > MAX_FILE_SIZE:
-        raise HTTPException(status_code=413, detail="Ukuran file melebihi batas 3 MB")
-
-    try:
-        img1 = _open_image_from_bytes(image1.filename or "image1.jpg", contents1)
-        img2 = _open_image_from_bytes(image2.filename or "image2.jpg", contents2)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception:
-        raise HTTPException(status_code=400, detail="File gambar tidak valid atau rusak")
-
-    try:
-        hash1 = imagehash.phash(img1)
-        hash2 = imagehash.phash(img2)
-    except Exception:
-        raise HTTPException(status_code=400, detail="Gagal menghitung pHash gambar")
-
-    distance    = int(hash1 - hash2)
-    bits1       = [int(b) for b in hash1.hash.flatten()]
-    bits2       = [int(b) for b in hash2.hash.flatten()]
-    diff_bits   = [int(b1 ^ b2) for b1, b2 in zip(bits1, bits2)]
-    similarity  = round((1 - distance / 64) * 100, 2)
-
-    return {
-        "hash1_hex":          str(hash1),
-        "hash2_hex":          str(hash2),
-        "hash1_bits":         bits1,
-        "hash2_bits":         bits2,
-        "diff_bits":          diff_bits,
-        "hamming_distance":   distance,
-        "similarity_percent": similarity,
-        "threshold":          PHASH_THRESHOLD,
-        "is_duplicate":       distance <= PHASH_THRESHOLD,
-        "steps": {
-            "resize":    "32x32 px",
-            "colorspace":"Grayscale",
-            "dct":       "DCT 2D → ambil koefisien 8x8 frekuensi rendah (kiri atas)",
-            "compare":   "Rata-rata koefisien → binary (>avg=1) → XOR antar hash = Hamming distance",
-        },
-    }
-
-@app.post("/simulator/fuzzy")
-async def simulator_fuzzy(
-    body: SimulatorFuzzyInput,
-    x_operator_id: Optional[str] = Header(None, alias="x-operator-id"),
-):
-    # SIMULATOR: Menghitung skor Token Sort Ratio antara dua judul; tidak ada data yang disimpan.
-    if not body.title1.strip() or not body.title2.strip():
-        raise HTTPException(status_code=400, detail="Judul tidak boleh kosong")
-
-    t1_orig = body.title1
-    t2_orig = body.title2
-    t1_norm = t1_orig.lower().strip()
-    t2_norm = t2_orig.lower().strip()
-
-    tokens1        = t1_norm.split()
-    tokens2        = t2_norm.split()
-    sorted_tokens1 = sorted(tokens1)
-    sorted_tokens2 = sorted(tokens2)
-    sorted1        = " ".join(sorted_tokens1)
-    sorted2        = " ".join(sorted_tokens2)
-
-    score = token_sort_ratio(t1_orig, t2_orig)
-
-    return {
-        "original1":      t1_orig,
-        "original2":      t2_orig,
-        "normalized1":    t1_norm,
-        "normalized2":    t2_norm,
-        "sorted1":        sorted1,
-        "sorted2":        sorted2,
-        "score":          score,
-        "threshold":      FUZZY_THRESHOLD,
-        "is_duplicate":   score >= FUZZY_THRESHOLD,
-        "tokens1":        tokens1,
-        "tokens2":        tokens2,
-        "sorted_tokens1": sorted_tokens1,
-        "sorted_tokens2": sorted_tokens2,
-    }
-
-# ══════════════════════════════════════════════════════════════════════════════
-# ── AKHIR SIMULATOR ───────────────────────────────────────────────────────────
-# ══════════════════════════════════════════════════════════════════════════════
 
 # ── Root ────────────────────────────────────────────────────────────────────
 @app.get("/")
@@ -261,14 +135,14 @@ async def update_profil(email: str, body: ProfilUpdate):
     return {"success": True}
 
 # ── Periode Klaim ─────────────────────────────────────────────────────────────
-# Body JSON untuk POST /periode — data yang dibutuhkan saat membuat periode klaim baru
+# Body JSON untuk POST /periode — nama di-generate otomatis dari nomor_periode + semester + tahun
 class PeriodeCreate(BaseModel):
-    nama:            str
+    nomor_periode:   int
+    semester:        str            # "Gasal" atau "Genap"
+    tahun:           int
     tanggal_mulai:   str
     tanggal_selesai: str
     dibuat_oleh:     Optional[str] = None
-    semester:        Optional[int] = 0
-    tahun:           Optional[int] = 0
 
 @app.get("/periode/aktif")
 async def periode_aktif():
@@ -297,7 +171,8 @@ async def buat_periode(body: PeriodeCreate, x_operator_id: Optional[str] = Heade
     # Membuat periode klaim baru dan mencatat aksi ke audit log — hanya operator.
     op = _require_operator(x_operator_id)
     periode_id = create_periode(body.model_dump())
-    insert_audit_log(op["id"], op["nama"], "buat_periode", "periode", periode_id, body.nama)
+    nama = f"Periode {body.nomor_periode} Semester {body.semester} {body.tahun}"
+    insert_audit_log(op["id"], op["nama"], "buat_periode", "periode", periode_id, nama)
     return {"success": True, "id": periode_id}
 
 @app.put("/periode/{periode_id}")
@@ -330,18 +205,21 @@ async def rewards_by_periode(periode_id: int):
     # Mengambil semua data reward yang terhubung ke periode tertentu.
     return get_rewards_by_periode_id(periode_id)
 
-# Body JSON untuk PATCH /periode/{id} — field periode yang boleh diedit setelah dibuat
+# Body JSON untuk PATCH /periode/{id} — nama di-generate ulang dari nomor_periode + semester + tahun
 class PeriodeEdit(BaseModel):
-    nama:            str
+    nomor_periode:   int
+    semester:        str            # "Gasal" atau "Genap"
+    tahun:           int
     tanggal_mulai:   str
     tanggal_selesai: str
 
 @app.patch("/periode/{periode_id}")
 async def edit_periode(periode_id: int, body: PeriodeEdit, x_operator_id: Optional[str] = Header(None)):
-    # Mengedit nama dan tanggal periode yang belum diarsipkan — hanya operator.
+    # Mengedit periode (nomor, semester, tahun, tanggal) dan me-regenerasi nama — hanya operator.
     op = _require_operator(x_operator_id)
     update_periode_data(periode_id, body.model_dump())
-    insert_audit_log(op["id"], op["nama"], "edit_periode", "periode", periode_id, body.nama)
+    nama = f"Periode {body.nomor_periode} Semester {body.semester} {body.tahun}"
+    insert_audit_log(op["id"], op["nama"], "edit_periode", "periode", periode_id, nama)
     return {"success": True}
 
 @app.delete("/periode/{periode_id}")

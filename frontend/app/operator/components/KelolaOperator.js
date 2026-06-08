@@ -28,12 +28,12 @@ export default function KelolaOperator({ operatorId }) {
   const [deleteSaving, setDeleteSaving] = useState(false);
   // Modal reset password: { id, nama }
   const [passwordModal, setPasswordModal] = useState(null);
-  const [pwForm,        setPwForm]        = useState({ new_password: "", confirm: "" });
+  const [pwForm,        setPwForm]        = useState({ old_password: "", new_password: "", confirm: "" });
   const [pwError,       setPwError]       = useState("");
   const [pwSaving,      setPwSaving]      = useState(false);
   const [showFormPw,    setShowFormPw]    = useState(false);
   const [showDeletePw,  setShowDeletePw]  = useState(false);
-  const [showResetPw,   setShowResetPw]   = useState({ new: false, confirm: false });
+  const [showResetPw,   setShowResetPw]   = useState({ old: false, new: false, confirm: false });
 
   // Header standar untuk request API yang membutuhkan autentikasi operator.
   const headers = { "Content-Type": "application/json", "x-operator-id": String(operatorId) };
@@ -89,21 +89,25 @@ export default function KelolaOperator({ operatorId }) {
 
   const handleResetPassword = (op) => {
     setPasswordModal({ id: op.id, nama: op.nama });
-    setPwForm({ new_password: "", confirm: "" });
+    setPwForm({ old_password: "", new_password: "", confirm: "" });
     setPwError("");
-    setShowResetPw({ new: false, confirm: false });
+    setShowResetPw({ old: false, new: false, confirm: false });
   };
 
   const handleResetPasswordConfirm = async (e) => {
     e.preventDefault();
+    const isSelf = String(passwordModal.id) === String(operatorId);
+    if (isSelf && !pwForm.old_password) { setPwError("Password lama wajib diisi."); return; }
     if (pwForm.new_password.length < 8) { setPwError("Password minimal 8 karakter."); return; }
     if (pwForm.new_password !== pwForm.confirm) { setPwError("Konfirmasi password tidak cocok."); return; }
     setPwSaving(true);
+    const body = { new_password: pwForm.new_password };
+    if (isSelf) body.old_password = pwForm.old_password;
     try {
       const res = await apiFetch(`${API}/operators/${passwordModal.id}/password`, {
         method: "PATCH",
         headers,
-        body: JSON.stringify({ new_password: pwForm.new_password }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
@@ -448,11 +452,50 @@ export default function KelolaOperator({ operatorId }) {
                   d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
               </svg>
             </div>
-            <h3 className="text-[16px] font-black text-gray-900 mb-1">Reset Password</h3>
+            <h3 className="text-[16px] font-black text-gray-900 mb-1">
+              {String(passwordModal.id) === String(operatorId) ? "Ganti Password" : "Reset Password"}
+            </h3>
             <p className="text-[13px] text-gray-400 mb-6">
-              Atur password baru untuk akun <span className="font-bold text-gray-700">{passwordModal.nama}</span>.
+              {String(passwordModal.id) === String(operatorId)
+                ? "Masukkan password lama dan password baru Anda."
+                : <>Atur password baru untuk akun <span className="font-bold text-gray-700">{passwordModal.nama}</span>.</>
+              }
             </p>
             <form onSubmit={handleResetPasswordConfirm} className="space-y-4">
+              {/* Field password lama hanya muncul ketika mengubah password sendiri */}
+              {String(passwordModal.id) === String(operatorId) && (
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                    Password Lama <span className="text-red-400">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showResetPw.old ? "text" : "password"}
+                      required
+                      autoFocus
+                      value={pwForm.old_password}
+                      onChange={e => { setPwForm(v => ({ ...v, old_password: e.target.value })); setPwError(""); }}
+                      placeholder="Masukkan password saat ini"
+                      className="w-full px-4 py-3 pr-10 bg-gray-50 border border-gray-200 rounded-2xl text-[14px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
+                    />
+                    <button type="button" tabIndex={-1}
+                      onClick={() => setShowResetPw(v => ({ ...v, old: !v.old }))}
+                      className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-300 hover:text-blue-400 transition-colors">
+                      {showResetPw.old ? (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                            d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
               <div>
                 <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
                   Password Baru <span className="text-red-400">*</span>
@@ -461,7 +504,7 @@ export default function KelolaOperator({ operatorId }) {
                   <input
                     type={showResetPw.new ? "text" : "password"}
                     required
-                    autoFocus
+                    autoFocus={String(passwordModal.id) !== String(operatorId)}
                     value={pwForm.new_password}
                     onChange={e => { setPwForm(v => ({ ...v, new_password: e.target.value })); setPwError(""); }}
                     placeholder="Minimal 8 karakter"

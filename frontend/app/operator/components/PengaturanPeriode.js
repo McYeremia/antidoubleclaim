@@ -22,28 +22,38 @@ export default function PengaturanPeriode({ operatorNama, operatorId }) {
   const [showForm,       setShowForm]       = useState(false);
   const [editingPeriode, setEditingPeriode] = useState(null);
   const [saving,         setSaving]         = useState(false);
-  const [form,         setForm]         = useState({ nama: "", tanggal_mulai: "", tanggal_selesai: "" });
+  const [form,         setForm]         = useState({ nomor_periode: 1, semester: "Gasal", tahun: new Date().getFullYear(), tanggal_mulai: "", tanggal_selesai: "" });
   // confirmModal menyimpan konfigurasi dialog konfirmasi yang sedang aktif.
   const [confirmModal, setConfirmModal] = useState(null);
+
+  const TAHUN_DEFAULT = new Date().getFullYear();
+  const EMPTY_FORM = { nomor_periode: 1, semester: "Gasal", tahun: TAHUN_DEFAULT, tanggal_mulai: "", tanggal_selesai: "" };
 
   // ─── HANDLER FORM ────────────────────────────────────────────────────────
   // Membuka form kosong untuk membuat periode baru.
   const openCreate = () => {
     setEditingPeriode(null);
-    setForm({ nama: "", tanggal_mulai: "", tanggal_selesai: "" });
+    setForm(EMPTY_FORM);
     setShowForm(true);
   };
 
   const openEdit = (p) => {
     setEditingPeriode(p);
-    setForm({ nama: p.nama, tanggal_mulai: p.tanggal_mulai, tanggal_selesai: p.tanggal_selesai });
+    const semesterVal = (p.semester === "Gasal" || p.semester === "Genap") ? p.semester : "Gasal";
+    setForm({
+      nomor_periode: p.nomor_periode || 1,
+      semester:      semesterVal,
+      tahun:         p.tahun || TAHUN_DEFAULT,
+      tanggal_mulai:   p.tanggal_mulai,
+      tanggal_selesai: p.tanggal_selesai,
+    });
     setShowForm(true);
   };
 
   const closeForm = () => {
     setShowForm(false);
     setEditingPeriode(null);
-    setForm({ nama: "", tanggal_mulai: "", tanggal_selesai: "" });
+    setForm(EMPTY_FORM);
   };
 
   const fetchPeriode = async () => {
@@ -60,8 +70,12 @@ export default function PengaturanPeriode({ operatorNama, operatorId }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.nama.trim() || !form.tanggal_mulai || !form.tanggal_selesai) {
-      alert("Nama, tanggal mulai, dan tanggal selesai wajib diisi.");
+    if (!form.nomor_periode || !form.semester || !form.tahun || !form.tanggal_mulai || !form.tanggal_selesai) {
+      alert("Semua field (nomor periode, semester, tahun, tanggal mulai, tanggal selesai) wajib diisi.");
+      return;
+    }
+    if (!["Gasal", "Genap"].includes(form.semester)) {
+      alert("Semester harus Gasal atau Genap.");
       return;
     }
     setSaving(true);
@@ -187,18 +201,51 @@ export default function PengaturanPeriode({ operatorNama, operatorId }) {
             {editingPeriode ? `Edit Periode — ${editingPeriode.nama}` : "Periode Baru"}
           </h2>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
+
+            {/* Preview nama yang akan di-generate */}
+            {form.nomor_periode && form.semester && form.tahun && (
+              <div className="px-3 py-2 bg-[#f0f8f4] border border-[#046137]/20 rounded-xl text-[12px] text-[#046137] font-semibold">
+                Nama periode: Periode {form.nomor_periode} Semester {form.semester} {form.tahun}
+              </div>
+            )}
+
+            <div className="grid grid-cols-3 gap-4">
+              <div>
                 <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">
-                  Nama Periode <span className="text-red-400">*</span>
+                  Nomor Periode <span className="text-red-400">*</span>
                 </label>
                 <input
-                  type="text" value={form.nama}
-                  onChange={e => setForm(f => ({ ...f, nama: e.target.value }))}
-                  placeholder="Contoh: Periode 1 2025"
+                  type="number" min="1" value={form.nomor_periode}
+                  onChange={e => setForm(f => ({ ...f, nomor_periode: parseInt(e.target.value) || 1 }))}
                   className="block w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#046137]"
                 />
               </div>
+              <div>
+                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">
+                  Semester <span className="text-red-400">*</span>
+                </label>
+                <select
+                  value={form.semester}
+                  onChange={e => setForm(f => ({ ...f, semester: e.target.value }))}
+                  className="block w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#046137] bg-white"
+                >
+                  <option value="Gasal">Gasal</option>
+                  <option value="Genap">Genap</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">
+                  Tahun <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="number" min="2000" max="2100" value={form.tahun}
+                  onChange={e => setForm(f => ({ ...f, tahun: parseInt(e.target.value) || TAHUN_DEFAULT }))}
+                  className="block w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#046137]"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">
                   Tanggal Mulai <span className="text-red-400">*</span>

@@ -22,7 +22,6 @@ import PengaturanPeriode         from "./components/PengaturanPeriode";      // 
 import ArsipPeriode              from "./components/ArsipPeriode";           // arsip periode lama (superadmin)
 import VisualisasiDataOperator   from "./components/VisualisasiDataOperator";// grafik & statistik klaim
 import LogAktivitas              from "./components/LogAktivitas";           // audit log aksi operator (superadmin)
-import SimulatorDeteksi          from "./components/SimulatorDeteksi";       // pengujian pHash & fuzzy interaktif
 
 // Konten dashboard dibungkus terpisah agar useSearchParams bisa dipakai di dalam Suspense.
 function OperatorDashboardContent() {
@@ -192,7 +191,6 @@ function OperatorDashboardContent() {
           {activeMenu === "claim"       && <PengajuanClaim router={router} />}
           {activeMenu === "reward"      && <PengajuanReward />}
           {activeMenu === "visualisasi" && <VisualisasiDataOperator />}
-          {activeMenu === "simulator"   && <SimulatorDeteksi />}
           {activeMenu === "operators"   && isSuperAdmin && <KelolaOperator operatorId={operatorId} />}
           {activeMenu === "periode"     && isSuperAdmin && <PengaturanPeriode operatorNama={operatorNama} operatorId={operatorId} />}
           {activeMenu === "arsip"       && isSuperAdmin && <ArsipPeriode />}
