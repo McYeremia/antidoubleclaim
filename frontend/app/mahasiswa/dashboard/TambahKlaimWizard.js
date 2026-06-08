@@ -8,7 +8,11 @@ import { API_URL, apiFetch } from "./components/shared";
 // KONSTANTA
 // ─────────────────────────────────────────────────────────────────────────────
 const TAHUN_INI  = new Date().getFullYear();
-const TAHUN_OPSI = [String(TAHUN_INI), String(TAHUN_INI - 1)]; // hanya 2 tahun terakhir yang bisa dipilih
+// Tahun valid berdasarkan batas 1 semester (6 bulan) ke belakang
+const _BATAS_SEMESTER = new Date(); _BATAS_SEMESTER.setMonth(_BATAS_SEMESTER.getMonth() - 6);
+const TAHUN_OPSI = _BATAS_SEMESTER.getFullYear() < TAHUN_INI
+  ? [String(TAHUN_INI), String(_BATAS_SEMESTER.getFullYear())]
+  : [String(TAHUN_INI)];
 
 // Nilai rupiah per 1 poin reward, sesuai SK Rektor UKDW.
 // Estimasi reward = totalPoin × bonusFactor × PENGALI_REWARD
@@ -240,15 +244,14 @@ function validateStep(step, data, files, showKelompok, totalSteps) {
 
       const _now = new Date();
       const todayStr = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, "0")}-${String(_now.getDate()).padStart(2, "0")}`;
-      const _batas = new Date(_now); _batas.setFullYear(_batas.getFullYear() - 1);
+      const _batas = new Date(_now); _batas.setMonth(_batas.getMonth() - 6);
       const batasLaluStr = `${_batas.getFullYear()}-${String(_batas.getMonth() + 1).padStart(2, "0")}-${String(_batas.getDate()).padStart(2, "0")}`;
 
       if (!data.tanggal_mulai) {
         e.tanggal_mulai = "Tanggal mulai wajib diisi.";
       } else {
         if (data.tanggal_mulai > todayStr)          e.tanggal_mulai = "Tanggal mulai tidak boleh di masa depan.";
-        // SK Rektor Pasal 5: pengajuan hanya berlaku untuk kegiatan dalam 12 bulan terakhir
-        else if (data.tanggal_mulai < batasLaluStr) e.tanggal_mulai = "Melebihi batas 12 bulan pengajuan (SK Rektor Pasal 5).";
+        else if (data.tanggal_mulai < batasLaluStr) e.tanggal_mulai = "Melebihi batas 1 semester (6 bulan) pengajuan.";
       }
 
       if (!data.tanggal_selesai) {
@@ -264,14 +267,14 @@ function validateStep(step, data, files, showKelompok, totalSteps) {
 
       const _now2 = new Date();
       const todayStr2 = `${_now2.getFullYear()}-${String(_now2.getMonth() + 1).padStart(2, "0")}-${String(_now2.getDate()).padStart(2, "0")}`;
-      const _batas2 = new Date(_now2); _batas2.setFullYear(_batas2.getFullYear() - 1);
+      const _batas2 = new Date(_now2); _batas2.setMonth(_batas2.getMonth() - 6);
       const batasLaluStr2 = `${_batas2.getFullYear()}-${String(_batas2.getMonth() + 1).padStart(2, "0")}-${String(_batas2.getDate()).padStart(2, "0")}`;
 
       if (!data.tanggal_mulai) {
         e.tanggal_mulai = "Tanggal mulai wajib diisi.";
       } else {
         if (data.tanggal_mulai > todayStr2)      e.tanggal_mulai = "Tanggal mulai tidak boleh di masa depan.";
-        else if (data.tanggal_mulai < batasLaluStr2) e.tanggal_mulai = "Melebihi batas 12 bulan pengajuan (SK Rektor Pasal 5).";
+        else if (data.tanggal_mulai < batasLaluStr2) e.tanggal_mulai = "Melebihi batas 1 semester (6 bulan) pengajuan.";
       }
 
       if (!data.tanggal_selesai) {
@@ -852,11 +855,11 @@ function Step4Rekognisi({ data, onChange, onBlur, onFileChange, files, errors, p
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
         <FInput id="tanggal_mulai_rek" label="Tanggal Mulai" required
           type="date"
-          min={(() => { const d = new Date(); d.setFullYear(d.getFullYear() - 1); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; })()}
+          min={(() => { const d = new Date(); d.setMonth(d.getMonth() - 6); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; })()}
           max={(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; })()}
           value={data.tanggal_mulai} onChange={(e) => onChange("tanggal_mulai", e.target.value)}
           onBlur={() => onBlur("tanggal_mulai")}
-          hint="Tidak boleh di masa depan, maks. 12 bulan yang lalu (SK Rektor)"
+          hint="Tidak boleh di masa depan, maks. 1 semester (6 bulan) yang lalu"
           error={errors?.tanggal_mulai} />
         <FInput id="tanggal_selesai_rek" label="Tanggal Selesai" required
           type="date"
@@ -1071,11 +1074,11 @@ function Step4Lomba({ data, onChange, onBlur, onFileChange, files, errors }) {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
         <FInput id="tanggal_mulai" label="Tanggal Mulai" required
           type="date"
-          min={(() => { const d = new Date(); d.setFullYear(d.getFullYear() - 1); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; })()}
+          min={(() => { const d = new Date(); d.setMonth(d.getMonth() - 6); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; })()}
           max={(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; })()}
           value={data.tanggal_mulai} onChange={(e) => onChange("tanggal_mulai", e.target.value)}
           onBlur={() => onBlur("tanggal_mulai")}
-          hint="Tidak boleh di masa depan, maks. 12 bulan yang lalu (SK Rektor)"
+          hint="Tidak boleh di masa depan, maks. 1 semester (6 bulan) yang lalu"
           error={errors?.tanggal_mulai} />
 
         <FInput id="tanggal_selesai" label="Tanggal Selesai" required

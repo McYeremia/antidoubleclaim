@@ -176,6 +176,7 @@ def create_database():
         "ALTER TABLE CLAIMS ADD COLUMN periode_id INTEGER",
         "ALTER TABLE PENGAJUAN ADD COLUMN kompetisi_puspresnas TEXT",
         "ALTER TABLE CLAIMS ADD COLUMN kategori_simkatmawa TEXT",
+        "ALTER TABLE PERIODE_KLAIM ADD COLUMN nomor_periode INTEGER",
     ]:
         try:
             cursor.execute(migration)
@@ -1331,15 +1332,21 @@ def get_periode_nama(periode_id: int):
 
 def create_periode(data: dict) -> int:
     # Membuat periode klaim baru dengan status awal 'tutup', harus diaktifkan manual oleh operator.
+    # nama di-generate otomatis dari nomor_periode + semester + tahun
+    nomor    = data.get("nomor_periode")
+    semester = data.get("semester")
+    tahun    = data.get("tahun")
+    nama     = f"Periode {nomor} Semester {semester} {tahun}"
     conn = _get_conn()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO PERIODE_KLAIM (nama, semester, tahun, tanggal_mulai, tanggal_selesai, status, dibuat_oleh)
-        VALUES (?, ?, ?, ?, ?, 'tutup', ?)
+        INSERT INTO PERIODE_KLAIM (nama, semester, tahun, nomor_periode, tanggal_mulai, tanggal_selesai, status, dibuat_oleh)
+        VALUES (?, ?, ?, ?, ?, ?, 'tutup', ?)
     """, (
-        data.get("nama"),
-        data.get("semester"),
-        data.get("tahun"),
+        nama,
+        semester,
+        tahun,
+        nomor,
         data.get("tanggal_mulai"),
         data.get("tanggal_selesai"),
         data.get("dibuat_oleh"),
@@ -1506,11 +1513,15 @@ def get_rewards_by_periode_id(periode_id: int) -> list:
 
 
 def update_periode_data(periode_id: int, data: dict) -> bool:
-    # Memperbarui nama dan tanggal mulai/selesai periode.
+    # Memperbarui periode: nama di-generate ulang dari nomor_periode + semester + tahun.
+    nomor    = data.get("nomor_periode")
+    semester = data.get("semester")
+    tahun    = data.get("tahun")
+    nama     = f"Periode {nomor} Semester {semester} {tahun}"
     conn = _get_conn()
     conn.execute(
-        "UPDATE PERIODE_KLAIM SET nama = ?, tanggal_mulai = ?, tanggal_selesai = ? WHERE id = ?",
-        (data.get("nama"), data.get("tanggal_mulai"), data.get("tanggal_selesai"), periode_id)
+        "UPDATE PERIODE_KLAIM SET nama = ?, tanggal_mulai = ?, tanggal_selesai = ?, nomor_periode = ?, semester = ?, tahun = ? WHERE id = ?",
+        (nama, data.get("tanggal_mulai"), data.get("tanggal_selesai"), nomor, semester, tahun, periode_id)
     )
     conn.commit()
     conn.close()
