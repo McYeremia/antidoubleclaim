@@ -5,6 +5,7 @@ import os
 import time
 import shutil
 import threading
+import re
 from collections import deque
 from typing import Optional
 
@@ -264,3 +265,23 @@ otp_permintaan    = RateLimiter(OTP_MAKS_PERMINTAAN, OTP_PERMINTAAN_DETIK)
 
 def tolak_terlalu_banyak(detik: int, pesan: str):
     raise HTTPException(status_code=429, detail=pesan, headers={"Retry-After": str(detik)})
+
+
+# ── Nama file upload ──────────────────────────────────────────────────────────
+_KARAKTER_TERLARANG = re.compile(r'[\x00-\x1f<>:"|?*]')  # karakter yang tidak sah di nama file Windows
+PANJANG_NAMA_MAKS   = 150
+
+
+def bersihkan_nama_file(nama: str) -> str:
+    # Membersihkan nama file dari pengguna sebelum dipakai sebagai bagian nama file di disk.
+    # Mencegah path traversal: "..\..\backend\api.py" menjadi "backend_api.py", sehingga file
+    # selalu tersimpan di folder uploads. Nama file normal (mis. "sertifikat lomba.pdf") tidak berubah.
+    bagian = [b for b in (nama or "").replace("\\", "/").split("/") if b not in ("", ".", "..")]
+    hasil = "_".join(bagian)
+    hasil = _KARAKTER_TERLARANG.sub("_", hasil)
+    hasil = re.sub(r"\.{2,}", ".", hasil)   # tidak boleh ada ".." tersisa
+    hasil = hasil.strip(" .")                # Windows membuang titik/spasi di ujung nama
+    if len(hasil) > PANJANG_NAMA_MAKS:       # potong nama yang terlalu panjang, pertahankan ekstensi
+        dasar, ext = os.path.splitext(hasil)
+        hasil = dasar[:PANJANG_NAMA_MAKS - len(ext)] + ext
+    return hasil or "file"

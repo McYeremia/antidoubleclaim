@@ -45,6 +45,7 @@ from backend.image_hash import SertifikatTidakValid
 from backend.security import (
     BodySizeLimitMiddleware, limit_upload, hash_slot, ensure_disk_space, read_limited,
     validasi_jenis_file, login_gagal, otp_gagal, otp_permintaan, tolak_terlalu_banyak,
+    bersihkan_nama_file,
 )
 from backend.email_service import (
     kirim_email_klaim_disetujui,
@@ -386,7 +387,7 @@ def upload_certificate(
         validasi_jenis_file(file.filename, contents)
 
         # Nama file diberi prefix UUID agar unik meski mahasiswa mengirim file bernama sama
-        unique_name   = f"{uuid.uuid4().hex}_{file.filename}"
+        unique_name   = f"{uuid.uuid4().hex}_{bersihkan_nama_file(file.filename)}"
         file_location = os.path.join(UPLOAD_FOLDER, unique_name)
         with open(file_location, "wb") as buffer:
             buffer.write(contents)
@@ -492,7 +493,7 @@ def submit_pengajuan(
                 return None
             contents = read_limited(upload, MAX_FILE_SIZE)
             validasi_jenis_file(upload.filename, contents)  # hanya PDF/JPG/PNG
-            fname    = f"{prefix}_{uuid.uuid4().hex}_{upload.filename}"
+            fname    = f"{prefix}_{uuid.uuid4().hex}_{bersihkan_nama_file(upload.filename)}"
             fpath    = os.path.join(UPLOAD_FOLDER, fname)
             with open(fpath, "wb") as buf:
                 buf.write(contents)
@@ -666,7 +667,7 @@ def submit_reward_konfirmasi(
                 return None
             contents = read_limited(upload, MAX_FILE_SIZE)
             validasi_jenis_file(upload.filename, contents)  # hanya PDF/JPG/PNG
-            fname = f"{prefix}_{uuid.uuid4().hex}_{upload.filename}"
+            fname = f"{prefix}_{uuid.uuid4().hex}_{bersihkan_nama_file(upload.filename)}"
             fpath = os.path.join(UPLOAD_FOLDER, fname)
             with open(fpath, "wb") as buf:
                 buf.write(contents)
@@ -802,7 +803,7 @@ def resubmit_reward(
             return None
         contents = read_limited(upload, MAX_FILE_SIZE)
         validasi_jenis_file(upload.filename, contents)  # hanya PDF/JPG/PNG
-        path = os.path.join(UPLOAD_FOLDER, f"reward_{uuid.uuid4().hex}_{upload.filename}")
+        path = os.path.join(UPLOAD_FOLDER, f"reward_{uuid.uuid4().hex}_{bersihkan_nama_file(upload.filename)}")
         with open(path, "wb") as f:
             f.write(contents)
         saved.append(path)
