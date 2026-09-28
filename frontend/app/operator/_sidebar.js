@@ -63,7 +63,8 @@ export function OperatorTopbar() {
       .catch(() => setPeriodeLabel(null));
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await fetch("/api/operator/logout", { method: "POST" }).catch(() => {});
     ["role","operator_id","operator_nama","operator_username","operator_role","operator_login_at"]
       .forEach(k => localStorage.removeItem(k));
     router.push("/portal");

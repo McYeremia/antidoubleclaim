@@ -154,12 +154,11 @@ const isLombaMandiri = (kat) =>
 
 // Ukuran file maks
 const MAX_FILE_MB = 3;
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "application/pdf", "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "application/pdf"];  // sama dengan whitelist di backend
 
 function validateFile(file) {
   if (!file) return null;
-  if (!ALLOWED_TYPES.includes(file.type)) return "Format tidak didukung. Gunakan JPG, PNG, PDF, atau DOC.";
+  if (!ALLOWED_TYPES.includes(file.type)) return "Format tidak didukung. Gunakan JPG, PNG, atau PDF.";
   if (file.size > MAX_FILE_MB * 1024 * 1024) return `Ukuran file maksimal ${MAX_FILE_MB} MB.`;
   return null;
 }
@@ -519,13 +518,13 @@ function FFile({ id, label, required, hint, error, onChange, currentFile }) {
             {currentFile ? currentFile.name : "Klik atau seret file ke sini"}
           </p>
           <p style={{ fontSize: "10px", color: T.hintText, marginTop: "1px" }}>
-            {currentFile ? `${(currentFile.size / 1024).toFixed(0)} KB` : "JPG, PNG, PDF, DOC — maks. 3 MB"}
+            {currentFile ? `${(currentFile.size / 1024).toFixed(0)} KB` : "JPG, PNG, PDF — maks. 3 MB"}
           </p>
         </div>
         {currentFile && (
           <span style={{ marginLeft: "auto", fontSize: "10px", color: T.accent, fontWeight: 600, flexShrink: 0 }}>Ganti</span>
         )}
-        <input ref={inputRef} id={id} type="file" accept=".jpg,.jpeg,.png,.pdf,.doc,.docx" onChange={onChange} className="sr-only" />
+        <input ref={inputRef} id={id} type="file" accept=".jpg,.jpeg,.png,.pdf" onChange={onChange} className="sr-only" />
       </div>
       {!error && hint && <FieldHint>{hint}</FieldHint>}
       <FieldError>{error}</FieldError>
@@ -715,7 +714,7 @@ function Step2({ data, onChange, onBlur, onFileChange, files, errors }) {
             label="Surat Tugas Dosen Pembimbing (opsional)"
             onChange={(e) => onFileChange("surat_tugas_dospem", e)}
             currentFile={files?.surat_tugas_dospem}
-            hint="PDF, JPG, PNG, atau DOC"
+            hint="PDF, JPG, atau PNG"
             error={errors?.surat_tugas_dospem}
           />
         </div>

@@ -61,10 +61,8 @@ export default function ArsipPeriode() {
       onConfirm:    async () => {
         setConfirmModal(null);
         setActionLoading(true);
-        const opId = localStorage.getItem("operator_id");
         const res = await apiFetch(`${API}/periode/${p.id}?status=ditutup`, {
           method: "PUT",
-          headers: opId ? { "x-operator-id": opId } : {},
         });
         setActionLoading(false);
         if (!res.ok) {
@@ -86,11 +84,9 @@ export default function ArsipPeriode() {
       confirmLabel: "YA, ARSIPKAN",
       onConfirm:    async () => {
         setConfirmModal(null);
-        const opId = localStorage.getItem("operator_id");
         setActionLoading(true);
         const res = await apiFetch(`${API}/periode/${p.id}/arsip`, {
           method: "POST",
-          headers: opId ? { "x-operator-id": opId } : {},
         });
         if (!res.ok) {
           const d = await res.json().catch(() => ({}));

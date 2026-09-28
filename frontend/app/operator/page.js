@@ -78,7 +78,7 @@ function OperatorDashboardContent() {
     try {
       const res = await apiFetch(`${API}/operators/${operatorId}/password`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", "x-operator-id": String(operatorId) },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ old_password: pwForm.old, new_password: pwForm.new }),
       });
       if (!res.ok) {
@@ -97,8 +97,9 @@ function OperatorDashboardContent() {
     }
   };
 
-  // Menghapus semua data sesi dari localStorage dan redirect ke portal login.
-  const handleLogout = () => {
+  // Mengakhiri sesi di server, menghapus data sesi dari localStorage, lalu redirect ke portal login.
+  const handleLogout = async () => {
+    await fetch("/api/operator/logout", { method: "POST" }).catch(() => {});
     ["role","operator_id","operator_nama","operator_username","operator_role","operator_login_at"]
       .forEach(k => localStorage.removeItem(k));
     router.push("/portal");

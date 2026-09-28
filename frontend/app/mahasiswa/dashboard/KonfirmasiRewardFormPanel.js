@@ -62,7 +62,7 @@ function Select({ children, error, ...props }) {
 
 function FileInput({ label, name, onChange, required, hint, currentFile, existingPath, error }) {
   const existingFilename = existingPath ? existingPath.split(/[\\/]/).pop() : null;
-  const existingUrl      = existingFilename ? `${API}/uploads/${existingFilename}` : null;
+  const existingUrl      = existingFilename ? `/api/file?name=${encodeURIComponent(existingFilename)}` : null;
   const hasExisting      = !!existingUrl;
   const isRequired       = required && !hasExisting;
 

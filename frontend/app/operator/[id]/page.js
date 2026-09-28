@@ -148,8 +148,7 @@ function CertPreview({ url, filename }) {
 function FileLink({ label, path }) {
   if (!path) return null;
   const filename = path.split(/[\\/]/).pop();
-  const opId = typeof window !== "undefined" ? localStorage.getItem("operator_id") : "";
-  const url = `/api/file?name=${filename}${opId ? `&op=${opId}` : ""}`;
+  const url = `/api/file?name=${filename}`;
   // strip everything up to and including the 32-char uuid: prefix(_prefix)*_uuid32_originalname
   const match = filename.match(/^.+?_[0-9a-f]{32}_(.+)$/);
   const displayName = match ? match[1] : filename;
@@ -632,8 +631,6 @@ export default function DetailKlaim() {
 
   useEffect(() => { fetchAll(); }, [id]);
 
-  const opId = typeof window !== "undefined" ? localStorage.getItem("operator_id") : null;
-  const opHeaders = opId ? { "x-operator-id": opId } : {};
 
   const handleApprove = () => setApproveModal(true);
 
@@ -641,7 +638,7 @@ export default function DetailKlaim() {
     setApproveModal(false);
     setActionLoading(true);
     try {
-      const res = await apiFetch(`${API}/claims/${id}/approve`, { method: "PATCH", headers: opHeaders });
+      const res = await apiFetch(`${API}/claims/${id}/approve`, { method: "PATCH" });
       if (!res.ok) throw new Error(`Server error ${res.status}`);
       await fetchAll();
     } catch (err) {
@@ -659,7 +656,7 @@ export default function DetailKlaim() {
     try {
       const res = await apiFetch(`${API}/claims/${id}`, {
         method: "DELETE",
-        headers: { ...opHeaders, "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ catatan: note || null }),
       });
       if (!res.ok) throw new Error(`Server error ${res.status}`);
@@ -688,7 +685,7 @@ export default function DetailKlaim() {
     </div>
   );
 
-  const fileUrl = `/api/file?name=${claim.sertifikat_filename}${opId ? `&op=${opId}` : ""}`;
+  const fileUrl = `/api/file?name=${claim.sertifikat_filename}`;
   const canAct  = claim.status !== "sudah dicek" && claim.status !== "ditolak";
 
   // Validasi khusus Rekognisi: Harus ada estimasi dana
@@ -864,7 +861,7 @@ export default function DetailKlaim() {
               <div className="space-y-4">
                 <p className="text-[11px] font-black text-orange-400 uppercase tracking-widest mb-2">Visual Perbandingan</p>
                 <CertPreview
-                  url={`/api/file?name=${miripClaim.sertifikat_filename}${opId ? `&op=${opId}` : ""}`}
+                  url={`/api/file?name=${miripClaim.sertifikat_filename}`}
                   filename={miripClaim.sertifikat_filename}
                 />
               </div>

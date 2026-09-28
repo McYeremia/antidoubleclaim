@@ -239,6 +239,11 @@ POPPLER_PATH=C:\poppler\Library\bin
 
 # Password awal akun superadmin (opsional, default: admin123)
 ADMIN_DEFAULT_PASSWORD=admin123
+
+# Kunci rahasia bersama backend <-> server Next.js (wajib, minimal 32 karakter).
+# Nilainya HARUS sama dengan INTERNAL_API_KEY di frontend/.env.local.
+# Buat dengan: python -c "import secrets; print(secrets.token_urlsafe(48))"
+INTERNAL_API_KEY=isi_dengan_string_acak_panjang
 ```
 
 ### 3. Jalankan Backend
@@ -268,7 +273,10 @@ NEXTAUTH_SECRET=isi_dengan_string_acak_panjang
 GOOGLE_CLIENT_ID=isi_dari_google_console
 GOOGLE_CLIENT_SECRET=isi_dari_google_console
 
-NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
+# Harus sama dengan INTERNAL_API_KEY di .env root
+INTERNAL_API_KEY=isi_dengan_string_acak_panjang
+# Alamat backend dilihat dari server Next.js (bukan dari browser)
+BACKEND_INTERNAL_URL=http://127.0.0.1:8000
 ```
 
 Authorized redirect URI yang didaftarkan di Google Console:
@@ -372,7 +380,11 @@ Akun superadmin default dibuat otomatis saat backend pertama kali dijalankan:
 - **Username**: `admin`
 - **Password**: nilai `ADMIN_DEFAULT_PASSWORD` di `.env` (default: `admin123`)
 
-Autentikasi API menggunakan header `X-Operator-ID: <id>` pada setiap request dari frontend operator.
+Browser tidak memanggil backend secara langsung. Semua request lewat route Next.js `/api/backend/*`, yang:
+- memeriksa session Google (mahasiswa) atau cookie sesi operator (`adc_op`, httpOnly),
+- meneruskan identitas yang sudah diverifikasi ke backend bersama kunci rahasia `X-Internal-Key`.
+
+Backend menolak semua request tanpa kunci tersebut (kecuali `GET /`), lalu mengecek hak akses per endpoint: mahasiswa hanya bisa mengakses data miliknya sendiri (atau klaim kelompok di mana ia tercatat sebagai anggota), operator mengakses semua data, dan fitur tertentu khusus superadmin. Login operator menghasilkan token sesi acak yang berlaku 3 jam; logout serta ganti/reset password mengakhiri sesi.
 
 ---
 
@@ -395,7 +407,7 @@ Digunakan untuk memfilter visualisasi data berdasarkan fakultas, prodi, dan angk
 
 ## Catatan Teknis
 
-- **File upload**: Disimpan di `backend/uploads/` dengan nama `{prefix}_{uuid}_{nama_asli}`. Frontend mengakses file lewat proxy Next.js `GET /api/file?name=` untuk menghindari CORS/ngrok blocking.
+- **File upload**: Disimpan di `backend/uploads/` dengan nama `{prefix}_{uuid}_{nama_asli}`. File tidak bisa diakses publik: frontend mengambilnya lewat proxy Next.js `GET /api/file?name=`, yang meneruskan ke endpoint backend `GET /files/{nama}` dengan pengecekan hak akses (pemilik, anggota kelompok klaim, atau operator).
 - **Migrasi database**: Dilakukan inline dengan `ALTER TABLE ... ADD COLUMN` dibungkus `try/except`. Tidak ada tool migrasi terpisah.
 - **Email notifikasi**: Dikirim sebagai background task FastAPI agar tidak memblokir response API.
 - **Simulator**: Endpoint `/simulator/*` memproses gambar in-memory dan tidak menyimpan apapun ke database atau disk.

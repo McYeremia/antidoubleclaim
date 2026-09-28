@@ -33,8 +33,7 @@ function CertPanel({ claim, label, accent }) {
     </div>
   );
 
-  const opId    = typeof window !== "undefined" ? localStorage.getItem("operator_id") : "";
-  const fileUrl  = `/api/file?name=${claim.sertifikat_filename}${opId ? `&op=${opId}` : ""}`;
+  const fileUrl  = `/api/file?name=${claim.sertifikat_filename}`;
   const isPdf    = claim.sertifikat_filename?.toLowerCase().endsWith(".pdf");
   const accentBg = accent === "orange" ? "bg-orange-50 border-orange-200" : "bg-[#f0f7f3] border-[#d4ebe0]";
   const accentTxt = accent === "orange" ? "text-orange-600" : "text-[#046137]";
