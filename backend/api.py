@@ -8,7 +8,7 @@ import os
 import json
 import traceback
 import uuid
-import random
+import secrets
 
 from backend.database import (
     insert_claim, create_database,
@@ -44,6 +44,7 @@ from backend.auth import (
 from backend.image_hash import SertifikatTidakValid
 from backend.security import (
     BodySizeLimitMiddleware, limit_upload, hash_slot, ensure_disk_space, read_limited,
+    validasi_jenis_file, login_gagal, otp_gagal, otp_permintaan, tolak_terlalu_banyak,
 )
 from backend.email_service import (
     kirim_email_klaim_disetujui,
@@ -382,6 +383,7 @@ def upload_certificate(
             raise HTTPException(status_code=400, detail="Format sertifikat harus PDF, JPG, atau PNG")
         ensure_disk_space(UPLOAD_FOLDER)
         contents = read_limited(file, MAX_FILE_SIZE)
+        validasi_jenis_file(file.filename, contents)
 
         # Nama file diberi prefix UUID agar unik meski mahasiswa mengirim file bernama sama
         unique_name   = f"{uuid.uuid4().hex}_{file.filename}"
@@ -489,6 +491,7 @@ def submit_pengajuan(
             if not upload or not upload.filename:
                 return None
             contents = read_limited(upload, MAX_FILE_SIZE)
+            validasi_jenis_file(upload.filename, contents)  # hanya PDF/JPG/PNG
             fname    = f"{prefix}_{uuid.uuid4().hex}_{upload.filename}"
             fpath    = os.path.join(UPLOAD_FOLDER, fname)
             with open(fpath, "wb") as buf:
@@ -662,6 +665,7 @@ def submit_reward_konfirmasi(
             if not upload or not upload.filename:
                 return None
             contents = read_limited(upload, MAX_FILE_SIZE)
+            validasi_jenis_file(upload.filename, contents)  # hanya PDF/JPG/PNG
             fname = f"{prefix}_{uuid.uuid4().hex}_{upload.filename}"
             fpath = os.path.join(UPLOAD_FOLDER, fname)
             with open(fpath, "wb") as buf:
@@ -797,6 +801,7 @@ def resubmit_reward(
         if not upload or not upload.filename:
             return None
         contents = read_limited(upload, MAX_FILE_SIZE)
+        validasi_jenis_file(upload.filename, contents)  # hanya PDF/JPG/PNG
         path = os.path.join(UPLOAD_FOLDER, f"reward_{uuid.uuid4().hex}_{upload.filename}")
         with open(path, "wb") as f:
             f.write(contents)
@@ -853,9 +858,16 @@ class CreateOperatorRequest(BaseModel):
 @app.post("/login-operator")
 async def login_operator(body: OperatorLoginRequest):
     # Autentikasi operator dengan username dan password; mengembalikan data user dan token sesi jika berhasil.
+    # Setelah LOGIN_MAKS_GAGAL kali salah password, username dikunci sementara (mencegah tebak password).
+    kunci = body.username.strip().lower()
+    sisa = login_gagal.sisa_kunci(kunci)
+    if sisa:
+        tolak_terlalu_banyak(sisa, f"Terlalu banyak percobaan login gagal. Coba lagi dalam {-(-sisa // 60)} menit.")
     user = authenticate_operator(body.username, body.password)
     if not user:
+        login_gagal.catat_gagal(kunci)
         raise HTTPException(status_code=401, detail="Username atau password salah")
+    login_gagal.reset(kunci)
     token = buat_sesi_operator(user["id"])
     return {"success": True, "user": user, "token": token}
 
@@ -878,10 +890,15 @@ class ResetPasswordRequest(BaseModel):
 @app.post("/operator/lupa-password")
 async def lupa_password_operator(body: LupaPasswordRequest, background_tasks: BackgroundTasks):
     # Membuat OTP reset password dan mengirimkannya ke email operator jika terdaftar.
-    op  = get_operator_by_email(body.email)
-    otp = str(random.randint(100000, 999999))   # OTP 6 digit acak
-    create_operator_otp(body.email, otp)         # simpan ke DB meski email tidak terdaftar
+    # Permintaan dibatasi per email (OTP_MAKS_PERMINTAAN) agar email operator tidak dibanjiri kode.
+    retry = otp_permintaan.check(body.email.strip().lower())
+    if retry is not None:
+        tolak_terlalu_banyak(retry, f"Terlalu banyak permintaan kode OTP. Coba lagi dalam {-(-retry // 60)} menit.")
+    op = get_operator_by_email(body.email)
     if op:
+        otp = str(100000 + secrets.randbelow(900000))  # OTP 6 digit dari generator acak yang aman
+        create_operator_otp(body.email, otp)             # OTP hanya disimpan untuk email yang terdaftar
+        otp_gagal.reset(body.email.strip().lower())      # kode baru → hitungan salah OTP diulang
         background_tasks.add_task(kirim_email_otp_reset_operator, op["email"], op["nama"], otp)
     # Selalu return sukses meski email tidak terdaftar — mencegah penyerang menebak email yang ada
     return {"success": True, "pesan": "Jika email terdaftar, kode OTP akan dikirimkan."}
@@ -891,8 +908,14 @@ async def reset_password_operator(body: ResetPasswordRequest):
     # Mereset password operator menggunakan OTP yang valid; OTP langsung hangus setelah digunakan.
     if not body.new_password or len(body.new_password) < 8:
         raise HTTPException(status_code=400, detail="Password baru minimal 8 karakter")
+    # Setelah OTP_MAKS_GAGAL kali salah, kode tidak bisa dipakai lagi; operator harus meminta kode baru
+    kunci = body.email.strip().lower()
+    if otp_gagal.sisa_kunci(kunci):
+        raise HTTPException(status_code=429, detail="Terlalu banyak percobaan kode OTP yang salah. Silakan minta kode OTP baru.")
     if not verify_operator_otp(body.email, body.otp):
+        otp_gagal.catat_gagal(kunci)
         raise HTTPException(status_code=400, detail="Kode OTP tidak valid atau sudah kadaluarsa")
+    otp_gagal.reset(kunci)
     op = get_operator_by_email(body.email)
     if not op:
         raise HTTPException(status_code=400, detail="Kode OTP tidak valid atau sudah kadaluarsa")

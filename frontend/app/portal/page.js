@@ -42,11 +42,17 @@ export default function OperatorLoginPage() {
     e.preventDefault();
     setFpError(""); setFpLoading(true);
     try {
-      await apiFetch(`${API}/operator/lupa-password`, {
+      const res = await apiFetch(`${API}/operator/lupa-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: fpEmail }),
       });
+      // Mis. 429 jika kode OTP terlalu sering diminta
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setFpError(d.detail || "Gagal meminta kode OTP.");
+        return;
+      }
       setFpStep("otp");
     } catch {
       setFpError("Tidak dapat terhubung ke server.");

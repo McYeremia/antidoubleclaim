@@ -184,3 +184,83 @@ def read_limited(upload, max_bytes: int) -> bytes:
     if len(contents) > max_bytes:
         raise HTTPException(status_code=413, detail=f"File '{upload.filename}' melebihi batas maksimal {max_bytes // (1024 * 1024)} MB")
     return contents
+
+
+# ── Jenis file upload ─────────────────────────────────────────────────────────
+# Semua file upload (sertifikat, dokumen pendukung, dokumen reward) hanya boleh PDF/JPG/PNG.
+# Dicek dari ekstensi DAN isi awal file (magic bytes), supaya file lain yang diganti namanya tetap ditolak.
+EKSTENSI_DIIZINKAN = {".pdf", ".jpg", ".jpeg", ".png"}
+
+
+def _isi_sesuai_format(contents: bytes) -> bool:
+    if contents.startswith(b"\x89PNG\r\n\x1a\n"):  # PNG
+        return True
+    if contents.startswith(b"\xff\xd8\xff"):       # JPEG
+        return True
+    return b"%PDF-" in contents[:1024]             # PDF (spesifikasi mengizinkan header di 1 KB pertama)
+
+
+def validasi_jenis_file(filename: str, contents: bytes):
+    # Tolak (400) file yang ekstensinya bukan PDF/JPG/PNG atau isinya tidak sesuai format tersebut.
+    ext = os.path.splitext(filename or "")[1].lower()
+    if ext not in EKSTENSI_DIIZINKAN or not _isi_sesuai_format(contents):
+        raise HTTPException(status_code=400, detail=f"File '{filename}' harus berformat PDF, JPG, atau PNG")
+
+
+# ── Batas percobaan login & OTP ───────────────────────────────────────────────
+LOGIN_MAKS_GAGAL      = _env_int("LOGIN_MAKS_GAGAL", 5)        # salah password berturut-turut per username
+LOGIN_KUNCI_DETIK     = _env_int("LOGIN_KUNCI_DETIK", 900)     # lama akun dikunci setelah itu (15 menit)
+OTP_MAKS_GAGAL        = _env_int("OTP_MAKS_GAGAL", 5)          # salah OTP sebelum kode hangus
+OTP_MAKS_PERMINTAAN   = _env_int("OTP_MAKS_PERMINTAAN", 3)     # permintaan OTP per email…
+OTP_PERMINTAAN_DETIK  = _env_int("OTP_PERMINTAAN_DETIK", 900)  # …dalam rentang ini (15 menit)
+
+
+class PenghitungGagal:
+    # Menghitung percobaan gagal per kunci (username/email) dalam jendela waktu tertentu.
+    # Disimpan di memori (1 proses uvicorn), reset saat restart.
+    def __init__(self, batas: int, jendela_detik: int):
+        self.batas = batas
+        self.jendela = jendela_detik
+        self._data: dict[str, list] = {}  # kunci -> [jumlah gagal, waktu gagal pertama]
+        self._lock = threading.Lock()
+
+    def sisa_kunci(self, kunci: str) -> Optional[int]:
+        # Detik tersisa jika kunci sedang terkunci (batas gagal tercapai), atau None jika boleh mencoba.
+        now = time.monotonic()
+        with self._lock:
+            d = self._data.get(kunci)
+            if not d:
+                return None
+            if now - d[1] >= self.jendela:
+                del self._data[kunci]
+                return None
+            return int(self.jendela - (now - d[1])) + 1 if d[0] >= self.batas else None
+
+    def catat_gagal(self, kunci: str) -> int:
+        # Tambah satu percobaan gagal; kembalikan jumlah gagal saat ini.
+        now = time.monotonic()
+        with self._lock:
+            if len(self._data) > RateLimiter.MAX_TRACKED_IPS:
+                for k in [k for k, v in self._data.items() if now - v[1] >= self.jendela]:
+                    del self._data[k]
+            d = self._data.get(kunci)
+            if not d or now - d[1] >= self.jendela:
+                d = self._data[kunci] = [0, now]
+            d[0] += 1
+            return d[0]
+
+    def reset(self, kunci: str = None):
+        with self._lock:
+            if kunci is None:
+                self._data.clear()
+            else:
+                self._data.pop(kunci, None)
+
+
+login_gagal       = PenghitungGagal(LOGIN_MAKS_GAGAL, LOGIN_KUNCI_DETIK)
+otp_gagal         = PenghitungGagal(OTP_MAKS_GAGAL, OTP_PERMINTAAN_DETIK)
+otp_permintaan    = RateLimiter(OTP_MAKS_PERMINTAAN, OTP_PERMINTAAN_DETIK)
+
+
+def tolak_terlalu_banyak(detik: int, pesan: str):
+    raise HTTPException(status_code=429, detail=pesan, headers={"Retry-After": str(detik)})
