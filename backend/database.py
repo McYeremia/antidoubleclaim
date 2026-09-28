@@ -977,6 +977,10 @@ def get_operator_by_id(operator_id: int):
     return dict(zip(cols, row))
 
 
+# Hash bcrypt pembanding untuk username yang tidak ada (lihat authenticate_operator)
+_HASH_DUMMY = bcrypt.hashpw(b"dummy-password-pembanding", bcrypt.gensalt())
+
+
 def authenticate_operator(username: str, password: str):
     # Memverifikasi username dan password operator menggunakan bcrypt. Mengembalikan data user jika valid.
     conn = _get_conn()
@@ -988,6 +992,12 @@ def authenticate_operator(username: str, password: str):
     row = cursor.fetchone()
     conn.close()
     if not row:
+        # Tetap jalankan bcrypt agar waktu respons sama dengan username yang ada —
+        # mencegah penyerang menebak username mana yang terdaftar dari lamanya respons
+        try:
+            bcrypt.checkpw(password.encode(), _HASH_DUMMY)
+        except Exception:
+            pass
         return None
     uid, uname, pw_hash, nama, email, role = row
     try:

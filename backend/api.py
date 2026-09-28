@@ -75,6 +75,17 @@ MAX_FILE_SIZE = 3 * 1024 * 1024  # Batas ukuran file upload: maks 3 MB per file
 
 MAX_ANGGOTA = 50  # sama dengan batas di wizard frontend
 
+# Pesan untuk error tak terduga (500). Detail teknis hanya dicatat di log server (traceback), tidak dikirim ke pengguna.
+PESAN_ERROR_SERVER = "Terjadi kesalahan di server. Silakan coba lagi."
+
+# bcrypt hanya bisa memproses password maksimal 72 byte; lebih dari itu ditolak dengan pesan jelas (bukan error 500)
+MAX_PASSWORD_BYTES = 72
+
+
+def _cek_panjang_password(password: str):
+    if len(password.encode("utf-8")) > MAX_PASSWORD_BYTES:
+        raise HTTPException(status_code=400, detail=f"Password maksimal {MAX_PASSWORD_BYTES} karakter")
+
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
@@ -421,7 +432,7 @@ def upload_certificate(
         _hapus_file([file_location])
         print("!!! ERROR SAAT UPLOAD !!!")
         print(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=PESAN_ERROR_SERVER)
 
 # ── Pengajuan ─────────────────────────────────────────────────────────────────
 @app.post("/pengajuan", dependencies=[Depends(limit_upload)])
@@ -553,7 +564,7 @@ def submit_pengajuan(
     except Exception as e:
         _hapus_file(saved)
         print(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=PESAN_ERROR_SERVER)
 
 @app.get("/pengajuan")
 async def list_pengajuan(ident: dict = Depends(wajib_mahasiswa)):
@@ -710,7 +721,7 @@ def submit_reward_konfirmasi(
     except Exception as e:
         _hapus_file(saved)
         print(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=PESAN_ERROR_SERVER)
 
 
 # Body JSON untuk PATCH /reward-konfirmasi/{id}/status — status baru dan catatan opsional dari operator
@@ -909,6 +920,7 @@ async def reset_password_operator(body: ResetPasswordRequest):
     # Mereset password operator menggunakan OTP yang valid; OTP langsung hangus setelah digunakan.
     if not body.new_password or len(body.new_password) < 8:
         raise HTTPException(status_code=400, detail="Password baru minimal 8 karakter")
+    _cek_panjang_password(body.new_password)
     # Setelah OTP_MAKS_GAGAL kali salah, kode tidak bisa dipakai lagi; operator harus meminta kode baru
     kunci = body.email.strip().lower()
     if otp_gagal.sisa_kunci(kunci):
@@ -938,6 +950,7 @@ async def add_operator(
     op = ident["op"]
     if not body.password or len(body.password) < 8:
         raise HTTPException(status_code=400, detail="Password minimal 8 karakter")
+    _cek_panjang_password(body.password)
     role = body.role or "operator"
     ok = create_operator(body.username, body.password, body.nama, body.email, role)
     if not ok:
@@ -981,6 +994,7 @@ async def change_operator_password(
 
     if not body.new_password or len(body.new_password) < 8:
         raise HTTPException(status_code=400, detail="Password baru minimal 8 karakter")
+    _cek_panjang_password(body.new_password)
 
     update_operator_password(target["username"], body.new_password)
     # Sesi lain milik operator target diakhiri; sesi yang sedang dipakai untuk mengganti password sendiri tetap aktif

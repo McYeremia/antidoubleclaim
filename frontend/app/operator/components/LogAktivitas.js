@@ -44,8 +44,14 @@ function exportToCsv(logs) {
       ? (() => { const r = (log.detail ?? "").split("|")[1]; return r === "superadmin" ? "Super Admin" : r === "operator" ? "Operator" : "—"; })()
       : log.detail ?? "",
   ]);
+  // Sel yang diawali = + - @ diberi awalan ' agar Excel membacanya sebagai teks, bukan rumus
+  // (mencegah CSV injection dari teks yang diketik pengguna, mis. nama lomba di kolom Detail).
+  const amanExcel = (v) => {
+    const s = String(v);
+    return /^[=+\-@\t\r]/.test(s) ? `'${s}` : s;
+  };
   const csv = [headers, ...rows]
-    .map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(","))
+    .map(row => row.map(v => `"${amanExcel(v).replace(/"/g, '""')}"`).join(","))
     .join("\n");
   const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
   const url  = URL.createObjectURL(blob);
