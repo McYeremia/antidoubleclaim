@@ -46,18 +46,13 @@ export default function PengajuanReward() {
   const diproses = rewards.filter(r => r.reward_status === "diproses");
   const selesai  = rewards.filter(r => r.reward_status === "selesai");
 
-  const opHeaders = () => {
-    const opId = localStorage.getItem("operator_id");
-    return {
-      "Content-Type": "application/json",
-      ...(opId ? { "x-operator-id": opId } : {}),
-    };
-  };
+  // Identitas operator dikirim otomatis lewat cookie sesi
+  const jsonHeaders = { "Content-Type": "application/json" };
 
   const doKirimReward = async (id) => {
     const res = await apiFetch(`${API}/reward-konfirmasi/${id}/status`, {
       method: "PATCH",
-      headers: opHeaders(),
+      headers: jsonHeaders,
       body: JSON.stringify({ status: "selesai" }),
     });
     if (!res.ok) { setAlertModal({ title: "Gagal", message: "Gagal memperbarui status reward. Coba lagi." }); return; }
@@ -69,7 +64,7 @@ export default function PengajuanReward() {
       await Promise.all(diproses.map(r =>
         apiFetch(`${API}/reward-konfirmasi/${r.id}/status`, {
           method: "PATCH",
-          headers: opHeaders(),
+          headers: jsonHeaders,
           body: JSON.stringify({ status: "selesai" }),
         })
       ));
@@ -84,7 +79,7 @@ export default function PengajuanReward() {
     setBermasalahLoading(true);
     const res = await apiFetch(`${API}/reward-konfirmasi/${bermasalahTarget.id}/status`, {
       method: "PATCH",
-      headers: opHeaders(),
+      headers: jsonHeaders,
       body: JSON.stringify({ status: "dikembalikan", catatan: bermasalahCatatan }),
     });
     setBermasalahLoading(false);

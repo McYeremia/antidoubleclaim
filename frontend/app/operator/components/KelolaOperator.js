@@ -35,8 +35,8 @@ export default function KelolaOperator({ operatorId }) {
   const [showDeletePw,  setShowDeletePw]  = useState(false);
   const [showResetPw,   setShowResetPw]   = useState({ old: false, new: false, confirm: false });
 
-  // Header standar untuk request API yang membutuhkan autentikasi operator.
-  const headers = { "Content-Type": "application/json", "x-operator-id": String(operatorId) };
+  // Header standar untuk request API (identitas operator dikirim otomatis lewat cookie sesi).
+  const headers = { "Content-Type": "application/json" };
 
   // ─── DATA FETCHING ────────────────────────────────────────────────────────
   // Mengambil daftar semua operator dari API.

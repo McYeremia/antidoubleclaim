@@ -69,6 +69,18 @@ def create_database():
     """)
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_otp_email ON OTP_SESSIONS (email)")
 
+    # Sesi login operator: yang disimpan hanya hash SHA-256 dari token, bukan token aslinya
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS OPERATOR_SESI (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        operator_id INTEGER NOT NULL REFERENCES USERS(id) ON DELETE CASCADE,
+        token_hash  TEXT    NOT NULL UNIQUE,
+        expires_at  TEXT    NOT NULL,
+        created_at  TEXT    DEFAULT (DATETIME('now', 'localtime'))
+    )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_sesi_operator ON OPERATOR_SESI (operator_id)")
+
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS CLAIMS (
         id               INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1773,3 +1785,127 @@ def verify_operator_otp(email: str, otp: str) -> bool:
     conn.commit()
     conn.close()
     return True
+
+
+# ---------------------------------------------------------------------------
+# Sesi Operator & Hak Akses Data
+# ---------------------------------------------------------------------------
+SESI_OPERATOR_JAM = 3  # masa berlaku sesi login operator (sama dengan batas di frontend)
+
+
+def _hash_token(token: str) -> str:
+    # Token sesi disimpan sebagai hash SHA-256 — jika database bocor, token aslinya tetap tidak diketahui.
+    import hashlib
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+def buat_sesi_operator(operator_id: int) -> str:
+    # Membuat sesi login baru untuk operator dan mengembalikan token acaknya (hanya dikembalikan sekali ini).
+    import secrets
+    from datetime import datetime, timedelta
+    token      = secrets.token_urlsafe(32)
+    expires_at = (datetime.now() + timedelta(hours=SESI_OPERATOR_JAM)).strftime("%Y-%m-%d %H:%M:%S")
+    conn = _get_conn()
+    # Sekalian bersihkan sesi yang sudah kedaluwarsa
+    conn.execute("DELETE FROM OPERATOR_SESI WHERE expires_at < DATETIME('now', 'localtime')")
+    conn.execute(
+        "INSERT INTO OPERATOR_SESI (operator_id, token_hash, expires_at) VALUES (?, ?, ?)",
+        (operator_id, _hash_token(token), expires_at),
+    )
+    conn.commit()
+    conn.close()
+    return token
+
+
+def get_operator_by_token(token: str):
+    # Mengambil data operator pemilik token sesi yang masih berlaku; None jika token salah atau kedaluwarsa.
+    if not token:
+        return None
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT u.id, u.username, u.nama, u.email, u.role
+        FROM OPERATOR_SESI s
+        JOIN USERS u ON u.id = s.operator_id
+        WHERE s.token_hash = ? AND s.expires_at > DATETIME('now', 'localtime')
+    """, (_hash_token(token),))
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        return None
+    return dict(zip(["id", "username", "nama", "email", "role"], row))
+
+
+def hapus_sesi_operator(token: str):
+    # Mengakhiri satu sesi (logout).
+    conn = _get_conn()
+    conn.execute("DELETE FROM OPERATOR_SESI WHERE token_hash = ?", (_hash_token(token),))
+    conn.commit()
+    conn.close()
+
+
+def hapus_semua_sesi_operator(operator_id: int, kecuali_token: str = None):
+    # Mengakhiri semua sesi seorang operator (setelah ganti/reset password), kecuali sesi yang sedang dipakai.
+    conn = _get_conn()
+    if kecuali_token:
+        conn.execute("DELETE FROM OPERATOR_SESI WHERE operator_id = ? AND token_hash != ?",
+                     (operator_id, _hash_token(kecuali_token)))
+    else:
+        conn.execute("DELETE FROM OPERATOR_SESI WHERE operator_id = ?", (operator_id,))
+    conn.commit()
+    conn.close()
+
+
+def mahasiswa_boleh_lihat_klaim(claim_id: int, email: str) -> bool:
+    # True jika mahasiswa adalah pemilik klaim, atau tercatat sebagai anggota kelompok pada pengajuan klaim itu.
+    nim = email.split("@")[0]
+    conn = _get_conn()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT 1 FROM CLAIMS WHERE id = ? AND LOWER(mahasiswa_email) = LOWER(?)
+        UNION
+        SELECT 1 FROM PENGAJUAN p
+        JOIN PENGAJUAN_ANGGOTA pa ON pa.pengajuan_id = p.id
+        WHERE p.claim_id = ? AND pa.nim_anggota = ?
+        LIMIT 1
+    """, (claim_id, email, claim_id, nim))
+    ok = cursor.fetchone() is not None
+    conn.close()
+    return ok
+
+
+# Kolom path file per tabel, beserta kolom pemilik dan klaim terkait — dipakai untuk cek akses file
+_KOLOM_FILE = {
+    "CLAIMS":            ("id",       ["sertifikat_path"]),
+    "PENGAJUAN":         ("claim_id", ["surat_tugas_path", "dokumen_sertifikat_path",
+                                       "foto_penyerahan_path", "dokumen_lainnya_path"]),
+    "REWARD_KONFIRMASI": ("claim_id", ["foto_buku_tabungan_path", "foto_ktm_path", "foto_ktp_path",
+                                       "pakta_integritas_path", "laporan_akhir_path", "karya_publikasi_path"]),
+}
+
+
+def mahasiswa_boleh_lihat_file(nama_file: str, email: str) -> bool:
+    # True jika file direferensikan oleh klaim/pengajuan/reward yang boleh dilihat mahasiswa ini
+    # (miliknya sendiri, atau klaim di mana ia anggota kelompok).
+    # Path di DB bisa berupa path Windows atau Linux, jadi dicocokkan berdasarkan nama file di ujung path.
+    # Karakter wildcard LIKE (% dan _) di nama file di-escape dengan "!" agar dicocokkan apa adanya
+    pola = "%" + nama_file.replace("!", "!!").replace("%", "!%").replace("_", "!_")
+    conn = _get_conn()
+    cursor = conn.cursor()
+    kandidat = []  # (email pemilik, claim_id)
+    for tabel, (kolom_klaim, kolom_path) in _KOLOM_FILE.items():
+        for kolom in kolom_path:
+            cursor.execute(
+                f"SELECT mahasiswa_email, {kolom_klaim}, {kolom} FROM {tabel} WHERE {kolom} LIKE ? ESCAPE '!'",
+                (pola,),
+            )
+            for pemilik, claim_id, path in cursor.fetchall():
+                if path.replace("\\", "/").rsplit("/", 1)[-1] == nama_file:
+                    kandidat.append((pemilik, claim_id))
+    conn.close()
+    for pemilik, claim_id in kandidat:
+        if pemilik and pemilik.lower() == email.lower():
+            return True
+        if claim_id and mahasiswa_boleh_lihat_klaim(claim_id, email):
+            return True
+    return False

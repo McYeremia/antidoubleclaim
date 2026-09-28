@@ -12,7 +12,6 @@ export default function PengajuanClaim({ router }) {
   const [claims,        setClaims]        = useState([]);
   const [ditolakClaims, setDitolakClaims] = useState([]);
   const [loading,       setLoading]       = useState(true);
-  const [opId,          setOpId]          = useState(null);
   // discardModal: { id, name } — menyimpan klaim yang menunggu konfirmasi penolakan.
   const [discardModal,  setDiscardModal]  = useState(null);
   // approveModal: { id, name } — menyimpan klaim yang menunggu konfirmasi persetujuan.
@@ -22,7 +21,6 @@ export default function PengajuanClaim({ router }) {
   const [statusFilter,  setStatusFilter]  = useState("semua");
 
   useEffect(() => {
-    setOpId(localStorage.getItem("operator_id"));
     fetchClaims();
   }, []);
 
@@ -45,12 +43,6 @@ export default function PengajuanClaim({ router }) {
     }
   };
 
-  // Membangun header request dengan operator-id dari localStorage.
-  const opHeaders = (extra = {}) => ({
-    ...extra,
-    ...(opId ? { "x-operator-id": opId } : {}),
-  });
-
   // ─── HANDLER ──────────────────────────────────────────────────────────────
   // Membuka modal konfirmasi approve; memblokir rekognisi yang belum ada estimasi dana.
   const handleApprove = (id, e) => {
@@ -72,7 +64,7 @@ export default function PengajuanClaim({ router }) {
   const handleApproveConfirm = async () => {
     const { id } = approveModal;
     setApproveModal(null);
-    const res = await apiFetch(`${API}/claims/${id}/approve`, { method: "PATCH", headers: opHeaders() });
+    const res = await apiFetch(`${API}/claims/${id}/approve`, { method: "PATCH" });
     if (!res.ok) { alert("Gagal menyetujui klaim."); return; }
     fetchClaims();
   };
@@ -88,7 +80,7 @@ export default function PengajuanClaim({ router }) {
     setDiscardModal(null);
     const res = await apiFetch(`${API}/claims/${id}`, {
       method: "DELETE",
-      headers: opHeaders({ "Content-Type": "application/json" }),
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ catatan: note || null }),
     });
     if (!res.ok) { alert("Gagal menghapus klaim."); return; }

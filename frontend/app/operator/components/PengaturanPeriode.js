@@ -80,18 +80,17 @@ export default function PengaturanPeriode({ operatorNama, operatorId }) {
     }
     setSaving(true);
     try {
-      const authHeader = operatorId ? { "x-operator-id": String(operatorId) } : {};
       if (editingPeriode) {
         const res = await apiFetch(`${API}/periode/${editingPeriode.id}`, {
           method: "PATCH",
-          headers: { "Content-Type": "application/json", ...authHeader },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(form),
         });
         if (!res.ok) { alert("Gagal menyimpan perubahan."); return; }
       } else {
         const res = await apiFetch(`${API}/periode`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", ...authHeader },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ...form, dibuat_oleh: operatorNama }),
         });
         if (!res.ok) { alert("Gagal membuat periode."); return; }
@@ -114,7 +113,6 @@ export default function PengaturanPeriode({ operatorNama, operatorId }) {
         setConfirmModal(null);
         const res = await apiFetch(`${API}/periode/${p.id}?status=${newStatus}`, {
           method: "PUT",
-          headers: operatorId ? { "x-operator-id": String(operatorId) } : {},
         });
         if (!res.ok) { alert("Gagal mengubah status periode."); return; }
         fetchPeriode();
@@ -132,7 +130,6 @@ export default function PengaturanPeriode({ operatorNama, operatorId }) {
         setConfirmModal(null);
         const res  = await apiFetch(`${API}/periode/${p.id}`, {
           method: "DELETE",
-          headers: operatorId ? { "x-operator-id": String(operatorId) } : {},
         });
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
@@ -155,7 +152,6 @@ export default function PengaturanPeriode({ operatorNama, operatorId }) {
         setConfirmModal(null);
         const res  = await apiFetch(`${API}/admin/reset-data`, {
           method: "POST",
-          headers: operatorId ? { "x-operator-id": String(operatorId) } : {},
         });
         if (res.ok) {
           alert("Semua data berhasil dihapus.");

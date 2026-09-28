@@ -83,9 +83,7 @@ export default function LogAktivitas({ operatorId }) {
       const params = new URLSearchParams();
       if (from) params.set("date_from", from);
       if (to)   params.set("date_to",   to);
-      const res  = await apiFetch(`${API}/audit-log?${params}`, {
-        headers: { "x-operator-id": String(operatorId) },
-      });
+      const res  = await apiFetch(`${API}/audit-log?${params}`);
       const data = res.ok ? await res.json() : [];
       setLogs(data);
     } catch {

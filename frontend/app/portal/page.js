@@ -3,8 +3,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
-const API        = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-const apiFetch = (url, options = {}) => fetch(url, { ...options, headers: { "ngrok-skip-browser-warning": "true", ...(options.headers || {}) } });
+// Semua request lewat route Next.js /api/backend (backend tidak dipanggil langsung dari browser)
+const API        = "/api/backend";
+const apiFetch = (url, options = {}) => fetch(url, options);
 const SESSION_MS = 3 * 60 * 60 * 1000;
 
 function isOperatorSessionValid() {
@@ -89,7 +90,8 @@ export default function OperatorLoginPage() {
     setError("");
     setLoading(true);
     try {
-      const res = await apiFetch(`${API}/login-operator`, {
+      // Login lewat route Next.js yang menyimpan token sesi di cookie httpOnly
+      const res = await apiFetch("/api/operator/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),

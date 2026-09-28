@@ -6,20 +6,18 @@
 // Nama bulan Indonesia untuk format tampilan tanggal.
 export const BULAN = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
 
-// URL base backend — fallback ke localhost jika env tidak di-set.
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+// URL base API. Browser tidak memanggil backend langsung: semua request lewat route Next.js
+// /api/backend yang memeriksa session Google mahasiswa lalu meneruskannya ke backend.
+export const API_URL = "/api/backend";
 
 // Label tampilan per kategori klaim.
 export const KATEGORI_LABEL = { puspresnas: "PUSPRESNAS", non_puspresnas: "Non PUSPRESNAS", publikasi: "Publikasi / Karya / HKI" };
 
 // ─── FETCH HELPER ─────────────────────────────────────────────────────────────
 
-// Wrapper fetch yang menyisipkan header ngrok agar tidak diblokir ngrok browser warning.
+// Wrapper fetch untuk halaman mahasiswa (identitas dikirim otomatis lewat cookie session NextAuth).
 export function apiFetch(url, options = {}) {
-  return fetch(url, {
-    ...options,
-    headers: { "ngrok-skip-browser-warning": "true", ...(options.headers || {}) },
-  });
+  return fetch(url, options);
 }
 
 // ─── STATUS & LABEL ───────────────────────────────────────────────────────────

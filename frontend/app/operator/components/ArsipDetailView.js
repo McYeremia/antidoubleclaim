@@ -33,7 +33,7 @@ export default function ArsipDetailView({ detailItem, rewards, onBack }) {
     : [];
 
   const certFilename = detailItem.sertifikat_filename || (detailItem.sertifikat_path ? detailItem.sertifikat_path.split(/[\\/]/).pop() : null);
-  const certUrl      = certFilename ? `${API}/uploads/${certFilename}` : null;
+  const certUrl      = certFilename ? `/api/file?name=${encodeURIComponent(certFilename)}` : null;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">

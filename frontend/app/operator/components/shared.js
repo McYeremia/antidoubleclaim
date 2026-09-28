@@ -5,17 +5,22 @@ import { useState, useEffect } from "react";
 
 // ─── KONSTANTA ────────────────────────────────────────────────────────────────
 
-// URL base backend — fallback ke localhost jika env tidak di-set.
-export const API = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+// URL base API. Browser tidak memanggil backend langsung: semua request lewat route Next.js
+// /api/backend yang memeriksa sesi login operator (cookie httpOnly) lalu meneruskannya ke backend.
+export const API = "/api/backend";
 
 // ─── FETCH HELPER ─────────────────────────────────────────────────────────────
 
-// Wrapper fetch yang menyisipkan header ngrok agar tidak diblokir ngrok browser warning.
-export function apiFetch(url, options = {}) {
-  return fetch(url, {
-    ...options,
-    headers: { "ngrok-skip-browser-warning": "true", ...(options.headers || {}) },
-  });
+// Wrapper fetch untuk halaman operator. Jika backend menandai sesi sudah berakhir
+// (header X-Sesi-Berakhir), data sesi di browser dibersihkan dan operator diarahkan ke halaman login.
+export async function apiFetch(url, options = {}) {
+  const res = await fetch(url, options);
+  if (res.status === 401 && res.headers.get("x-sesi-berakhir") && typeof window !== "undefined") {
+    ["role","operator_id","operator_nama","operator_username","operator_role","operator_login_at"]
+      .forEach(k => localStorage.removeItem(k));
+    window.location.href = "/portal";
+  }
+  return res;
 }
 
 // ─── FORMAT TANGGAL ───────────────────────────────────────────────────────────
@@ -126,9 +131,7 @@ export function DocLink({ label, path }) {
   const match       = filename.match(/^.+?_[0-9a-f]{32}_(.+)$/);
   const displayName = match ? match[1] : filename;
 
-  // typeof window !== "undefined" diperlukan agar tidak error saat rendering di server (SSR)
-  const opId = typeof window !== "undefined" ? localStorage.getItem("operator_id") : "";
-  const href = `/api/file?name=${filename}${opId ? `&op=${opId}` : ""}`;
+  const href = `/api/file?name=${filename}`;
   return (
     <div className="min-w-0 overflow-hidden">
       <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{label}</p>
@@ -173,8 +176,7 @@ export function ArsipFileLink({ label, path }) {
   if (!path) return null;
   const filename = path.split(/[\\/]/).pop();
   const display  = filename.length > 36 ? filename.slice(0, 33) + "…" : filename; // potong jika > 36 karakter
-  const opId = typeof window !== "undefined" ? localStorage.getItem("operator_id") : ""; // SSR-safe localStorage
-  const href = `/api/file?name=${filename}${opId ? `&op=${opId}` : ""}`;
+  const href = `/api/file?name=${filename}`;
   return (
     <div className="min-w-0">
       <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{label}</p>

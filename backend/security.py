@@ -8,7 +8,9 @@ import threading
 from collections import deque
 from typing import Optional
 
-from fastapi import HTTPException, Request
+from fastapi import Depends, HTTPException, Request
+
+from backend.auth import identitas
 
 
 def _env_int(name: str, default: int) -> int:
@@ -22,7 +24,7 @@ def _env_int(name: str, default: int) -> int:
 # Batas total satu request (semua file + isian form). Form reward berisi 6 file × 3 MB, jadi 25 MB cukup longgar.
 MAX_REQUEST_BYTES = _env_int("MAX_REQUEST_MB", 25) * 1024 * 1024
 
-# Rate limit endpoint upload per IP. Longgar karena banyak mahasiswa bisa berbagi satu IP publik (wifi kampus/NAT).
+# Rate limit endpoint upload per akun (lihat limit_upload).
 UPLOAD_RATE_LIMIT  = _env_int("UPLOAD_RATE_LIMIT", 30)        # jumlah request
 UPLOAD_RATE_WINDOW = _env_int("UPLOAD_RATE_WINDOW_SEC", 600)  # dalam rentang detik
 
@@ -96,11 +98,10 @@ class BodySizeLimitMiddleware:
 
 # ── Rate limit per IP ─────────────────────────────────────────────────────────
 class RateLimiter:
-    # Sliding window di memori: menyimpan waktu request terakhir per IP.
+    # Sliding window di memori: menyimpan waktu request terakhir per kunci (akun atau IP).
     # Cukup untuk satu proses uvicorn; data hilang saat restart (tidak masalah untuk rate limit).
-    # IP diambil dari request.client — jika di belakang reverse proxy/ngrok, jalankan uvicorn
-    # dengan --proxy-headers agar IP asli dari X-Forwarded-For yang terbaca.
-    MAX_TRACKED_IPS = 10_000  # batas jumlah IP yang dilacak, supaya limiter sendiri tidak menghabiskan memori
+    # Kunci ditentukan oleh pemanggil (lihat limit_upload).
+    MAX_TRACKED_IPS = 10_000  # batas jumlah kunci yang dilacak, supaya limiter sendiri tidak menghabiskan memori
 
     def __init__(self, limit: int, window_sec: int):
         self.limit = limit
@@ -109,7 +110,7 @@ class RateLimiter:
         self._lock = threading.Lock()
 
     def check(self, key: str) -> Optional[int]:
-        # Catat satu request; kembalikan None jika diizinkan, atau detik tunggu jika melebihi batas.
+        # Catat satu request untuk kunci ini; kembalikan None jika diizinkan, atau detik tunggu jika melebihi batas.
         now = time.monotonic()
         with self._lock:
             if len(self._hits) > self.MAX_TRACKED_IPS:
@@ -123,7 +124,7 @@ class RateLimiter:
             return None
 
     def _prune(self, now: float):
-        # Buang IP yang semua catatannya sudah di luar window.
+        # Buang kunci yang semua catatannya sudah di luar window.
         for key in [k for k, h in self._hits.items() if not h or now - h[-1] >= self.window]:
             del self._hits[key]
 
@@ -135,10 +136,17 @@ class RateLimiter:
 upload_limiter = RateLimiter(UPLOAD_RATE_LIMIT, UPLOAD_RATE_WINDOW)
 
 
-def limit_upload(request: Request):
-    # Dependency FastAPI untuk endpoint upload: tolak dengan 429 jika IP ini sudah melewati batas.
-    ip = request.client.host if request.client else "unknown"
-    retry_after = upload_limiter.check(ip)
+def limit_upload(request: Request, ident: Optional[dict] = Depends(identitas)):
+    # Dependency FastAPI untuk endpoint upload: tolak dengan 429 jika akun ini sudah melewati batas.
+    # Kuota dihitung per akun (email mahasiswa), karena semua request datang lewat server Next.js
+    # sehingga IP-nya sama. IP hanya dipakai jika tidak ada yang login (request itu tetap akan ditolak 401).
+    if ident and ident["tipe"] == "mahasiswa":
+        kunci = "mhs:" + ident["email"]
+    elif ident:
+        kunci = f"op:{ident['op']['id']}"
+    else:
+        kunci = "ip:" + (request.client.host if request.client else "unknown")
+    retry_after = upload_limiter.check(kunci)
     if retry_after is not None:
         raise HTTPException(
             status_code=429,
