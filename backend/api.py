@@ -1,5 +1,5 @@
 # Modul utama FastAPI: mendefinisikan semua endpoint REST untuk klaim, pengajuan, reward, operator, periode, dan simulator.
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Header, BackgroundTasks
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Header, BackgroundTasks, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -36,6 +36,10 @@ from backend.database import (
     verify_operator_otp,
 )
 from backend.nim_parser import parse_nim, is_valid_student_email
+from backend.image_hash import SertifikatTidakValid
+from backend.security import (
+    BodySizeLimitMiddleware, limit_upload, hash_slot, ensure_disk_space, read_limited,
+)
 from backend.email_service import (
     kirim_email_klaim_disetujui,
     kirim_email_klaim_tidak_lolos,
@@ -56,13 +60,27 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# Tolak request yang terlalu besar sebelum body di-parse (batas: MAX_REQUEST_MB di .env)
+app.add_middleware(BodySizeLimitMiddleware)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
 MAX_FILE_SIZE = 3 * 1024 * 1024  # Batas ukuran file upload: maks 3 MB per file
 
+MAX_ANGGOTA = 50  # sama dengan batas di wizard frontend
+
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
+
+
+def _hapus_file(paths):
+    # Menghapus file yang sudah terlanjur ditulis jika proses penyimpanan gagal, supaya tidak menumpuk di disk.
+    for p in paths:
+        if p and os.path.exists(p):
+            try:
+                os.remove(p)
+            except OSError:
+                pass
 
 app.mount("/uploads", StaticFiles(directory=UPLOAD_FOLDER), name="uploads")
 
@@ -317,8 +335,10 @@ async def discard(claim_id: int, background_tasks: BackgroundTasks, body: Option
     return {"message": "Klaim ditolak", "id": claim_id}
 
 # ── Upload ───────────────────────────────────────────────────────────────────
-@app.post("/upload")
-async def upload_certificate(
+# Endpoint upload ditulis `def` (bukan `async def`) agar FastAPI menjalankannya di threadpool:
+# konversi PDF + pHash yang lambat tidak lagi menahan request pengguna lain.
+@app.post("/upload", dependencies=[Depends(limit_upload)])
+def upload_certificate(
     nama_lomba: str = Form(...),
     tingkat: str = Form(...),
     tanggal: str = Form(...),
@@ -329,12 +349,15 @@ async def upload_certificate(
     kategori_simkatmawa: Optional[str] = Form(None),
 ):
     # Menerima upload sertifikat, menyimpan file ke disk, dan menjalankan deteksi duplikat.
+    file_location = None
     try:
         print(f"--- Menerima upload: {nama_lomba} dari {mahasiswa_email} ---")
 
-        contents = await file.read()
-        if len(contents) > MAX_FILE_SIZE:
-            raise HTTPException(status_code=413, detail="Ukuran file melebihi batas maksimal 3 MB")
+        # Format dicek sebelum file ditulis, supaya file yang pasti ditolak tidak sempat memakan disk
+        if os.path.splitext(file.filename or "")[1].lower() not in (".jpg", ".jpeg", ".png", ".pdf"):
+            raise HTTPException(status_code=400, detail="Format sertifikat harus PDF, JPG, atau PNG")
+        ensure_disk_space(UPLOAD_FOLDER)
+        contents = read_limited(file, MAX_FILE_SIZE)
 
         # Nama file diberi prefix UUID agar unik meski mahasiswa mengirim file bernama sama
         unique_name   = f"{uuid.uuid4().hex}_{file.filename}"
@@ -343,9 +366,11 @@ async def upload_certificate(
             buffer.write(contents)
         print(f"File disimpan di: {file_location}")
 
-        result = insert_claim(nama_lomba, tingkat, tanggal, peringkat, file_location,
-                              mahasiswa_email=mahasiswa_email, nama_display=nama_display,
-                              kategori_simkatmawa=kategori_simkatmawa)
+        # Proses pHash dibatasi beberapa sekaligus (MAX_CONCURRENT_HASH) agar server tidak kehabisan CPU/RAM
+        with hash_slot():
+            result = insert_claim(nama_lomba, tingkat, tanggal, peringkat, file_location,
+                                  mahasiswa_email=mahasiswa_email, nama_display=nama_display,
+                                  kategori_simkatmawa=kategori_simkatmawa)
 
         return {
             "uploaded":           result.get("uploaded", True),
@@ -358,14 +383,22 @@ async def upload_certificate(
             "pesan":              result.get("pesan"),
         }
 
+    except HTTPException:
+        _hapus_file([file_location])
+        raise
+    except SertifikatTidakValid as e:
+        # Dari generate_phash: format tidak didukung, PDF rusak, atau dimensi terlalu besar
+        _hapus_file([file_location])
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        _hapus_file([file_location])
         print("!!! ERROR SAAT UPLOAD !!!")
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 # ── Pengajuan ─────────────────────────────────────────────────────────────────
-@app.post("/pengajuan")
-async def submit_pengajuan(
+@app.post("/pengajuan", dependencies=[Depends(limit_upload)])
+def submit_pengajuan(
     mahasiswa_email:     str            = Form(...),
     nama_display:        str            = Form(...),
     nomor_wa:            str            = Form(...),
@@ -405,26 +438,35 @@ async def submit_pengajuan(
     dokumen_lainnya:     Optional[UploadFile] = File(None),
 ):
     # Menerima data pengajuan SIMKATMAWA lengkap beserta file-file dokumen pendukung.
+    saved = []  # path file yang sudah ditulis, dihapus lagi jika proses gagal
     try:
+        # Data anggota divalidasi dulu sebelum file apa pun ditulis ke disk
+        try:
+            anggota = json.loads(anggota_json) if anggota_json else []
+        except json.JSONDecodeError:
+            raise HTTPException(status_code=400, detail="Data anggota tidak valid")
+        if not isinstance(anggota, list) or not all(isinstance(a, dict) for a in anggota):
+            raise HTTPException(status_code=400, detail="Data anggota tidak valid")
+        if len(anggota) > MAX_ANGGOTA:
+            raise HTTPException(status_code=400, detail=f"Jumlah anggota maksimal {MAX_ANGGOTA}")
+        ensure_disk_space(UPLOAD_FOLDER)
+
         def save_file(upload: Optional[UploadFile], prefix: str) -> Optional[str]:
             # Menyimpan file upload ke folder uploads dengan nama unik; kembalikan path-nya.
             if not upload or not upload.filename:
                 return None
-            contents = upload.file.read()
-            if len(contents) > MAX_FILE_SIZE:
-                raise HTTPException(status_code=413, detail=f"File '{upload.filename}' melebihi batas maksimal 3 MB")
+            contents = read_limited(upload, MAX_FILE_SIZE)
             fname    = f"{prefix}_{uuid.uuid4().hex}_{upload.filename}"
             fpath    = os.path.join(UPLOAD_FOLDER, fname)
             with open(fpath, "wb") as buf:
                 buf.write(contents)
+            saved.append(fpath)
             return fpath
 
         surat_tugas_path       = save_file(surat_tugas,        "surat_tugas")
         foto_penyerahan_path   = save_file(foto_penyerahan,    "foto")
         dokumen_sertifikat_path = save_file(dokumen_sertifikat, "sertifikat")
         dokumen_lainnya_path   = save_file(dokumen_lainnya,    "lainnya")
-
-        anggota = json.loads(anggota_json) if anggota_json else []
 
         data = {
             "mahasiswa_email":      mahasiswa_email,
@@ -468,7 +510,11 @@ async def submit_pengajuan(
         pengajuan_id = insert_pengajuan(data, anggota)
         return {"success": True, "pengajuan_id": pengajuan_id}
 
+    except HTTPException:
+        _hapus_file(saved)
+        raise
     except Exception as e:
+        _hapus_file(saved)
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -536,8 +582,8 @@ async def edit_pengajuan(pengajuan_id: int, body: PengajuanUpdate):
     return {"success": True}
 
 # ── Reward Konfirmasi ──────────────────────────────────────────────────────────
-@app.post("/reward-konfirmasi")
-async def submit_reward_konfirmasi(
+@app.post("/reward-konfirmasi", dependencies=[Depends(limit_upload)])
+def submit_reward_konfirmasi(
     claim_id:               str                    = Form(...),
     mahasiswa_email:        str                    = Form(...),
     tahun_klaim:            str                    = Form(...),
@@ -564,18 +610,20 @@ async def submit_reward_konfirmasi(
     karya_publikasi:        Optional[UploadFile]   = File(None),
 ):
     # Menerima data konfirmasi reward dari mahasiswa beserta dokumen rekening dan laporan akhir.
+    saved = []  # path file yang sudah ditulis, dihapus lagi jika proses gagal
     try:
+        ensure_disk_space(UPLOAD_FOLDER)
+
         def save_file(upload: Optional[UploadFile], prefix: str) -> Optional[str]:
             # Menyimpan file upload ke folder uploads dengan nama unik; kembalikan path-nya.
             if not upload or not upload.filename:
                 return None
-            contents = upload.file.read()
-            if len(contents) > MAX_FILE_SIZE:
-                raise HTTPException(status_code=413, detail=f"File '{upload.filename}' melebihi batas maksimal 3 MB")
+            contents = read_limited(upload, MAX_FILE_SIZE)
             fname = f"{prefix}_{uuid.uuid4().hex}_{upload.filename}"
             fpath = os.path.join(UPLOAD_FOLDER, fname)
             with open(fpath, "wb") as buf:
                 buf.write(contents)
+            saved.append(fpath)
             return fpath
 
         data = {
@@ -608,7 +656,11 @@ async def submit_reward_konfirmasi(
         reward_id = insert_reward_konfirmasi(data)
         return {"success": True, "reward_id": reward_id}
 
+    except HTTPException:
+        _hapus_file(saved)
+        raise
     except Exception as e:
+        _hapus_file(saved)
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -658,8 +710,8 @@ async def get_reward(claim_id: int):
         raise HTTPException(status_code=404, detail="Data reward tidak ditemukan")
     return data
 
-@app.put("/reward-konfirmasi/{reward_id}")
-async def resubmit_reward(
+@app.put("/reward-konfirmasi/{reward_id}", dependencies=[Depends(limit_upload)])
+def resubmit_reward(
     reward_id: int,
     tahun_klaim:           str            = Form(...),
     periode:               str            = Form(...),
@@ -684,43 +736,49 @@ async def resubmit_reward(
     karya_publikasi:       Optional[UploadFile] = File(None),
 ):
     # Memperbarui data reward konfirmasi setelah dikembalikan oleh operator untuk diperbaiki.
+    saved = []  # path file yang sudah ditulis, dihapus lagi jika proses gagal
+    ensure_disk_space(UPLOAD_FOLDER)
+
     def save_file(upload: Optional[UploadFile]) -> Optional[str]:
         # Menyimpan file upload baru ke folder uploads; kembalikan path-nya atau None jika tidak ada file.
         if not upload or not upload.filename:
             return None
-        contents = upload.file.read()
-        if len(contents) > MAX_FILE_SIZE:
-            raise HTTPException(status_code=413, detail=f"File '{upload.filename}' melebihi batas maksimal 3 MB")
+        contents = read_limited(upload, MAX_FILE_SIZE)
         path = os.path.join(UPLOAD_FOLDER, f"reward_{uuid.uuid4().hex}_{upload.filename}")
         with open(path, "wb") as f:
             f.write(contents)
+        saved.append(path)
         return path
 
-    data = {
-        "tahun_klaim":            tahun_klaim,
-        "periode":                periode,
-        "periode_id":             int(periode_id) if periode_id else None,
-        "nomor_urut_lampiran":    nomor_urut_lampiran,
-        "kategori_lomba":         kategori_lomba,
-        "kompetisi_puspresnas":   kompetisi_puspresnas,
-        "judul_lomba":            judul_lomba,
-        "tahun_kegiatan":         tahun_kegiatan,
-        "nama_ketua":             nama_ketua,
-        "nomor_wa":               nomor_wa,
-        "nama_pemilik_rekening":  nama_pemilik_rekening,
-        "bank":                   bank,
-        "nomor_rekening":         nomor_rekening,
-        "bersedia":               bersedia == "true",
-        "data_benar":             data_benar == "true",
-        "foto_buku_tabungan_path": save_file(foto_buku_tabungan),
-        "foto_ktm_path":          save_file(foto_ktm),
-        "foto_ktp_path":          save_file(foto_ktp),
-        "pakta_integritas_path":  save_file(pakta_integritas),
-        "laporan_akhir_path":     save_file(laporan_akhir),
-        "karya_publikasi_path":   save_file(karya_publikasi),
-    }
-    update_reward_konfirmasi(reward_id, data)
-    return {"success": True}
+    try:
+        data = {
+            "tahun_klaim":            tahun_klaim,
+            "periode":                periode,
+            "periode_id":             int(periode_id) if periode_id else None,
+            "nomor_urut_lampiran":    nomor_urut_lampiran,
+            "kategori_lomba":         kategori_lomba,
+            "kompetisi_puspresnas":   kompetisi_puspresnas,
+            "judul_lomba":            judul_lomba,
+            "tahun_kegiatan":         tahun_kegiatan,
+            "nama_ketua":             nama_ketua,
+            "nomor_wa":               nomor_wa,
+            "nama_pemilik_rekening":  nama_pemilik_rekening,
+            "bank":                   bank,
+            "nomor_rekening":         nomor_rekening,
+            "bersedia":               bersedia == "true",
+            "data_benar":             data_benar == "true",
+            "foto_buku_tabungan_path": save_file(foto_buku_tabungan),
+            "foto_ktm_path":          save_file(foto_ktm),
+            "foto_ktp_path":          save_file(foto_ktp),
+            "pakta_integritas_path":  save_file(pakta_integritas),
+            "laporan_akhir_path":     save_file(laporan_akhir),
+            "karya_publikasi_path":   save_file(karya_publikasi),
+        }
+        update_reward_konfirmasi(reward_id, data)
+        return {"success": True}
+    except Exception:
+        _hapus_file(saved)
+        raise
 
 
 # ── Autentikasi & Manajemen Operator ─────────────────────────────────────────
