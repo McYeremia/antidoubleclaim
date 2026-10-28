@@ -1,4 +1,4 @@
-# Modul utama FastAPI: mendefinisikan semua endpoint REST untuk klaim, pengajuan, reward, operator, periode, dan simulator.
+# Modul utama FastAPI: mendefinisikan semua endpoint REST untuk klaim, pengajuan, reward, operator, periode, statistik, dan file.
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Header, BackgroundTasks, Depends
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
