@@ -46,8 +46,8 @@ export function isCrossSite(request) {
 // Meneruskan respons backend ke browser apa adanya (status, tipe konten, body di-stream).
 export function relayResponse(upstream, extraHeaders = {}) {
   const headers = new Headers(extraHeaders);
-  for (const name of ["content-type", "content-disposition", "retry-after", "cache-control",
-                      "x-content-type-options", "x-sesi-berakhir"]) {
+  // (X-Content-Type-Options: nosniff dipasang global di next.config.mjs)
+  for (const name of ["content-type", "content-disposition", "retry-after", "cache-control", "x-sesi-berakhir"]) {
     const value = upstream.headers.get(name);
     if (value) headers.set(name, value);
   }
